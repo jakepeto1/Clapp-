@@ -1,0 +1,416 @@
+{
+    "article": {
+        "lemma": "ὁ, ἡ, το",
+        "type": "article",
+        "singular": {
+            "nominative": ["ὁ", "ἡ", "το"],
+            "vocative": ["ὁ", "ἡ", "το"],
+            "accusative": ["τον", "την", "το"],
+            "genitive": ["του", "της", "του"],
+            "dative": ["τῳ", "τῃ", "τῳ"]
+        },
+        "plural": {
+            "nominative": ["οἱ", "αἱ", "τα"],
+            "vocative": ["οἱ", "αἱ", "τα"],
+            "accusative": ["τους", "τας", "τα"],
+            "genitive": ["των", "των", "των"],
+            "dative": ["τοις", "ταις", "τοις"]
+        }
+    },
+    "mousa": {
+        "lemma": "μουσα",
+        "type": "first_declension_alpha",
+        "singular": {
+            "nominative": "μουσα",
+            "vocative": "μουσα",
+            "accusative": "μουσαν",
+            "genitive": "μουσης",
+            "dative": "μουσῃ"
+        },
+        "plural": {
+            "nominative": "μουσαι",
+            "vocative": "μουσαι",
+            "accusative": "μουσας",
+            "genitive": "μουσων",
+            "dative": "μουσαις"
+        }
+    },
+    "chora": {
+        "lemma": "χωρα",
+        "type": "first_declension_long_alpha",
+        "singular": {
+            "nominative": "χωρα",
+            "vocative": "χωρα",
+            "accusative": "χωραν",
+            "genitive": "χωρας",
+            "dative": "χωρᾳ"
+        },
+        "plural": {
+            "nominative": "χωραι",
+            "vocative": "χωραι",
+            "accusative": "χωρας",
+            "genitive": "χωρων",
+            "dative": "χωραις"
+        }
+    },
+    "time": {
+        "lemma": "τιμη",
+        "type": "first_declension_eta",
+        "singular": {
+            "nominative": "τιμη",
+            "vocative": "τιμη",
+            "accusative": "τιμην",
+            "genitive": "τιμης",
+            "dative": "τιμῃ"
+        },
+        "plural": {
+            "nominative": "τιμαι",
+            "vocative": "τιμαι",
+            "accusative": "τιμας",
+            "genitive": "τιμων",
+            "dative": "τιμαις"
+        }
+    },
+    "logos": {
+        "lemma": "λογος",
+        "type": "second_declension_masculine",
+        "singular": {
+            "nominative": "λογος",
+            "vocative": "λογε",
+            "accusative": "λογον",
+            "genitive": "λογου",
+            "dative": "λογῳ"
+        },
+        "plural": {
+            "nominative": "λογοι",
+            "vocative": "λογοι",
+            "accusative": "λογους",
+            "genitive": "λογων",
+            "dative": "λογοις"
+        }
+    },
+    "doron": {
+        "lemma": "δωρον",
+        "type": "second_declension_neuter",
+        "singular": {
+            "nominative": "δωρον",
+            "vocative": "δωρον",
+            "accusative": "δωρον",
+            "genitive": "δωρου",
+            "dative": "δωρῳ"
+        },
+        "plural": {
+            "nominative": "δωρα",
+            "vocative": "δωρα",
+            "accusative": "δωρα",
+            "genitive": "δωρων",
+            "dative": "δωροις"
+        }
+    },
+    "phylax": {
+        "lemma": "φύλαξ",
+        "type": "third_declension_masculine",
+        "singular": {
+            "nominative": "φύλαξ",
+            "vocative": "φύλαξ",
+            "accusative": "φύλακα",
+            "genitive": "φύλακος",
+            "dative": "φύλακι"
+        },
+        "plural": {
+            "nominative": "φύλακες",
+            "vocative": "φύλακες",
+            "accusative": "φύλακας",
+            "genitive": "φυλάκων",
+            "dative": "φύλαξι"
+        }
+    },
+    "soma": {
+        "lemma": "σῶμα",
+        "type": "third_declension_neuter",
+        "singular": {
+            "nominative": "σῶμα",
+            "vocative": "σῶμα",
+            "accusative": "σῶμα",
+            "genitive": "σώματος",
+            "dative": "σώματι"
+        },
+        "plural": {
+            "nominative": "σώματα",
+            "vocative": "σώματα",
+            "accusative": "σώματα",
+            "genitive": "σωμάτων",
+            "dative": "σώμασι"
+        }
+    },
+    "geron": {
+        "lemma": "γέρων",
+        "type": "third_declension_masculine",
+        "singular": {
+            "nominative": "γέρων",
+            "vocative": "γέρον",
+            "accusative": "γέροντα",
+            "genitive": "γέροντος",
+            "dative": "γέροντι"
+        },
+        "plural": {
+            "nominative": "γέροντες",
+            "vocative": "γέροντες",
+            "accusative": "γέροντας",
+            "genitive": "γερόντων",
+            "dative": "γέρουσι"
+        }
+    },
+    "aner": {
+        "lemma": "ἀνήρ",
+        "type": "third_declension_irregular",
+        "singular": {
+            "nominative": "ἀνήρ",
+            "vocative": "ἄνερ",
+            "accusative": "ἄνδρα",
+            "genitive": "ἀνδρός",
+            "dative": "ἀνδρί"
+        },
+        "plural": {
+            "nominative": "ἄνδρες",
+            "vocative": "ἄνδρες",
+            "accusative": "ἄνδρας",
+            "genitive": "ἀνδρῶν",
+            "dative": "ἀνδράσι"
+        }
+    },
+    "pater": {
+        "lemma": "πατήρ",
+        "type": "third_declension_irregular",
+        "singular": {
+            "nominative": "πατήρ",
+            "vocative": "πάτερ",
+            "accusative": "πατέρα",
+            "genitive": "πατρός",
+            "dative": "πατρί"
+        },
+        "plural": {
+            "nominative": "πατέρες",
+            "vocative": "πατέρες",
+            "accusative": "πατέρας",
+            "genitive": "πατέρων",
+            "dative": "πατράσι"
+        }
+    },
+    "elpis": {
+        "lemma": "ἐλπίς",
+        "type": "third_declension_feminine",
+        "singular": {
+            "nominative": "ἐλπίς",
+            "vocative": "ἐλπί",
+            "accusative": "ἐλπίδα",
+            "genitive": "ἐλπίδος",
+            "dative": "ἐλπίδι"
+        },
+        "plural": {
+            "nominative": "ἐλπίδες",
+            "vocative": "ἐλπίδες",
+            "accusative": "ἐλπίδας",
+            "genitive": "ἐλπίδων",
+            "dative": "ἐλπίσι"
+        }
+    },
+    "rhetor": {
+        "lemma": "ῥήτωρ",
+        "type": "third_declension_masculine",
+        "singular": {
+            "nominative": "ῥήτωρ",
+            "vocative": "ῥῆτορ",
+            "accusative": "ῥήτορα",
+            "genitive": "ῥήτορος",
+            "dative": "ῥήτορι"
+        },
+        "plural": {
+            "nominative": "ῥήτορες",
+            "vocative": "ῥήτορες",
+            "accusative": "ῥήτορας",
+            "genitive": "ῥητόρων",
+            "dative": "ῥήτορσι"
+        }
+    },
+    "gyne": {
+        "lemma": "γυνή",
+        "type": "third_declension_irregular",
+        "singular": {
+            "nominative": "γυνή",
+            "vocative": "γύναι",
+            "accusative": "γυναῖκα",
+            "genitive": "γυναικός",
+            "dative": "γυναικί"
+        },
+        "plural": {
+            "nominative": "γυναῖκες",
+            "vocative": "γυναῖκες",
+            "accusative": "γυναῖκας",
+            "genitive": "γυναικῶν",
+            "dative": "γυναιξί"
+        }
+    },
+    "polis": {
+        "lemma": "πόλις",
+        "type": "third_declension_feminine",
+        "singular": {
+            "nominative": "πόλις",
+            "vocative": "πόλι",
+            "accusative": "πόλιν",
+            "genitive": "πόλεως",
+            "dative": "πόλει"
+        },
+        "plural": {
+            "nominative": "πόλεις",
+            "vocative": "πόλεις",
+            "accusative": "πόλεις",
+            "genitive": "πόλεων",
+            "dative": "πόλεσι"
+        }
+    },
+    "asty": {
+        "lemma": "ἄστυ",
+        "type": "third_declension_neuter",
+        "singular": {
+            "nominative": "ἄστυ",
+            "vocative": "ἄστυ",
+            "accusative": "ἄστυ",
+            "genitive": "ἄστεως",
+            "dative": "ἄστει"
+        },
+        "plural": {
+            "nominative": "ἄστη",
+            "vocative": "ἄστη",
+            "accusative": "ἄστη",
+            "genitive": "ἄστεων",
+            "dative": "ἄστεσι"
+        }
+    },
+    "basileus": {
+        "lemma": "βασιλεύς",
+        "type": "third_declension_masculine",
+        "singular": {
+            "nominative": "βασιλεύς",
+            "vocative": "βασιλεῦ",
+            "accusative": "βασιλέα",
+            "genitive": "βασιλέως",
+            "dative": "βασιλεῖ"
+        },
+        "plural": {
+            "nominative": "βασιλεῖς",
+            "vocative": "βασιλεῖς",
+            "accusative": "βασιλέας",
+            "genitive": "βασιλέων",
+            "dative": "βασιλεῦσι"
+        }
+    },
+    "bous": {
+        "lemma": "βοῦς",
+        "type": "third_declension_irregular",
+        "singular": {
+            "nominative": "βοῦς",
+            "vocative": "βοῦ",
+            "accusative": "βοῦν",
+            "genitive": "βοός",
+            "dative": "βοΐ"
+        },
+        "plural": {
+            "nominative": "βόες",
+            "vocative": "βόες",
+            "accusative": "βοῦς",
+            "genitive": "βοῶν",
+            "dative": "βουσί"
+        }
+    },
+    "naus": {
+        "lemma": "ναῦς",
+        "type": "third_declension_irregular",
+        "singular": {
+            "nominative": "ναῦς",
+            "vocative": "ναῦ",
+            "accusative": "ναῦν",
+            "genitive": "νεώς",
+            "dative": "νηΐ"
+        },
+        "plural": {
+            "nominative": "νῆες",
+            "vocative": "νῆες",
+            "accusative": "ναῦς",
+            "genitive": "νεῶν",
+            "dative": "ναυσί"
+        }
+    },
+    "huios": {
+        "lemma": "υἱός",
+        "type": "mixed_declension",
+        "singular": {
+            "nominative": "υἱός",
+            "vocative": "υἱέ",
+            "accusative": "υἱόν",
+            "genitive": "υἱοῦ",
+            "dative": "υἱῷ"
+        },
+        "plural": {
+            "nominative": "υἱεῖς",
+            "vocative": "υἱεῖς",
+            "accusative": "υἱεῖς",
+            "genitive": "υἱέων",
+            "dative": "υἱέσι"
+        }
+    },
+    "genos": {
+        "lemma": "γένος",
+        "type": "third_declension_neuter",
+        "singular": {
+            "nominative": "γένος",
+            "vocative": "γένος",
+            "accusative": "γένος",
+            "genitive": "γένους",
+            "dative": "γένει"
+        },
+        "plural": {
+            "nominative": "γένη",
+            "vocative": "γένη",
+            "accusative": "γένη",
+            "genitive": "γενῶν",
+            "dative": "γένεσι"
+        }
+    },
+    "trieres": {
+        "lemma": "τριήρης",
+        "type": "third_declension_feminine",
+        "singular": {
+            "nominative": "τριήρης",
+            "vocative": "τριήρες",
+            "accusative": "τριήρη",
+            "genitive": "τριήρους",
+            "dative": "τριήρει"
+        },
+        "plural": {
+            "nominative": "τριήρεις",
+            "vocative": "τριήρεις",
+            "accusative": "τριήρεις",
+            "genitive": "τριήρων",
+            "dative": "τριήρεσι"
+        }
+    },
+    "nautas": {
+        "lemma": "ναύτης",
+        "type": "first_declension_masculine",
+        "singular": {
+            "nominative": "ναύτης",
+            "vocative": "ναῦτα",
+            "accusative": "ναύτην",
+            "genitive": "ναύτου",
+            "dative": "ναύτῃ"
+        },
+        "plural": {
+            "nominative": "ναῦται",
+            "vocative": "ναῦται",
+            "accusative": "ναύτας",
+            "genitive": "ναυτῶν",
+            "dative": "ναύταις"
+        }
+    }
+}
