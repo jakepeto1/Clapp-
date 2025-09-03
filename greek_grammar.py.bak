@@ -1,0 +1,957 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import json
+import unicodedata
+import sys
+from typing import Optional, Tuple
+
+# Unicode combining characters for Greek diacritics
+SMOOTH_BREATHING = '\u0313'  # ᾿
+ROUGH_BREATHING = '\u0314'   # ῾
+IOTA_SUBSCRIPT = '\u0345'    # ͅ (combines with α, η, ω)
+
+class FontManager:
+    """Manage fonts for the application"""
+    def __init__(self):
+        self.default_font = None
+
+    def get_default_font(self):
+        return self.default_font
+
+    def set_default_font(self, font_tuple):
+        self.default_font = font_tuple
+        ttk.Label(mode_frame, text="Select Study Mode:").grid(row=0, column=0, padx=(0, 10))
+        self.mode_var = tk.StringVar(value="First Declension (μουσα)")
+        modes = [
+            "Article (ὁ, ἡ, το)",
+            "First Declension (μουσα)",
+            "First Declension -η (τιμη)",
+            "First Declension Long α (χωρα)",
+            "First Declension Masculine (ναύτης)",
+            "Second Declension (λογος)",
+            "Second Declension Neuter (δωρον)",
+            "Mixed Declension Son (υἱός)",
+            "Third Declension Guard (φύλαξ)",
+            "Third Declension Body (σῶμα)",
+            "Third Declension Old Man (γέρων)",
+            "Third Declension Man (ἀνήρ)",
+            "Third Declension Father (πατήρ)",
+            "Third Declension Hope (ἐλπίς)",
+            "Third Declension Orator (ῥήτωρ)",
+            "Third Declension Woman (γυνή)",
+            "Third Declension City (πόλις)",
+            "Third Declension Town (ἄστυ)",
+            "Third Declension King (βασιλεύς)",
+            "Third Declension Ox (βοῦς)",
+            "Third Declension Ship (ναῦς)",
+            "Third Declension Race (γένος)",
+            "Third Declension Trireme (τριήρης)"
+        ]
+        mode_dropdown = ttk.Combobox(mode_frame, textvariable=self.mode_var, values=modes, font=self.greek_font)
+        mode_dropdown.grid(row=0, column=1, sticky='ew')
+        mode_dropdown.state(['readonly'])
+        mode_dropdown.bind('<<ComboboxSelected>>', self.on_mode_change)
+
+        # Current word frame
+        word_frame = ttk.Frame(self.main_frame)
+        word_frame.grid(row=2, column=0, columnspan=3, pady=(0, 20))
+        ttk.Label(word_frame, text="Decline the word:", font=('Arial', 12)).grid(row=0, column=0, padx=(0, 10))
+        self.word_label = ttk.Label(word_frame, font=self.greek_font)
+        self.word_label.grid(row=0, column=1)
+
+        # Create declension table
+        self.create_declension_table()
+
+        # Buttons frame
+        button_frame = ttk.Frame(self.main_frame)
+        button_frame.grid(row=4, column=0, columnspan=3, pady=20)
+        check_button = ttk.Button(button_frame, text="Check Answers", command=self.check_answers, width=15)
+        check_button.grid(row=0, column=0, padx=10)
+        reveal_button = ttk.Button(button_frame, text="Reveal Answers", command=self.reveal_answers, width=15)
+        reveal_button.grid(row=0, column=1, padx=10)
+        reset_button = ttk.Button(button_frame, text="Reset", command=self.reset_table, width=15)
+        reset_button.grid(row=0, column=2, padx=10)
+class GreekGrammarApp:
+    """Provides an interactive interface for practicing Greek declensions."""
+    
+    def __init__(self, root):
+        """Initialize the Greek Grammar application."""
+        self.root = root
+        self.root.title("Ancient Greek Grammar Study")
+        
+        # Initialize state variables
+        self.pending_diacritic = None
+        self.table_frame = None
+        self.entries = {}
+        self.error_labels = {}
+        
+        # Create font manager
+        self.font_manager = FontManager()
+        
+        # Set up proper Unicode handling for Greek characters
+        import sys
+        if sys.platform.startswith('win'):
+            try:
+                import locale
+                locale.setlocale(locale.LC_ALL, 'Greek_Greece.UTF-8')
+            except locale.Error:
+                try:
+                    locale.setlocale(locale.LC_ALL, 'el_GR.UTF-8')
+                except locale.Error:
+                    print("Warning: Greek locale not available. Unicode support may be limited.")
+        
+        # Set up fonts
+        from tkinter import font
+        self.greek_font = ('Times New Roman', 12)  # Default font that supports Greek
+        
+        # Create specific font configurations
+        self.normal_font = font.Font(family=self.greek_font[0], size=self.greek_font[1])
+        self.bold_font = font.Font(family=self.greek_font[0], size=self.greek_font[1], weight='bold')
+        self.large_font = font.Font(family=self.greek_font[0], size=self.greek_font[1] + 2)
+        self.small_font = font.Font(family=self.greek_font[0], size=self.greek_font[1] - 2)
+
+        # Configure default fonts for different widget types
+        self.root.option_add('*Font', self.normal_font)
+        self.root.option_add('*Entry.font', self.normal_font)
+        self.root.option_add('*Text.font', self.normal_font)
+        self.root.option_add('*Label.font', self.normal_font)
+        self.root.option_add('*Button.font', self.normal_font)
+
+        # Configure root window
+        self.root.configure(padx=20, pady=20)
+        
+        # Main container and grid config
+        self.main_frame = ttk.Frame(self.root, style='Content.TFrame')
+        self.main_frame.grid(row=0, column=0, sticky='nsew')
+        
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(1, weight=1)
+        self.main_frame.grid_columnconfigure(2, weight=1)
+
+        # Initialize paradigms
+        self.paradigms = {}
+        try:
+            with open('paradigms.json', 'r', encoding='utf-8') as f:
+                self.paradigms = json.load(f)
+        except FileNotFoundError:
+            messagebox.showerror("Error", "Could not find paradigms.json file")
+            root.destroy()
+            return
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Could not parse paradigms.json file")
+            root.destroy()
+            return
+
+        # Create title
+        title_label = ttk.Label(self.main_frame, text="Ancient Greek Grammar Study", font=('Arial', 16, 'bold'))
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+
+        # Create study mode selection frame
+        mode_frame = ttk.Frame(self.main_frame)
+        mode_frame.grid(row=1, column=0, columnspan=3, pady=(0, 20), sticky='ew')
+        mode_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(mode_frame, text="Select Study Mode:").grid(row=0, column=0, padx=(0, 10))
+        self.mode_var = tk.StringVar(value="First Declension (μουσα)")
+        modes = [
+    
+    def normalize_greek(self, text: str) -> str:
+        """
+        Normalize Greek text to ensure consistent handling of combining characters.
+        Uses NFC normalization which combines characters and diacritics.
+        """
+        return unicodedata.normalize('NFC', text)
+
+    def add_breathing(self, char: str, breathing: str) -> str:
+        """
+        Add a breathing mark to a Greek vowel.
+        Args:
+            char: The base vowel
+            breathing: Either SMOOTH_BREATHING or ROUGH_BREATHING
+        Returns:
+            Normalized combination of vowel + breathing
+        """
+        # Make sure we're working with lowercase for consistency
+        char = char.lower()
+        # Only add breathing to vowels
+        if char not in 'αεηιουω':
+            return char
+        return self.normalize_greek(char + breathing)
+
+    def add_iota_subscript(self, char: str) -> str:
+        """
+        Add iota subscript to a vowel that can take it (α, η, ω)
+        Returns the original character if it can't take iota subscript
+        """
+        char = char.lower()
+        if char not in 'αηω':
+            return char
+        return self.normalize_greek(char + IOTA_SUBSCRIPT)
+
+    def __init__(self, root):
+        """Initialize the Greek Grammar application."""
+        self.root = root
+        self.root.title("Ancient Greek Grammar Study")
+        
+        # Initialize state variables
+        self.pending_diacritic = None
+        self.table_frame = None
+        self.entries = {}
+        self.error_labels = {}
+        
+        # Create font manager
+        self.font_manager = FontManager()
+        
+        # Set up proper Unicode handling for Greek characters
+        import sys
+        if sys.platform.startswith('win'):
+            try:
+                import locale
+                locale.setlocale(locale.LC_ALL, 'Greek_Greece.UTF-8')
+            except locale.Error:
+                try:
+                    locale.setlocale(locale.LC_ALL, 'el_GR.UTF-8')
+                except locale.Error:
+                    print("Warning: Greek locale not available. Unicode support may be limited.")
+        
+        # Set up fonts
+        from tkinter import font
+        self.greek_font = ('Times New Roman', 12)  # Default font that supports Greek
+        self.font_manager.set_default_font(self.greek_font)
+        
+        # Create specific font configurations
+        self.normal_font = font.Font(family=self.greek_font[0], size=self.greek_font[1])
+        self.bold_font = font.Font(family=self.greek_font[0], size=self.greek_font[1], weight='bold')
+        self.large_font = font.Font(family=self.greek_font[0], size=self.greek_font[1] + 2)
+        self.small_font = font.Font(family=self.greek_font[0], size=self.greek_font[1] - 2)
+
+        # Configure default fonts for different widget types
+        self.root.option_add('*Font', self.normal_font)
+        self.root.option_add('*Entry.font', self.normal_font)
+        self.root.option_add('*Text.font', self.normal_font)
+        self.root.option_add('*Label.font', self.normal_font)
+        self.root.option_add('*Button.font', self.normal_font)
+
+        # Configure root window
+        self.root.configure(padx=20, pady=20)
+        
+        # Main container and grid config
+        self.main_frame = ttk.Frame(self.root, style='Content.TFrame')
+        self.main_frame.grid(row=0, column=0, sticky='nsew')
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(1, weight=1)
+        self.main_frame.grid_columnconfigure(2, weight=1)
+
+        # Title
+        title_label = ttk.Label(self.main_frame, text="Ancient Greek Grammar Study", font=('Arial', 16, 'bold'))
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+
+        # Study mode selection frame
+        mode_frame = ttk.Frame(self.main_frame)
+        mode_frame.grid(row=1, column=0, columnspan=3, pady=(0, 20), sticky='ew')
+        mode_frame.columnconfigure(1, weight=1)
+
+        # Initialize paradigms
+        self.paradigms = {}
+        try:
+            with open('paradigms.json', 'r', encoding='utf-8') as f:
+                self.paradigms = json.load(f)
+        except FileNotFoundError:
+            messagebox.showerror("Error", "Could not find paradigms.json file")
+            root.destroy()
+            return
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Could not parse paradigms.json file")
+            root.destroy()
+            return
+
+        # Setup mode selector
+        ttk.Label(mode_frame, text="Select Study Mode:").grid(row=0, column=0, padx=(0, 10))
+        self.mode_var = tk.StringVar(value="First Declension (μουσα)")
+        modes = [
+            "Article (ὁ, ἡ, το)",
+            "First Declension (μουσα)",
+            "First Declension -η (τιμη)",
+            "First Declension Long α (χωρα)",
+            "First Declension Masculine (ναύτης)",
+            "Second Declension (λογος)",
+            "Second Declension Neuter (δωρον)",
+            "Mixed Declension Son (υἱός)",
+            "Third Declension Guard (φύλαξ)",
+            "Third Declension Body (σῶμα)",
+            "Third Declension Old Man (γέρων)",
+            "Third Declension Man (ἀνήρ)",
+            "Third Declension Father (πατήρ)",
+            "Third Declension Hope (ἐλπίς)",
+            "Third Declension Orator (ῥήτωρ)",
+            "Third Declension Woman (γυνή)",
+            "Third Declension City (πόλις)",
+            "Third Declension Town (ἄστυ)",
+            "Third Declension King (βασιλεύς)",
+            "Third Declension Ox (βοῦς)",
+            "Third Declension Ship (ναῦς)",
+            "Third Declension Race (γένος)",
+            "Third Declension Trireme (τριήρης)"
+        ]
+        mode_dropdown = ttk.Combobox(mode_frame, textvariable=self.mode_var, values=modes, font=self.greek_font)
+        mode_dropdown.grid(row=0, column=1, sticky='ew')
+        mode_dropdown.state(['readonly'])
+        mode_dropdown.bind('<<ComboboxSelected>>', self.on_mode_change)
+
+        # Word frame setup
+        word_frame = ttk.Frame(self.main_frame)
+        word_frame.grid(row=2, column=0, columnspan=3, pady=(0, 20))
+        ttk.Label(word_frame, text="Decline the word:", font=('Arial', 12)).grid(row=0, column=0, padx=(0, 10))
+        self.word_label = ttk.Label(word_frame, font=self.greek_font)
+        self.word_label.grid(row=0, column=1)
+
+        # Initialize paradigms
+        self.paradigms = {}
+        try:
+            with open('paradigms.json', 'r', encoding='utf-8') as f:
+                self.paradigms = json.load(f)
+        except FileNotFoundError:
+            messagebox.showerror("Error", "Could not find paradigms.json file")
+            root.destroy()
+            return
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Could not parse paradigms.json file")
+            root.destroy()
+            return
+
+        # Create title
+        title_label = ttk.Label(self.main_frame, text="Ancient Greek Grammar Study", font=('Arial', 16, 'bold'))
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+
+        # Create study mode selection frame
+        mode_frame = ttk.Frame(self.main_frame)
+        mode_frame.grid(row=1, column=0, columnspan=3, pady=(0, 20), sticky='ew')
+        mode_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(mode_frame, text="Select Study Mode:").grid(row=0, column=0, padx=(0, 10))
+        self.mode_var = tk.StringVar(value="First Declension (μουσα)")
+        modes = [
+            "Article (ὁ, ἡ, το)",
+            "First Declension (μουσα)",
+            "First Declension -η (τιμη)",
+            "First Declension Long α (χωρα)",
+            "First Declension Masculine (ναύτης)",
+            "Second Declension (λογος)",
+            "Second Declension Neuter (δωρον)",
+            "Mixed Declension Son (υἱός)",
+            "Third Declension Guard (φύλαξ)",
+            "Third Declension Body (σῶμα)",
+            "Third Declension Old Man (γέρων)",
+            "Third Declension Man (ἀνήρ)",
+            "Third Declension Father (πατήρ)",
+            "Third Declension Hope (ἐλπίς)",
+            "Third Declension Orator (ῥήτωρ)",
+            "Third Declension Woman (γυνή)",
+            "Third Declension City (πόλις)",
+            "Third Declension Town (ἄστυ)",
+            "Third Declension King (βασιλεύς)",
+            "Third Declension Ox (βοῦς)",
+            "Third Declension Ship (ναῦς)",
+            "Third Declension Race (γένος)",
+            "Third Declension Trireme (τριήρης)"
+        ]
+        mode_dropdown = ttk.Combobox(mode_frame, textvariable=self.mode_var, values=modes, font=self.greek_font)
+        mode_dropdown.grid(row=0, column=1, sticky='ew')
+        mode_dropdown.state(['readonly'])
+        mode_dropdown.bind('<<ComboboxSelected>>', self.on_mode_change)
+
+        # Create word frame setup
+        word_frame = ttk.Frame(self.main_frame)
+        word_frame.grid(row=2, column=0, columnspan=3, pady=(0, 20))
+        ttk.Label(word_frame, text="Decline the word:", font=('Arial', 12)).grid(row=0, column=0, padx=(0, 10))
+        self.word_label = ttk.Label(word_frame, font=self.greek_font)
+        self.word_label.grid(row=0, column=1)
+
+        # Create initial declension table
+        self.create_declension_table()
+
+        # Create help button
+        help_button = ttk.Button(self.root, text="Help", command=self.show_help, width=5)
+        help_button.grid(row=0, column=0, sticky='nw', padx=5, pady=5)
+            
+        modes = [
+            "Article (ὁ, ἡ, το)",
+            "First Declension (μουσα)",
+            "First Declension -η (τιμη)",
+            "First Declension Long α (χωρα)",
+            "First Declension Masculine (ναύτης)",
+            "Second Declension (λογος)",
+            "Second Declension Neuter (δωρον)",
+            "Mixed Declension Son (υἱός)",
+            "Third Declension Guard (φύλαξ)",
+            "Third Declension Body (σῶμα)",
+            "Third Declension Old Man (γέρων)",
+            "Third Declension Man (ἀνήρ)",
+            "Third Declension Father (πατήρ)",
+            "Third Declension Hope (ἐλπίς)",
+            "Third Declension Orator (ῥήτωρ)",
+            "Third Declension Woman (γυνή)",
+            "Third Declension City (πόλις)",
+            "Third Declension Town (ἄστυ)",
+            "Third Declension King (βασιλεύς)",
+            "Third Declension Ox (βοῦς)",
+            "Third Declension Ship (ναῦς)",
+            "Third Declension Race (γένος)",
+            "Third Declension Trireme (τριήρης)"
+        ]
+        mode_dropdown = ttk.Combobox(mode_frame, textvariable=self.mode_var, values=modes, font=self.greek_font)
+        mode_dropdown.grid(row=0, column=1, sticky='ew')
+        mode_dropdown.state(['readonly'])
+        mode_dropdown.bind('<<ComboboxSelected>>', self.on_mode_change)
+        
+        # Current word frame
+        word_frame = ttk.Frame(self.main_frame)
+        word_frame.grid(row=2, column=0, columnspan=3, pady=(0, 20))
+        ttk.Label(word_frame, text="Decline the word:", font=('Arial', 12)).grid(row=0, column=0, padx=(0, 10))
+        self.word_label = ttk.Label(word_frame, font=self.greek_font)
+        self.word_label.grid(row=0, column=1)
+        
+        # Create declension table
+        self.create_declension_table()
+        
+        # Buttons frame
+        button_frame = ttk.Frame(self.main_frame)
+        button_frame.grid(row=4, column=0, columnspan=3, pady=20)
+        
+        check_button = ttk.Button(button_frame, text="Check Answers", command=self.check_answers, width=15)
+        check_button.grid(row=0, column=0, padx=10)
+        
+        reveal_button = ttk.Button(button_frame, text="Reveal Answers", command=self.reveal_answers, width=15)
+        reveal_button.grid(row=0, column=1, padx=10)
+        
+        reset_button = ttk.Button(button_frame, text="Reset", command=self.reset_table, width=15)
+        reset_button.grid(row=0, column=2, padx=10)
+                
+        # Create declension table
+        self.create_declension_table()
+
+    def create_declension_table(self):
+        """Create the declension table with input fields for each case"""
+        # Create declension table frame
+        if self.table_frame:
+            self.table_frame.destroy()
+        self.table_frame = ttk.Frame(self.main_frame)
+        self.table_frame.grid(row=3, column=0, columnspan=3, pady=(0, 20))
+
+        # Initialize with the selected paradigm
+        current_paradigm = self.get_current_paradigm()
+        if current_paradigm:
+            # Create headers
+            ttk.Label(self.table_frame, text="").grid(row=0, column=0)
+            ttk.Label(self.table_frame, text="Singular", font=('Arial', 10, 'bold')).grid(row=0, column=2, pady=(0, 10))
+            ttk.Label(self.table_frame, text="Plural", font=('Arial', 10, 'bold')).grid(row=0, column=4, pady=(0, 10))
+
+            # Create input fields for each case
+            cases = ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]
+            for i, case in enumerate(cases):
+                # Case label
+                ttk.Label(self.table_frame, text=case, width=15).grid(row=i+1, column=0, sticky='e', padx=(0, 10))
+
+                # Singular
+                self.error_labels[f"{case}_sg"] = ttk.Label(self.table_frame, text="❌", foreground='red')
+                self.error_labels[f"{case}_sg"].grid(row=i+1, column=1, padx=5)
+                self.error_labels[f"{case}_sg"].grid_remove()
+
+                entry_sg = tk.Entry(self.table_frame, width=20, font=self.greek_font)
+                self.entries[f"{case}_sg"] = entry_sg
+                entry_sg.grid(row=i+1, column=2, padx=5, pady=5)
+
+                # Bindings for singular
+                entry_sg.bind('<KeyPress>', lambda e: self.handle_key_press(e))
+                entry_sg.bind('<KeyRelease>', lambda e, case=case: self.clear_error(f"{case}_sg"))
+                entry_sg.bind('<Return>', lambda e, case=case: self.handle_enter(e, f"{case}_sg"))
+                entry_sg.bind('<Up>', lambda e, case=case: self.handle_arrow(e, f"{case}_sg", 'up'))
+                entry_sg.bind('<Down>', lambda e, case=case: self.handle_arrow(e, f"{case}_sg", 'down'))
+
+                # Plural
+                self.error_labels[f"{case}_pl"] = ttk.Label(self.table_frame, text="❌", foreground='red')
+                self.error_labels[f"{case}_pl"].grid(row=i+1, column=3, padx=5)
+                self.error_labels[f"{case}_pl"].grid_remove()
+
+                entry_pl = tk.Entry(self.table_frame, width=20, font=self.greek_font)
+                self.entries[f"{case}_pl"] = entry_pl
+                entry_pl.grid(row=i+1, column=4, padx=5, pady=5)
+
+                # Bindings for plural
+                entry_pl.bind('<KeyPress>', lambda e: self.handle_key_press(e))
+                entry_pl.bind('<KeyRelease>', lambda e, case=case: self.clear_error(f"{case}_pl"))
+                entry_pl.bind('<Return>', lambda e, case=case: self.handle_enter(e, f"{case}_pl"))
+                entry_pl.bind('<Up>', lambda e, case=case: self.handle_arrow(e, f"{case}_pl", 'up'))
+                entry_pl.bind('<Down>', lambda e, case=case: self.handle_arrow(e, f"{case}_pl", 'down'))
+        
+        # Buttons frame
+        button_frame = ttk.Frame(self.main_frame)
+        button_frame.grid(row=4, column=0, columnspan=3, pady=20)
+        
+        check_button = ttk.Button(button_frame, text="Check Answers", command=self.check_answers, width=15)
+        check_button.grid(row=0, column=0, padx=10)
+        
+        reveal_button = ttk.Button(button_frame, text="Reveal Answers", command=self.reveal_answers, width=15)
+        reveal_button.grid(row=0, column=1, padx=10)
+        
+        reset_button = ttk.Button(button_frame, text="Reset", command=self.reset_table, width=15)
+        reset_button.grid(row=0, column=2, padx=10)
+        
+    def check_answers(self):
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            messagebox.showerror("Error", "No paradigm selected")
+            return
+            
+        for case in ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]:
+            # Check singular
+            if "singular" in current_paradigm and case.lower() in current_paradigm["singular"]:
+                self.check_single_answer(f"{case}_sg", current_paradigm["singular"][case.lower()])
+            
+            # Check plural
+            if "plural" in current_paradigm and case.lower() in current_paradigm["plural"]:
+                self.check_single_answer(f"{case}_pl", current_paradigm["plural"][case.lower()])
+
+    def check_single_answer(self, entry_key, correct_answer):
+        """Check if the user's answer matches the correct answer, handling both single forms and arrays"""
+        entry = self.entries[entry_key]
+        error_label = self.error_labels[entry_key]
+        
+        user_answer = self.strip_to_base_with_breathing_and_iota(entry.get().strip())
+        
+        # Handle array of correct answers (for articles with multiple gender forms)
+        if isinstance(correct_answer, list):
+            # Extract gender index from the entry key
+            if "_masc" in entry_key:
+                gender_idx = 0
+            elif "_fem" in entry_key:
+                gender_idx = 1
+            elif "_neut" in entry_key:
+                gender_idx = 2
+            else:
+                return False
+            
+            correct = self.strip_to_base_with_breathing_and_iota(correct_answer[gender_idx])
+        else:
+            correct = self.strip_to_base_with_breathing_and_iota(correct_answer)
+        
+        # Compare answers
+        is_correct = user_answer == correct
+        if is_correct:
+            entry.configure(bg='gold')
+            entry.configure(state='readonly')
+            error_label.grid_remove()
+        else:
+            entry.configure(bg='white')
+            error_label.grid()
+            
+        return is_correct
+            
+    def clear_error(self, entry_key):
+        entry = self.entries[entry_key]
+        if entry.cget('state') != 'readonly':  # Only clear if not correct
+            self.error_labels[entry_key].grid_remove()
+            entry.configure(bg='white')
+
+    def reveal_answers(self):
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            return
+            
+        for case in ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]:
+            # Fill singular
+            if "singular" in current_paradigm and case.lower() in current_paradigm["singular"]:
+                entry_key = f"{case}_sg"
+                if entry_key in self.entries:
+                    entry = self.entries[entry_key]
+                    entry.delete(0, tk.END)
+                    entry.insert(0, current_paradigm["singular"][case.lower()])
+                    entry.configure(state='readonly', bg='lightgray')
+                    
+            # Fill plural
+            if "plural" in current_paradigm and case.lower() in current_paradigm["plural"]:
+                entry_key = f"{case}_pl"
+                if entry_key in self.entries:
+                    entry = self.entries[entry_key]
+                    entry.delete(0, tk.END)
+                    entry.insert(0, current_paradigm["plural"][case.lower()])
+                    entry.configure(state='readonly', bg='lightgray')
+    
+    def reset_table(self):
+        for key, entry in self.entries.items():
+            entry.configure(state='normal')  # Reset to editable
+            entry.delete(0, tk.END)  # Clear the content
+            entry.configure(bg='white')  # Reset background color
+            self.error_labels[key].grid_remove()  # Hide error mark
+            
+    def show_help(self):
+        """Show help dialog with instructions for using the application"""
+        help_text = '''Ancient Greek Grammar Study
+
+Instructions:
+1. Select a declension type from the dropdown menu
+2. Enter the correct forms in each field
+3. Use Check Answers to verify your entries
+4. Use Reveal Answers to see the correct forms
+5. Use Reset to clear all entries
+
+Navigation:
+• Enter key: Move to next field (only if correct)
+• Up/Down arrows: Move between cases
+• Tab: Move between fields
+
+Special Characters:
+• Type a vowel (α, ε, η, ι, ο, υ, ω) followed by:
+  - ] for rough breathing (e.g., o] → ὁ)
+  - [ for smooth breathing (e.g., η[ → ἡ)
+  - { for iota subscript (e.g., α{ → ᾳ)
+
+Tips:
+• The word to decline is shown above the table
+• Gold background indicates correct answers
+• Red X marks indicate incorrect answers
+• Accents are not required'''
+
+        help_window = tk.Toplevel(self.root)
+        help_window.title("Greek Grammar Help")
+        help_window.geometry("400x500")
+
+        text_widget = tk.Text(help_window, wrap=tk.WORD, padx=10, pady=10)
+        text_widget.insert("1.0", help_text)
+        text_widget.config(state='disabled')
+        text_widget.pack(fill=tk.BOTH, expand=True)
+        
+    def add_smooth_breathing(self, char):
+        breathings = {
+            'α': 'ἀ', 'ε': 'ἐ', 'η': 'ἠ', 'ι': 'ἰ', 
+            'ο': 'ὀ', 'υ': 'ὐ', 'ω': 'ὠ'
+        }
+        return breathings.get(char, char)
+        
+    def add_rough_breathing(self, char):
+        breathings = {
+            'α': 'ἁ', 'ε': 'ἑ', 'η': 'ἡ', 'ι': 'ἱ', 
+            'ο': 'ὁ', 'υ': 'ὑ', 'ω': 'ὡ'
+        }
+        return breathings.get(char, char)
+        
+    def add_iota_subscript(self, char):
+        subscripts = {
+            'α': 'ᾳ', 'η': 'ῃ', 'ω': 'ῳ'
+        }
+        return subscripts.get(char, char)
+
+    def strip_to_base_with_breathing_and_iota(self, text):
+        """Strip everything except base letters, breathings, and iota subscripts"""
+        # Dictionary to map characters with accents to their base + breathing/iota form
+        replacements = {
+            # Alpha variations
+            'ά': 'α', 'ὰ': 'α', 'ᾶ': 'α',
+            'ἀ': 'ἀ', 'ἁ': 'ἁ',  # Keep breathings
+            'ᾳ': 'ᾳ',  # Keep iota subscript
+            
+            # Epsilon variations
+            'έ': 'ε', 'ὲ': 'ε',
+            'ἐ': 'ἐ', 'ἑ': 'ἑ',  # Keep breathings
+            
+            # Eta variations
+            'ή': 'η', 'ὴ': 'η', 'ῆ': 'η',
+            'ἠ': 'ἠ', 'ἡ': 'ἡ',  # Keep breathings
+            'ῃ': 'ῃ',  # Keep iota subscript
+            
+            # Iota variations
+            'ί': 'ι', 'ὶ': 'ι', 'ῖ': 'ι',
+            'ἰ': 'ἰ', 'ἱ': 'ἱ',  # Keep breathings
+            
+            # Omicron variations
+            'ό': 'ο', 'ὸ': 'ο',
+            'ὀ': 'ὀ', 'ὁ': 'ὁ',  # Keep breathings
+            
+            # Upsilon variations
+            'ύ': 'υ', 'ὺ': 'υ', 'ῦ': 'υ',
+            'ὐ': 'ὐ', 'ὑ': 'ὑ',  # Keep breathings
+            
+            # Omega variations
+            'ώ': 'ω', 'ὼ': 'ω', 'ῶ': 'ω',
+            'ὠ': 'ὠ', 'ὡ': 'ὡ',  # Keep breathings
+            'ῳ': 'ῳ',  # Keep iota subscript
+        }
+        
+        result = text.lower()
+        for accented, base in replacements.items():
+            result = result.replace(accented.lower(), base)
+        return result
+            
+    def handle_enter(self, event, current_key):
+        """Handle Enter key press in form fields"""
+        # Get current paradigm and validate input
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            return "break"
+
+        # Parse key components
+        key_parts = current_key.split('_')
+        case = key_parts[0]
+        number = key_parts[1]
+        number_key = 'singular' if number == 'sg' else 'plural'
+
+        # Check answer
+        if self.check_single_answer(current_key, current_paradigm[number_key][case.lower()]):
+            # Answer is correct, determine next field
+            cases = ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]
+            current_idx = cases.index(case)
+            
+            # Determine next field to focus
+            if current_idx < len(cases) - 1:
+                next_key = f"{cases[current_idx + 1]}_{number}"
+            else:  # At end of cases
+                if number == "sg":
+                    next_key = f"Nominative_pl"  # Move to plural
+                else:
+                    next_key = f"Nominative_sg"  # Wrap around
+            
+            # Focus next field if it exists and isn't readonly
+            if next_key in self.entries and self.entries[next_key].cget('state') != 'readonly':
+                self.entries[next_key].focus()
+
+        return "break"
+        
+    def handle_arrow(self, event, current_key, direction):
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+        case, number = current_key.split('_')
+        current_idx = cases.index(case)
+        
+        if direction == 'up' and current_idx > 0:
+            next_key = f"{cases[current_idx - 1]}_{number}"
+            self.entries[next_key].focus()
+        elif direction == 'down' and current_idx < len(cases) - 1:
+            next_key = f"{cases[current_idx + 1]}_{number}"
+            self.entries[next_key].focus()
+        return "break"  # Prevent default arrow behavior
+        
+    def create_declension_table(self):
+        """Create the declension table with input fields for each case"""
+        # Create declension table frame
+        if self.table_frame:
+            self.table_frame.destroy()
+        
+        self.table_frame = ttk.Frame(self.main_frame)
+        self.table_frame.grid(row=3, column=0, columnspan=3, pady=(0, 20))
+        
+        # Initialize with the selected paradigm
+        current_paradigm = self.get_current_paradigm()
+        if current_paradigm:
+            # Create headers
+            ttk.Label(self.table_frame, text="").grid(row=0, column=0)
+            ttk.Label(self.table_frame, text="Singular", font=('Arial', 10, 'bold')).grid(row=0, column=2, pady=(0, 10))
+            ttk.Label(self.table_frame, text="Plural", font=('Arial', 10, 'bold')).grid(row=0, column=4, pady=(0, 10))
+            
+            # Create input fields for each case
+            cases = ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]
+            for i, case in enumerate(cases):
+                # Case label
+                ttk.Label(self.table_frame, text=case, width=15).grid(row=i+1, column=0, sticky='e', padx=(0, 10))
+                
+                # Singular
+                self.error_labels[f"{case}_sg"] = ttk.Label(self.table_frame, text="❌", foreground='red')
+                self.error_labels[f"{case}_sg"].grid(row=i+1, column=1, padx=5)
+                self.error_labels[f"{case}_sg"].grid_remove()
+                
+                entry_sg = tk.Entry(self.table_frame, width=20, font=self.greek_font)
+                self.entries[f"{case}_sg"] = entry_sg
+                entry_sg.grid(row=i+1, column=2, padx=5, pady=5)
+                
+                # Bindings for singular
+                entry_sg.bind('<KeyPress>', lambda e: self.handle_key_press(e))
+                entry_sg.bind('<KeyRelease>', lambda e, case=case: self.clear_error(f"{case}_sg"))
+                entry_sg.bind('<Return>', lambda e, case=case: self.handle_enter(e, f"{case}_sg"))
+                entry_sg.bind('<Up>', lambda e, case=case: self.handle_arrow(e, f"{case}_sg", 'up'))
+                entry_sg.bind('<Down>', lambda e, case=case: self.handle_arrow(e, f"{case}_sg", 'down'))
+                
+                # Plural
+                self.error_labels[f"{case}_pl"] = ttk.Label(self.table_frame, text="❌", foreground='red')
+                self.error_labels[f"{case}_pl"].grid(row=i+1, column=3, padx=5)
+                self.error_labels[f"{case}_pl"].grid_remove()
+                
+                entry_pl = tk.Entry(self.table_frame, width=20, font=self.greek_font)
+                self.entries[f"{case}_pl"] = entry_pl
+                entry_pl.grid(row=i+1, column=4, padx=5, pady=5)
+                
+                # Bindings for plural
+                entry_pl.bind('<KeyPress>', lambda e: self.handle_key_press(e))
+                entry_pl.bind('<KeyRelease>', lambda e, case=case: self.clear_error(f"{case}_pl"))
+                entry_pl.bind('<Return>', lambda e, case=case: self.handle_enter(e, f"{case}_pl"))
+                entry_pl.bind('<Up>', lambda e, case=case: self.handle_arrow(e, f"{case}_pl", 'up'))
+                entry_pl.bind('<Down>', lambda e, case=case: self.handle_arrow(e, f"{case}_pl", 'down'))
+    
+    def get_current_paradigm(self):
+        """Get the currently selected paradigm based on the dropdown selection."""
+        mode = self.mode_var.get() if hasattr(self, 'mode_var') else ""
+        
+        # Map dropdown selections to paradigm keys
+        paradigm_map = {
+            "Article (ὁ, ἡ, το)": "article",
+            "First Declension (μουσα)": "mousa",
+            "First Declension -η (τιμη)": "time",
+            "First Declension Long α (χωρα)": "chora",
+            "First Declension Masculine (ναύτης)": "nautas",
+            "Second Declension (λογος)": "logos",
+            "Second Declension Neuter (δωρον)": "doron",
+            "Mixed Declension Son (υἱός)": "huios",
+            "Third Declension Guard (φύλαξ)": "phylax",
+            "Third Declension Body (σῶμα)": "soma",
+            "Third Declension Old Man (γέρων)": "geron",
+            "Third Declension Man (ἀνήρ)": "aner",
+            "Third Declension Father (πατήρ)": "pater",
+            "Third Declension Hope (ἐλπίς)": "elpis",
+            "Third Declension Orator (ῥήτωρ)": "rhetor",
+            "Third Declension Woman (γυνή)": "gyne",
+            "Third Declension City (πόλις)": "polis",
+            "Third Declension Town (ἄστυ)": "asty",
+            "Third Declension King (βασιλεύς)": "basileus",
+            "Third Declension Ox (βοῦς)": "bous",
+            "Third Declension Ship (ναῦς)": "naus",
+            "Third Declension Race (γένος)": "genos",
+            "Third Declension Trireme (τριήρης)": "trieres"
+        }
+        
+        # Get the paradigm key directly from the map
+        paradigm_key = paradigm_map.get(mode)
+        if paradigm_key and paradigm_key in self.paradigms:
+            return self.paradigms[paradigm_key]
+        
+        # If no valid paradigm found, return None
+        return None
+            
+    def on_mode_change(self, event):
+        self.reset_table()
+        paradigm = self.get_current_paradigm()
+        if not paradigm:
+            messagebox.showerror("Error", "Could not find paradigm data")
+            return
+            
+        # Update the word to decline
+        self.word_label.configure(text=paradigm["lemma"])
+        
+    def handle_key_press(self, event):
+        """
+        Handle special character input for breathings and iota subscript.
+        
+        Events:
+        - '[': Smooth breathing (on next vowel)
+        - ']': Rough breathing (on next vowel)
+        - '{': Iota subscript (on next long vowel)
+        """
+        entry = event.widget
+        char = event.char
+        
+        # Special character handling
+        if char in ['[', ']', '{']:
+            self.pending_diacritic = char
+            return "break"
+            
+        # Handle regular character input with pending diacritic
+        if self.pending_diacritic and char:
+            result = None
+            
+            # Try to apply the pending diacritic to the new character
+            if char.lower() in 'αεηιουω':  # Base vowels
+                if self.pending_diacritic == '[' and char.lower() in 'αεηιουω':  # Smooth breathing
+                    result = self.add_smooth_breathing(char)
+                elif self.pending_diacritic == ']' and char.lower() in 'αεηιουω':  # Rough breathing
+                    result = self.add_rough_breathing(char)
+                elif self.pending_diacritic == '{' and char.lower() in 'αηω':  # Iota subscript
+                    result = self.add_iota_subscript(char)
+                
+                # If we got a valid combination, insert it instead of the original char
+                if result:
+                    self.pending_diacritic = None
+                    entry.insert(tk.END, result)
+                    return "break"
+            
+            # Reset pending diacritic if we couldn't apply it
+            self.pending_diacritic = None
+        
+        # Let regular character input through if no pending diacritic
+        return None
+
+    def insert_char(self, char):
+        """Insert a character at the current cursor position in the focused entry"""
+        focused = self.root.focus_get()
+        if isinstance(focused, (tk.Entry, ttk.Entry)):
+            # Always normalize the character before inserting
+            normalized_char = self.normalize_greek(char)
+            pos = focused.index(tk.INSERT)
+            focused.insert(pos, normalized_char)
+            focused.focus()  # Ensure focus remains on the entry
+            
+    def handle_special_input(self, event, diacritic):
+        """
+        Handle special character input for breathings and iota subscript.
+        Args:
+            event: The key event
+            diacritic: The diacritic to add (SMOOTH_BREATHING, ROUGH_BREATHING, or IOTA_SUBSCRIPT)
+        """
+        entry = event.widget
+        text = entry.get()
+        
+        # Do nothing if there's no text
+        if not text:
+            return "break"
+            
+        # Get the last character typed
+        last_char = text[-1].lower()
+        result = None
+        
+        # Apply the appropriate diacritic
+        if diacritic in (SMOOTH_BREATHING, ROUGH_BREATHING):
+            if last_char in 'αεηιουω':
+                result = self.normalize_greek(last_char + diacritic)
+        elif diacritic == IOTA_SUBSCRIPT:
+            if last_char in 'αηω':
+                result = self.normalize_greek(last_char + diacritic)
+            
+        # If we successfully created a combined character, replace the last character
+        if result:
+            entry.delete(len(text)-1, tk.END)
+            entry.insert(tk.END, result)
+            
+        # Always return "break" to prevent the special character from being inserted
+        return "break"
+
+if __name__ == "__main__":
+    try:
+        print("Starting application...")
+        root = tk.Tk()
+        root.title("Ancient Greek Grammar Study")
+        
+        print("Configuring window...")
+        # Configure window
+        root.minsize(600, 400)  # Set minimum window size
+        root.geometry("800x600")  # Set initial window size
+        
+        # Configure grid
+        root.columnconfigure(0, weight=1)
+        root.rowconfigure(0, weight=1)
+        
+        # Configure styles
+        print("Configuring styles...")
+        style = ttk.Style()
+        style.configure('Correct.TEntry', fieldbackground='light green')
+        style.configure('Incorrect.TEntry', fieldbackground='light coral')
+        style.configure('Header.TFrame', background='white')
+        style.configure('Content.TFrame', background='white', relief='solid')
+        
+        print("Creating application...")
+        app = GreekGrammarApp(root)
+        print("Starting main loop...")
+        root.mainloop()
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise
