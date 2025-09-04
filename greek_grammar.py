@@ -981,25 +981,24 @@ class GreekGrammarApp:
         
         # Determine available tenses based on current verb
         mode = self.mode_var.get()
-        if "λύω" in mode or "φιλέω" in mode or "τιμάω" in mode or "δηλόω" in mode or "βάλλω" in mode or "δίδωμι" in mode or "τίθημι" in mode or "ἵστημι" in mode or "φημί" in mode or "ἵημι" in mode:
-            available_tenses = ["Present", "Imperfect", "Aorist", "Future"]
-        elif "εἰμί" in mode:
-            available_tenses = ["Present", "Imperfect", "Future"]
-            # If user had Aorist selected but switched to εἰμί, default to Present
-            if tense_value == "Aorist":
-                tense_value = "Present"
-        elif "οἶδα" in mode:
-            available_tenses = ["Present", "Imperfect"]
-            # οἶδα is a perfect with present meaning, limited forms
-            if tense_value in ["Aorist", "Future"]:
-                tense_value = "Present"
-        elif "εἶμι" in mode:
-            available_tenses = ["Present", "Imperfect", "Future"]
-            # εἶμι (go) has no aorist
-            if tense_value == "Aorist":
-                tense_value = "Present"
-        else:
-            available_tenses = ["Present", "Imperfect", "Aorist", "Future"]
+        available_tenses = self.get_base_available_tenses()
+        
+        # If current tense is not available for this verb, reset to Present
+        if tense_value not in available_tenses:
+            tense_value = "Present"
+        
+        # Further filter tenses based on current mood (if mood is already set)
+        current_mood = getattr(self, 'mood_var', None)
+        if current_mood:
+            try:
+                mood_value = current_mood.get()
+                if mood_value == "Infinitive":
+                    # Infinitives only exist for Present, Aorist, Future (no Imperfect)
+                    available_tenses = [t for t in available_tenses if t != "Imperfect"]
+                    if tense_value == "Imperfect":
+                        tense_value = "Present"
+            except:
+                pass  # Ignore errors if mood_var not properly set yet
         
         self.tense_var = tk.StringVar(value=tense_value)
         
@@ -1061,11 +1060,11 @@ class GreekGrammarApp:
         if tense_value == "Present":
             available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative", "Infinitive"]
         elif tense_value == "Imperfect":
-            available_moods = ["Indicative", "Optative"]
+            available_moods = ["Indicative", "Optative"]  # No infinitive for imperfect
         elif tense_value == "Aorist":
             available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative", "Infinitive"]
         elif tense_value == "Future":
-            available_moods = ["Indicative", "Optative", "Infinitive"]
+            available_moods = ["Indicative", "Optative", "Infinitive"]  # No subjunctive for future
         else:
             available_moods = ["Indicative"]
         
@@ -1095,6 +1094,9 @@ class GreekGrammarApp:
             # Update selectors frame for finite verb layout (3 columns)
             selectors_frame.grid_configure(columnspan=3)
             self.create_finite_verb_table()
+        
+        # Update tense/mood constraints after everything is set up
+        self.update_tense_mood_constraints()
     
     def create_infinitive_table(self):
         """Create a simple table for infinitive forms (tense × voice combinations)."""
@@ -1233,12 +1235,21 @@ class GreekGrammarApp:
                 self.error_labels[entry_key] = error_label
 
     def handle_key_press(self, event):
-        """Handle special character input."""
+        """Handle special character input.
+        
+        Diacritic shortcuts:
+        [ = smooth breathing (ἀ, ἐ, ἠ, ἰ, ὀ, ὐ, ὠ)
+        ] = rough breathing (ἁ, ἑ, ἡ, ἱ, ὁ, ὑ, ὡ)
+        { = iota subscript (ᾳ, ῃ, ῳ)
+        / = acute accent (ά, έ, ή, ί, ό, ύ, ώ)
+        \\ = grave accent (ὰ, ὲ, ὴ, ὶ, ὸ, ὺ, ὼ)
+        = = circumflex accent (ᾶ, ῆ, ῖ, ῦ, ῶ)
+        """
         char = event.char
         entry = event.widget
         
         # Handle special diacritic keys
-        if char in ['[', ']', '{']:
+        if char in ['[', ']', '{', '/', '\\', '=']:
             print(f"Diacritic key detected: {char}")
             cursor_pos = entry.index(tk.INSERT)
             
@@ -1256,12 +1267,21 @@ class GreekGrammarApp:
                         result = self.add_rough_breathing(prev_char)
                     elif char == '{':
                         result = self.add_iota_subscript(prev_char)
+                    elif char == '/':
+                        result = self.add_acute_accent(prev_char)
+                    elif char == '\\':
+                        result = self.add_grave_accent(prev_char)
+                    elif char == '=':
+                        result = self.add_circumflex_accent(prev_char)
                     
                     if result and result != prev_char:
                         entry.delete(cursor_pos-1, cursor_pos)
                         entry.insert(cursor_pos-1, result)
                         print(f"Inserted character with diacritic: {result}")
+                        # Position cursor after the modified character
+                        entry.icursor(cursor_pos)
             
+            # Prevent the diacritic character from being inserted
             return "break"
         
         return None
@@ -1301,6 +1321,42 @@ class GreekGrammarApp:
             return char
         result = subscripts[char]
         print(f"Iota subscript: {char} -> {result}")
+        return result
+
+    def add_acute_accent(self, char):
+        """Add acute accent to a vowel."""
+        accents = {
+            'α': 'ά', 'ε': 'έ', 'η': 'ή', 'ι': 'ί', 
+            'ο': 'ό', 'υ': 'ύ', 'ω': 'ώ',
+            'Α': 'Ά', 'Ε': 'Έ', 'Η': 'Ή', 'Ι': 'Ί',
+            'Ο': 'Ό', 'Υ': 'Ύ', 'Ω': 'Ώ'
+        }
+        result = accents.get(char, char)
+        print(f"Acute accent: {char} -> {result}")
+        return result
+
+    def add_grave_accent(self, char):
+        """Add grave accent to a vowel."""
+        accents = {
+            'α': 'ὰ', 'ε': 'ὲ', 'η': 'ὴ', 'ι': 'ὶ', 
+            'ο': 'ὸ', 'υ': 'ὺ', 'ω': 'ὼ',
+            'Α': 'Ὰ', 'Ε': 'Ὲ', 'Η': 'Ὴ', 'Ι': 'Ὶ',
+            'Ο': 'Ὸ', 'Υ': 'Ὺ', 'Ω': 'Ὼ'
+        }
+        result = accents.get(char, char)
+        print(f"Grave accent: {char} -> {result}")
+        return result
+
+    def add_circumflex_accent(self, char):
+        """Add circumflex accent to a vowel."""
+        accents = {
+            'α': 'ᾶ', 'η': 'ῆ', 'ι': 'ῖ', 
+            'υ': 'ῦ', 'ω': 'ῶ',
+            'Α': 'ᾶ', 'Η': 'ῆ', 'Ι': 'ῖ',
+            'Υ': 'ῦ', 'Ω': 'ῶ'
+        }
+        result = accents.get(char, char)
+        print(f"Circumflex accent: {char} -> {result}")
         return result
 
     def normalize_greek(self, text):
@@ -1409,8 +1465,61 @@ class GreekGrammarApp:
     def on_verb_form_change(self, event):
         """Handle changes to verb tense, voice, or mood selectors."""
         if self.type_var.get() == "Verb":
+            # Update available options based on current selections
+            self.update_tense_mood_constraints()
             self.reset_table()
             self.update_word_display()
+    
+    def update_tense_mood_constraints(self):
+        """Update available tense and mood options based on current selections."""
+        current_tense = self.tense_var.get()
+        current_mood = self.mood_var.get()
+        
+        # Determine available tenses based on current mood
+        if current_mood == "Infinitive":
+            # Infinitives only exist for Present, Aorist, Future (no Imperfect)
+            base_tenses = self.get_base_available_tenses()
+            available_tenses = [t for t in base_tenses if t != "Imperfect"]
+            if current_tense == "Imperfect":
+                self.tense_var.set("Present")
+                current_tense = "Present"
+        else:
+            available_tenses = self.get_base_available_tenses()
+        
+        # Update tense dropdown
+        self.tense_dropdown['values'] = available_tenses
+        
+        # Determine available moods based on current tense
+        if current_tense == "Present":
+            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative", "Infinitive"]
+        elif current_tense == "Imperfect":
+            available_moods = ["Indicative", "Optative"]  # No infinitive for imperfect
+            if current_mood == "Infinitive":
+                self.mood_var.set("Indicative")
+        elif current_tense == "Aorist":
+            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative", "Infinitive"]
+        elif current_tense == "Future":
+            available_moods = ["Indicative", "Optative", "Infinitive"]  # No subjunctive for future
+            if current_mood == "Subjunctive":
+                self.mood_var.set("Indicative")
+        else:
+            available_moods = ["Indicative"]
+        
+        # Update mood dropdown
+        self.mood_dropdown['values'] = available_moods
+    
+    def get_base_available_tenses(self):
+        """Get the base available tenses for the current verb (before mood constraints)."""
+        mode = self.mode_var.get()
+        
+        if "εἰμί" in mode:
+            return ["Present", "Imperfect"]
+        elif "οἶδα" in mode:
+            return ["Present", "Imperfect"]
+        elif "εἶμι" in mode:
+            return ["Present", "Imperfect", "Future"]
+        else:
+            return ["Present", "Imperfect", "Aorist", "Future"]
 
     def get_current_paradigm(self):
         """Get the currently selected paradigm."""
@@ -1487,8 +1596,22 @@ class GreekGrammarApp:
                 voice_key = voice_map.get(voice_val, voice_val)
                 
                 # Construct paradigm key
-                paradigm_key = f"{verb_base}_{tense_key}_{mood_key}_{voice_key}"
-                return self.paradigms.get(paradigm_key)
+                if mood_val == "infinitive":
+                    # For infinitives, combine all three voices into one paradigm
+                    combined_paradigm = {}
+                    for voice_name, voice_abbr in voice_map.items():
+                        voice_paradigm_key = f"{verb_base}_{tense_key}_{mood_key}_{voice_abbr}"
+                        voice_paradigm = self.paradigms.get(voice_paradigm_key)
+                        if voice_paradigm:
+                            # Extract the infinitive form for this voice
+                            inf_key = f"inf_{voice_name}"
+                            if inf_key in voice_paradigm:
+                                combined_paradigm[inf_key] = voice_paradigm[inf_key]
+                    return combined_paradigm if combined_paradigm else None
+                else:
+                    # For finite verbs, use single paradigm
+                    paradigm_key = f"{verb_base}_{tense_key}_{mood_key}_{voice_key}"
+                    return self.paradigms.get(paradigm_key)
             else:
                 # Fallback to present indicative active
                 paradigm_key = f"{verb_base}_pres_ind_act"
@@ -1635,11 +1758,14 @@ class GreekGrammarApp:
                                             self.error_labels[entry_key].grid()
                                         all_correct = False
         elif current_type == "Verb":
-            # Check verb answers (person/number structure)
-            persons = ["1st", "2nd", "3rd"]
-            for person in persons:
-                for number in ["sg", "pl"]:
-                    entry_key = f"{person}_{number}"
+            # Check if we're dealing with infinitives or finite verbs
+            current_mood = self.mood_var.get()
+            
+            if current_mood == "Infinitive":
+                # Check infinitive answers (voice-based structure)
+                voices = ["active", "middle", "passive"]
+                for voice in voices:
+                    entry_key = f"inf_{voice}"
                     
                     if entry_key in self.entries:
                         user_answer = self.entries[entry_key].get().strip()
@@ -1654,6 +1780,26 @@ class GreekGrammarApp:
                             if entry_key in self.error_labels:
                                 self.error_labels[entry_key].grid()
                             all_correct = False
+            else:
+                # Check finite verb answers (person/number structure)
+                persons = ["1st", "2nd", "3rd"]
+                for person in persons:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{person}_{number}"
+                        
+                        if entry_key in self.entries:
+                            user_answer = self.entries[entry_key].get().strip()
+                            correct_answer = current_paradigm.get(entry_key, "")
+                            
+                            # Remove accents for comparison
+                            user_answer_no_accents = self.remove_accents(user_answer)
+                            correct_answer_no_accents = self.remove_accents(correct_answer)
+                            
+                            if user_answer_no_accents != correct_answer_no_accents:
+                                # Show error indicator
+                                if entry_key in self.error_labels:
+                                    self.error_labels[entry_key].grid()
+                                all_correct = False
         else:
             # Check noun answers (simple structure)
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
@@ -1761,11 +1907,14 @@ class GreekGrammarApp:
                                     entry.insert(0, current_paradigm[gender][answer_key])
                                     entry.configure(state='readonly', bg='lightgray')
         elif current_type == "Verb":
-            # Fill verb answers (person/number structure)
-            persons = ["1st", "2nd", "3rd"]
-            for person in persons:
-                for number in ["sg", "pl"]:
-                    entry_key = f"{person}_{number}"
+            # Check if we're dealing with infinitives or finite verbs
+            current_mood = self.mood_var.get()
+            
+            if current_mood == "Infinitive":
+                # Fill infinitive answers (voice-based structure)
+                voices = ["active", "middle", "passive"]
+                for voice in voices:
+                    entry_key = f"inf_{voice}"
                     
                     if entry_key in self.entries and entry_key in current_paradigm:
                         entry = self.entries[entry_key]
@@ -1773,6 +1922,19 @@ class GreekGrammarApp:
                         entry.delete(0, tk.END)
                         entry.insert(0, current_paradigm[entry_key])
                         entry.configure(state='readonly', bg='lightgray')
+            else:
+                # Fill finite verb answers (person/number structure)
+                persons = ["1st", "2nd", "3rd"]
+                for person in persons:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{person}_{number}"
+                        
+                        if entry_key in self.entries and entry_key in current_paradigm:
+                            entry = self.entries[entry_key]
+                            entry.configure(state='normal')
+                            entry.delete(0, tk.END)
+                            entry.insert(0, current_paradigm[entry_key])
+                            entry.configure(state='readonly', bg='lightgray')
         else:
             # Fill noun answers (simple structure)
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
