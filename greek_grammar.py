@@ -122,7 +122,7 @@ class GreekGrammarApp:
         type_dropdown = ttk.Combobox(
             mode_frame,
             textvariable=self.type_var,
-            values=["Noun", "Adjective"],
+            values=["Noun", "Adjective", "Pronoun"],
             font=('Times New Roman', 12),
             width=12,
             state='readonly'
@@ -172,6 +172,16 @@ class GreekGrammarApp:
             "Three-termination Graceful (χαρίεις, χαρίεσσα, χαρίεν)",
             "Three-termination Having been stopped (παυσθείς, παυσθεῖσα, παυσθέν)",
             "Three-termination Having stopped perfect (πεπαυκώς, πεπαυκυῖα, πεπαυκός)"
+        ]
+        
+        self.pronoun_modes = [
+            "Personal I (ἐγώ)",
+            "Personal You (σύ)", 
+            "Personal Third Person (αὐτός, αὐτή, αὐτό)",
+            "Demonstrative This (οὗτος, αὕτη, τοῦτο)",
+            "Relative Who/Which (ὅς, ἥ, ὅ)",
+            "Interrogative Who/What (τίς, τί)",
+            "Indefinite Someone/Something (τις, τι)"
         ]
         
         # Start with noun modes
@@ -277,6 +287,20 @@ class GreekGrammarApp:
             word = "παυσθείς, παυσθεῖσα, παυσθέν"
         elif "πεπαυκώς" in mode:
             word = "πεπαυκώς, πεπαυκυῖα, πεπαυκός"
+        elif "ἐγώ" in mode:
+            word = "ἐγώ"
+        elif "σύ" in mode:
+            word = "σύ"
+        elif "αὐτός" in mode:
+            word = "αὐτός, αὐτή, αὐτό"
+        elif "οὗτος" in mode:
+            word = "οὗτος, αὕτη, τοῦτο"
+        elif "ὅς, ἥ, ὅ" in mode:
+            word = "ὅς, ἥ, ὅ"
+        elif "τίς, τί" in mode:
+            word = "τίς, τί"
+        elif "τις, τι" in mode:
+            word = "τις, τι"
         else:
             word = "—"
         
@@ -294,11 +318,13 @@ class GreekGrammarApp:
         if not current_paradigm:
             return
 
-        # Check if this is an adjective or noun
+        # Check if this is an adjective, noun, or pronoun
         current_type = self.type_var.get()
         
         if current_type == "Adjective":
             self.create_adjective_table(current_paradigm)
+        elif current_type == "Pronoun":
+            self.create_pronoun_table(current_paradigm)
         else:
             self.create_noun_table(current_paradigm)
         
@@ -671,6 +697,204 @@ class GreekGrammarApp:
                     self.error_labels[entry_key_pl] = error_label_pl
                     error_label_pl.grid_remove()
 
+    def create_pronoun_table(self, current_paradigm):
+        """Create the pronoun table with appropriate layout based on pronoun type."""
+        mode = self.mode_var.get()
+        
+        # Determine layout based on pronoun type
+        if "Personal I" in mode or "Personal You" in mode:
+            # Personal pronouns ἐγώ and σύ use noun-style layout (Singular / Plural)
+            self.create_personal_pronoun_table(current_paradigm)
+        else:
+            # Other pronouns use adjective-style layout (Masculine / Feminine / Neuter)
+            self.create_gender_pronoun_table(current_paradigm)
+    
+    def create_personal_pronoun_table(self, current_paradigm):
+        """Create table for personal pronouns (ἐγώ, σύ) - similar to noun layout."""
+        self.table_frame.grid_columnconfigure(0, weight=1)  # Case column
+        self.table_frame.grid_columnconfigure(1, weight=1)  # Singular column
+        self.table_frame.grid_columnconfigure(2, weight=1)  # Plural column
+
+        # Headers
+        ttk.Label(
+            self.table_frame,
+            text="Case",
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=0, padx=10, pady=10)
+
+        ttk.Label(
+            self.table_frame,
+            text="Singular",
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=1, padx=10, pady=10)
+
+        ttk.Label(
+            self.table_frame,
+            text="Plural",
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=2, padx=10, pady=10)
+
+        # Create input fields for each case
+        cases = ["Nominative", "Accusative", "Genitive", "Dative"]
+        for i, case in enumerate(cases, 1):
+            # Case label
+            ttk.Label(
+                self.table_frame,
+                text=case,
+                font=('Arial', 12, 'bold')
+            ).grid(row=i, column=0, padx=10, pady=8, sticky=tk.E)
+
+            # Singular and Plural entries
+            for j, number in enumerate(["sg", "pl"], 1):
+                entry_key = f"{case}_{number}"
+                
+                # Check if this form exists in the paradigm
+                form_exists = entry_key in current_paradigm
+                
+                if form_exists:
+                    # Create a frame to hold both entry and error label
+                    entry_frame = tk.Frame(self.table_frame)
+                    entry_frame.grid(row=i, column=j, padx=5, pady=8, sticky='ew')
+                    entry_frame.grid_columnconfigure(0, weight=1)
+                    
+                    # Create the entry in the frame
+                    entry = tk.Entry(
+                        entry_frame,
+                        width=18,
+                        font=('Times New Roman', 12),
+                        relief='solid',
+                        borderwidth=1
+                    )
+                    entry.grid(row=0, column=0, sticky='ew')
+                    
+                    self.entries[entry_key] = entry
+                    entry.bind('<Key>', self.handle_key_press)
+
+                    # Bind navigation events
+                    entry.bind('<KeyRelease>', lambda e, k=entry_key: self.clear_error(k))
+                    entry.bind('<Return>', lambda e, k=entry_key: self.handle_enter(e, k))
+                    entry.bind('<Up>', lambda e, k=entry_key: self.handle_arrow(e, k, 'up'))
+                    entry.bind('<Down>', lambda e, k=entry_key: self.handle_arrow(e, k, 'down'))
+                    entry.bind('<Left>', lambda e, k=entry_key: self.handle_arrow(e, k, 'left'))
+                    entry.bind('<Right>', lambda e, k=entry_key: self.handle_arrow(e, k, 'right'))
+
+                    # Create error label in the same frame
+                    error_label = ttk.Label(
+                        entry_frame,
+                        text="❌",
+                        foreground='red'
+                    )
+                    error_label.grid(row=0, column=1, sticky='e', padx=(2, 0))
+                    self.error_labels[entry_key] = error_label
+                    error_label.grid_remove()  # Hide initially
+                else:
+                    # Grey out missing forms - grid directly to table
+                    entry = tk.Entry(
+                        self.table_frame,
+                        width=18,
+                        font=('Times New Roman', 12),
+                        relief='solid',
+                        borderwidth=1,
+                        state='disabled',
+                        disabledbackground='#f0f0f0'
+                    )
+                    entry.grid(row=i, column=j, padx=5, pady=8, sticky='ew')
+
+    def create_gender_pronoun_table(self, current_paradigm):
+        """Create table for pronouns with gender forms (αὐτός, οὗτος, ὅς, etc.)."""
+        # Similar to 3-termination adjectives but account for missing forms
+        self.table_frame.grid_columnconfigure(0, weight=1)  # Case column
+        for i in range(1, 7):  # Gender columns (1-6)
+            self.table_frame.grid_columnconfigure(i, weight=1)
+
+        # Headers
+        ttk.Label(
+            self.table_frame,
+            text="Case",
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=0, padx=10, pady=10)
+
+        headers = ["Masculine Sg", "Masculine Pl", "Feminine Sg", "Feminine Pl", "Neuter Sg", "Neuter Pl"]
+        for i, header in enumerate(headers):
+            ttk.Label(
+                self.table_frame,
+                text=header,
+                font=('Arial', 12)
+            ).grid(row=0, column=i + 1, padx=5, pady=5)
+
+        # Create input fields for each case
+        cases = ["Nominative", "Accusative", "Genitive", "Dative"]
+        genders = ["masculine", "feminine", "neuter"]
+        
+        for i, case in enumerate(cases, 1):
+            # Case label
+            ttk.Label(
+                self.table_frame,
+                text=case,
+                font=('Arial', 12, 'bold')
+            ).grid(row=i, column=0, padx=10, pady=8, sticky=tk.E)
+
+            # Create entries for each gender and number
+            for j, gender in enumerate(genders):
+                base_col = 1 + j * 2
+                
+                for k, number in enumerate(["sg", "pl"]):
+                    entry_key = f"{case}_{gender}_{number}"
+                    col = base_col + k
+                    
+                    # Check if this form exists in the paradigm
+                    form_exists = (gender in current_paradigm and 
+                                 f"{case}_{number}" in current_paradigm[gender])
+                    
+                    if form_exists:
+                        # Create a frame to hold both entry and error label
+                        entry_frame = tk.Frame(self.table_frame)
+                        entry_frame.grid(row=i, column=col, padx=5, pady=8, sticky='ew')
+                        entry_frame.grid_columnconfigure(0, weight=1)
+                        
+                        # Create the entry in the frame
+                        entry = tk.Entry(
+                            entry_frame,
+                            width=18,
+                            font=('Times New Roman', 12),
+                            relief='solid',
+                            borderwidth=1
+                        )
+                        entry.grid(row=0, column=0, sticky='ew')
+                        
+                        self.entries[entry_key] = entry
+                        entry.bind('<Key>', self.handle_key_press)
+
+                        # Bind navigation events
+                        entry.bind('<KeyRelease>', lambda e, k=entry_key: self.clear_error(k))
+                        entry.bind('<Return>', lambda e, k=entry_key: self.handle_enter(e, k))
+                        entry.bind('<Up>', lambda e, k=entry_key: self.handle_arrow(e, k, 'up'))
+                        entry.bind('<Down>', lambda e, k=entry_key: self.handle_arrow(e, k, 'down'))
+                        entry.bind('<Left>', lambda e, k=entry_key: self.handle_arrow(e, k, 'left'))
+                        entry.bind('<Right>', lambda e, k=entry_key: self.handle_arrow(e, k, 'right'))
+
+                        # Create error label in the same frame
+                        error_label = ttk.Label(
+                            entry_frame,
+                            text="❌",
+                            foreground='red'
+                        )
+                        error_label.grid(row=0, column=1, sticky='e', padx=(2, 0))
+                        self.error_labels[entry_key] = error_label
+                        error_label.grid_remove()  # Hide initially
+                    else:
+                        # Grey out missing forms - grid directly to table
+                        entry = tk.Entry(
+                            self.table_frame,
+                            width=18,
+                            font=('Times New Roman', 12),
+                            relief='solid',
+                            borderwidth=1,
+                            state='disabled',
+                            disabledbackground='#f0f0f0'
+                        )
+                        entry.grid(row=i, column=col, padx=5, pady=8, sticky='ew')
+
     def handle_key_press(self, event):
         """Handle special character input."""
         char = event.char
@@ -807,15 +1031,18 @@ class GreekGrammarApp:
         return result
 
     def on_type_change(self, event):
-        """Handle type change between Noun and Adjective."""
+        """Handle type change between Noun, Adjective, and Pronoun."""
         current_type = self.type_var.get()
         
         if current_type == "Noun":
             self.modes = self.noun_modes.copy()
             self.mode_var.set("First Declension (μουσα)")
-        else:  # Adjective
+        elif current_type == "Adjective":
             self.modes = self.adjective_modes.copy()
             self.mode_var.set("Three-termination Good (ἀγαθός, ἀγαθή, ἀγαθόν)")
+        else:  # Pronoun
+            self.modes = self.pronoun_modes.copy()
+            self.mode_var.set("Personal I (ἐγώ)")
         
         # Update the dropdown values
         self.mode_dropdown['values'] = self.modes
@@ -862,7 +1089,14 @@ class GreekGrammarApp:
             "Three-termination Having stopped (παύσας, παύσασα, παῦσαν)": "pausas",
             "Three-termination Graceful (χαρίεις, χαρίεσσα, χαρίεν)": "charieis",
             "Three-termination Having been stopped (παυσθείς, παυσθεῖσα, παυσθέν)": "paustheis",
-            "Three-termination Having stopped perfect (πεπαυκώς, πεπαυκυῖα, πεπαυκός)": "pepaukos"
+            "Three-termination Having stopped perfect (πεπαυκώς, πεπαυκυῖα, πεπαυκός)": "pepaukos",
+            "Personal I (ἐγώ)": "ego",
+            "Personal You (σύ)": "sy", 
+            "Personal Third Person (αὐτός, αὐτή, αὐτό)": "autos",
+            "Demonstrative This (οὗτος, αὕτη, τοῦτο)": "houtos",
+            "Relative Who/Which (ὅς, ἥ, ὅ)": "hos",
+            "Interrogative Who/What (τίς, τί)": "tis_interrog",
+            "Indefinite Someone/Something (τις, τι)": "tis_indef"
         }
         
         paradigm_key = paradigm_map.get(mode)
@@ -913,6 +1147,55 @@ class GreekGrammarApp:
                                     if entry_key in self.error_labels:
                                         self.error_labels[entry_key].grid()
                                     all_correct = False
+        elif current_type == "Pronoun":
+            # Check pronoun answers (no vocative)
+            pronoun_cases = ["Nominative", "Accusative", "Genitive", "Dative"]
+            mode = self.mode_var.get()
+            
+            if "Personal I" in mode or "Personal You" in mode:
+                # Personal pronouns use simple structure like nouns
+                for case in pronoun_cases:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{number}"
+                        
+                        if entry_key in self.entries:
+                            user_answer = self.entries[entry_key].get().strip()
+                            correct_answer = current_paradigm.get(entry_key, "")
+                            
+                            # Remove accents for comparison
+                            user_answer_no_accents = self.remove_accents(user_answer)
+                            correct_answer_no_accents = self.remove_accents(correct_answer)
+                            
+                            if user_answer_no_accents != correct_answer_no_accents:
+                                # Show error indicator
+                                if entry_key in self.error_labels:
+                                    self.error_labels[entry_key].grid()
+                                all_correct = False
+            else:
+                # Gender pronouns use structure like adjectives
+                genders = ["masculine", "feminine", "neuter"]
+                
+                for case in pronoun_cases:
+                    for gender in genders:
+                        for number in ["sg", "pl"]:
+                            entry_key = f"{case}_{gender}_{number}"
+                            
+                            if entry_key in self.entries:
+                                user_answer = self.entries[entry_key].get().strip()
+                                
+                                # Navigate to correct answer in nested structure
+                                if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                                    correct_answer = current_paradigm[gender][f"{case}_{number}"]
+                                    
+                                    # Remove accents for comparison
+                                    user_answer_no_accents = self.remove_accents(user_answer)
+                                    correct_answer_no_accents = self.remove_accents(correct_answer)
+                                    
+                                    if user_answer_no_accents != correct_answer_no_accents:
+                                        # Show error indicator
+                                        if entry_key in self.error_labels:
+                                            self.error_labels[entry_key].grid()
+                                        all_correct = False
         else:
             # Check noun answers (simple structure)
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
@@ -985,6 +1268,40 @@ class GreekGrammarApp:
                                 entry.delete(0, tk.END)
                                 entry.insert(0, current_paradigm[gender][answer_key])
                                 entry.configure(state='readonly', bg='lightgray')
+        elif current_type == "Pronoun":
+            # Fill pronoun answers (no vocative)
+            pronoun_cases = ["Nominative", "Accusative", "Genitive", "Dative"]
+            mode = self.mode_var.get()
+            
+            if "Personal I" in mode or "Personal You" in mode:
+                # Personal pronouns use simple structure like nouns
+                for case in pronoun_cases:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{number}"
+                        
+                        if entry_key in self.entries and entry_key in current_paradigm:
+                            entry = self.entries[entry_key]
+                            entry.configure(state='normal')
+                            entry.delete(0, tk.END)
+                            entry.insert(0, current_paradigm[entry_key])
+                            entry.configure(state='readonly', bg='lightgray')
+            else:
+                # Gender pronouns use structure like adjectives
+                genders = ["masculine", "feminine", "neuter"]
+                
+                for case in pronoun_cases:
+                    for gender in genders:
+                        for number in ["sg", "pl"]:
+                            entry_key = f"{case}_{gender}_{number}"
+                            
+                            if entry_key in self.entries and gender in current_paradigm:
+                                answer_key = f"{case}_{number}"
+                                if answer_key in current_paradigm[gender]:
+                                    entry = self.entries[entry_key]
+                                    entry.configure(state='normal')
+                                    entry.delete(0, tk.END)
+                                    entry.insert(0, current_paradigm[gender][answer_key])
+                                    entry.configure(state='readonly', bg='lightgray')
         else:
             # Fill noun answers (simple structure)
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
@@ -1086,6 +1403,20 @@ Tips:
                 case, gender, number = parts
                 if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
                     correct_answer = current_paradigm[gender][f"{case}_{number}"]
+        elif current_type == "Pronoun":
+            # Handle pronoun entry keys
+            mode = self.mode_var.get()
+            if "Personal I" in mode or "Personal You" in mode:
+                # Personal pronouns use "Case_number" format
+                if entry_key in current_paradigm:
+                    correct_answer = current_paradigm[entry_key]
+            else:
+                # Gender pronouns use "Case_gender_number" format
+                parts = entry_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                        correct_answer = current_paradigm[gender][f"{case}_{number}"]
         else:
             # Parse noun entry key: "Case_number"
             if entry_key in current_paradigm:
@@ -1109,11 +1440,21 @@ Tips:
                 entry.configure(bg='white')
                 entry.configure(state='normal')
                 if error_label:
-                    error_label.grid()
+                    error_label.grid()  # Show the error label in its pre-configured position
             
             return is_correct
         
         return False
+
+    def find_next_empty_entry(self, candidates):
+        """Find the next empty entry from a list of candidate keys."""
+        for key in candidates:
+            if key in self.entries:
+                entry = self.entries[key]
+                # Check if entry is empty and not readonly (not already correct)
+                if not entry.get().strip() and str(entry.cget('state')) != 'readonly':
+                    return key
+        return None
 
     def move_to_next_entry(self, current_key):
         """Move focus to the next logical entry."""
@@ -1139,26 +1480,97 @@ Tips:
                 if gender in genders:
                     gender_idx = genders.index(gender)
                     
-                    # Try next number in same case/gender
-                    if number == "sg":
-                        next_key = f"{case}_{gender}_pl"
-                        if next_key in self.entries:
-                            self.entries[next_key].focus()
-                            return
-                    
-                    # Try next gender in same case
-                    if gender_idx < len(genders) - 1:
-                        next_key = f"{case}_{genders[gender_idx + 1]}_sg"
-                        if next_key in self.entries:
-                            self.entries[next_key].focus()
-                            return
-                    
-                    # Try next case, first gender
+                    # Try next case in same gender/number column first (downward movement)
                     if case_idx < len(cases) - 1:
-                        next_key = f"{cases[case_idx + 1]}_{genders[0]}_sg"
-                        if next_key in self.entries:
+                        candidates = [f"{cases[i]}_{gender}_{number}" for i in range(case_idx + 1, len(cases))]
+                        next_key = self.find_next_empty_entry(candidates)
+                        if next_key:
                             self.entries[next_key].focus()
                             return
+                    
+                    # If we've finished all cases in sg column, move to pl column of same gender
+                    if number == "sg":
+                        candidates = [f"{cases[i]}_{gender}_pl" for i in range(len(cases))]
+                        next_key = self.find_next_empty_entry(candidates)
+                        if next_key:
+                            self.entries[next_key].focus()
+                            return
+                    
+                    # If we're in plural and finished all cases, try next gender (start with sg)
+                    if gender_idx < len(genders) - 1:
+                        for next_gender in genders[gender_idx + 1:]:
+                            # Try sg first, then pl for next gender
+                            candidates = [f"{cases[i]}_{next_gender}_sg" for i in range(len(cases))]
+                            candidates.extend([f"{cases[i]}_{next_gender}_pl" for i in range(len(cases))])
+                            next_key = self.find_next_empty_entry(candidates)
+                            if next_key:
+                                self.entries[next_key].focus()
+                                return
+                            self.entries[next_key].focus()
+                            return
+        elif current_type == "Pronoun":
+            # Handle pronoun navigation (no vocative)
+            pronoun_cases = ["Nominative", "Accusative", "Genitive", "Dative"]
+            mode = self.mode_var.get()
+            
+            if "Personal I" in mode or "Personal You" in mode:
+                # Personal pronouns use noun-style navigation
+                parts = current_key.split('_')
+                if len(parts) == 2:
+                    case, number = parts
+                    case_idx = pronoun_cases.index(case)
+                    
+                    # Try next case in same number column first (downward movement)
+                    if case_idx < len(pronoun_cases) - 1:
+                        candidates = [f"{pronoun_cases[i]}_{number}" for i in range(case_idx + 1, len(pronoun_cases))]
+                        next_key = self.find_next_empty_entry(candidates)
+                        if next_key:
+                            self.entries[next_key].focus()
+                            return
+                    
+                    # If we've finished all cases in sg column, move to pl column
+                    if number == "sg":
+                        candidates = [f"{pronoun_cases[i]}_pl" for i in range(len(pronoun_cases))]
+                        next_key = self.find_next_empty_entry(candidates)
+                        if next_key:
+                            self.entries[next_key].focus()
+                            return
+            else:
+                # Gender pronouns use adjective-style navigation
+                parts = current_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    case_idx = pronoun_cases.index(case)
+                    genders = ["masculine", "feminine", "neuter"]
+                    
+                    if gender in genders:
+                        gender_idx = genders.index(gender)
+                        
+                        # Try next case in same gender/number column first (downward movement)
+                        if case_idx < len(pronoun_cases) - 1:
+                            candidates = [f"{pronoun_cases[i]}_{gender}_{number}" for i in range(case_idx + 1, len(pronoun_cases))]
+                            next_key = self.find_next_empty_entry(candidates)
+                            if next_key:
+                                self.entries[next_key].focus()
+                                return
+                        
+                        # If we've finished all cases in sg column, move to pl column of same gender
+                        if number == "sg":
+                            candidates = [f"{pronoun_cases[i]}_{gender}_pl" for i in range(len(pronoun_cases))]
+                            next_key = self.find_next_empty_entry(candidates)
+                            if next_key:
+                                self.entries[next_key].focus()
+                                return
+                        
+                        # If we're in plural and finished all cases, try next gender (start with sg)
+                        if gender_idx < len(genders) - 1:
+                            for next_gender in genders[gender_idx + 1:]:
+                                candidates = [f"{pronoun_cases[i]}_{next_gender}_sg" for i in range(len(pronoun_cases))]
+                                candidates.extend([f"{pronoun_cases[i]}_{next_gender}_pl" for i in range(len(pronoun_cases))])
+                                next_key = self.find_next_empty_entry(candidates)
+                                if next_key:
+                                    self.entries[next_key].focus()
+                                    return
         else:
             # Parse: "Case_number" 
             parts = current_key.split('_')
@@ -1166,17 +1578,19 @@ Tips:
                 case, number = parts
                 case_idx = cases.index(case)
                 
-                # Try other number in same case
-                if number == "sg":
-                    next_key = f"{case}_pl"
-                    if next_key in self.entries:
+                # Try next case in same number column first (downward movement)
+                if case_idx < len(cases) - 1:
+                    candidates = [f"{cases[i]}_{number}" for i in range(case_idx + 1, len(cases))]
+                    next_key = self.find_next_empty_entry(candidates)
+                    if next_key:
                         self.entries[next_key].focus()
                         return
                 
-                # Try next case, singular
-                if case_idx < len(cases) - 1:
-                    next_key = f"{cases[case_idx + 1]}_sg"
-                    if next_key in self.entries:
+                # If we've finished all cases in sg column, move to pl column
+                if number == "sg":
+                    candidates = [f"{cases[i]}_pl" for i in range(len(cases))]
+                    next_key = self.find_next_empty_entry(candidates)
+                    if next_key:
                         self.entries[next_key].focus()
                         return
 
@@ -1239,6 +1653,79 @@ Tips:
                         next_key = f"{case}_{genders[gender_idx + 1]}_{number}"
                         if next_key in self.entries:
                             self.entries[next_key].focus()
+        elif current_type == "Pronoun":
+            # Handle pronoun navigation (no vocative)
+            pronoun_cases = ["Nominative", "Accusative", "Genitive", "Dative"]
+            mode = self.mode_var.get()
+            
+            if "Personal I" in mode or "Personal You" in mode:
+                # Personal pronouns use noun-style navigation
+                parts = current_key.split('_')
+                if len(parts) == 2:
+                    case, number = parts
+                    case_idx = pronoun_cases.index(case)
+                    
+                    if direction == 'up' and case_idx > 0:
+                        next_key = f"{pronoun_cases[case_idx - 1]}_{number}"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                    elif direction == 'down' and case_idx < len(pronoun_cases) - 1:
+                        next_key = f"{pronoun_cases[case_idx + 1]}_{number}"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                    elif direction == 'left' and number == 'pl':
+                        # Move from plural to singular
+                        next_key = f"{case}_sg"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                    elif direction == 'right' and number == 'sg':
+                        # Move from singular to plural
+                        next_key = f"{case}_pl"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+            else:
+                # Gender pronouns use adjective-style navigation
+                parts = current_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    case_idx = pronoun_cases.index(case)
+                    genders = ["masculine", "feminine", "neuter"]
+                    
+                    if gender in genders:
+                        gender_idx = genders.index(gender)
+                        
+                        if direction == 'up' and case_idx > 0:
+                            next_key = f"{pronoun_cases[case_idx - 1]}_{gender}_{number}"
+                            if next_key in self.entries:
+                                self.entries[next_key].focus()
+                        elif direction == 'down' and case_idx < len(pronoun_cases) - 1:
+                            next_key = f"{pronoun_cases[case_idx + 1]}_{gender}_{number}"
+                            if next_key in self.entries:
+                                self.entries[next_key].focus()
+                        elif direction == 'left':
+                            # First try to move from plural to singular in same gender
+                            if number == 'pl':
+                                next_key = f"{case}_{gender}_sg"
+                                if next_key in self.entries:
+                                    self.entries[next_key].focus()
+                                    return "break"
+                            # If that fails or we're in singular, try previous gender with same number
+                            if gender_idx > 0:
+                                next_key = f"{case}_{genders[gender_idx - 1]}_{number}"
+                                if next_key in self.entries:
+                                    self.entries[next_key].focus()
+                        elif direction == 'right':
+                            # First try to move from singular to plural in same gender  
+                            if number == 'sg':
+                                next_key = f"{case}_{gender}_pl"
+                                if next_key in self.entries:
+                                    self.entries[next_key].focus()
+                                    return "break"
+                            # If that fails or we're in plural, try next gender with same number
+                            if gender_idx < len(genders) - 1:
+                                next_key = f"{case}_{genders[gender_idx + 1]}_{number}"
+                                if next_key in self.entries:
+                                    self.entries[next_key].focus()
         else:
             # Parse: "Case_number"
             parts = current_key.split('_')

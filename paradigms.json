@@ -808,5 +808,199 @@
       "Genitive_pl": "πεπαυκότων",
       "Dative_pl": "πεπαυκόσι"
     }
+  },
+  "ego": {
+    "type": "pronoun_personal",
+    "lemma": "ἐγώ",
+    "Nominative_sg": "ἐγώ",
+    "Accusative_sg": "ἐμέ",
+    "Genitive_sg": "ἐμοῦ",
+    "Dative_sg": "ἐμοί",
+    "Nominative_pl": "ἡμεῖς",
+    "Accusative_pl": "ἡμᾶς",
+    "Genitive_pl": "ἡμῶν",
+    "Dative_pl": "ἡμῖν"
+  },
+  "sy": {
+    "type": "pronoun_personal",
+    "lemma": "σύ",
+    "Nominative_sg": "σύ",
+    "Accusative_sg": "σέ",
+    "Genitive_sg": "σοῦ",
+    "Dative_sg": "σοί",
+    "Nominative_pl": "ὑμεῖς",
+    "Accusative_pl": "ὑμᾶς",
+    "Genitive_pl": "ὑμῶν",
+    "Dative_pl": "ὑμῖν"
+  },
+  "autos": {
+    "type": "pronoun_gender",
+    "lemma": "αὐτός, αὐτή, αὐτό",
+    "masculine": {
+      "Nominative_sg": "αὐτός",
+      "Accusative_sg": "αὐτόν",
+      "Genitive_sg": "αὐτοῦ",
+      "Dative_sg": "αὐτῷ",
+      "Nominative_pl": "αὐτοί",
+      "Accusative_pl": "αὐτούς",
+      "Genitive_pl": "αὐτῶν",
+      "Dative_pl": "αὐτοῖς"
+    },
+    "feminine": {
+      "Nominative_sg": "αὐτή",
+      "Accusative_sg": "αὐτήν",
+      "Genitive_sg": "αὐτῆς",
+      "Dative_sg": "αὐτῇ",
+      "Nominative_pl": "αὐταί",
+      "Accusative_pl": "αὐτάς",
+      "Genitive_pl": "αὐτῶν",
+      "Dative_pl": "αὐταῖς"
+    },
+    "neuter": {
+      "Nominative_sg": "αὐτό",
+      "Accusative_sg": "αὐτό",
+      "Genitive_sg": "αὐτοῦ",
+      "Dative_sg": "αὐτῷ",
+      "Nominative_pl": "αὐτά",
+      "Accusative_pl": "αὐτά",
+      "Genitive_pl": "αὐτῶν",
+      "Dative_pl": "αὐτοῖς"
+    }
+  },
+  "houtos": {
+    "type": "pronoun_gender",
+    "lemma": "οὗτος, αὕτη, τοῦτο",
+    "masculine": {
+      "Nominative_sg": "οὗτος",
+      "Accusative_sg": "τοῦτον",
+      "Genitive_sg": "τούτου",
+      "Dative_sg": "τούτῳ",
+      "Nominative_pl": "οὗτοι",
+      "Accusative_pl": "τούτους",
+      "Genitive_pl": "τούτων",
+      "Dative_pl": "τούτοις"
+    },
+    "feminine": {
+      "Nominative_sg": "αὕτη",
+      "Accusative_sg": "ταύτην",
+      "Genitive_sg": "ταύτης",
+      "Dative_sg": "ταύτῃ",
+      "Nominative_pl": "αὗται",
+      "Accusative_pl": "ταύτας",
+      "Genitive_pl": "τούτων",
+      "Dative_pl": "ταύταις"
+    },
+    "neuter": {
+      "Nominative_sg": "τοῦτο",
+      "Accusative_sg": "τοῦτο",
+      "Genitive_sg": "τούτου",
+      "Dative_sg": "τούτῳ",
+      "Nominative_pl": "ταῦτα",
+      "Accusative_pl": "ταῦτα",
+      "Genitive_pl": "τούτων",
+      "Dative_pl": "τούτοις"
+    }
+  },
+  "hos": {
+    "type": "pronoun_gender",
+    "lemma": "ὅς, ἥ, ὅ",
+    "masculine": {
+      "Nominative_sg": "ὅς",
+      "Accusative_sg": "ὅν",
+      "Genitive_sg": "οὗ",
+      "Dative_sg": "ᾧ",
+      "Nominative_pl": "οἵ",
+      "Accusative_pl": "οὕς",
+      "Genitive_pl": "ὧν",
+      "Dative_pl": "οἷς"
+    },
+    "feminine": {
+      "Nominative_sg": "ἥ",
+      "Accusative_sg": "ἥν",
+      "Genitive_sg": "ἧς",
+      "Dative_sg": "ᾗ",
+      "Nominative_pl": "αἵ",
+      "Accusative_pl": "ἅς",
+      "Genitive_pl": "ὧν",
+      "Dative_pl": "αἷς"
+    },
+    "neuter": {
+      "Nominative_sg": "ὅ",
+      "Accusative_sg": "ὅ",
+      "Genitive_sg": "οὗ",
+      "Dative_sg": "ᾧ",
+      "Nominative_pl": "ἅ",
+      "Accusative_pl": "ἅ",
+      "Genitive_pl": "ὧν",
+      "Dative_pl": "οἷς"
+    }
+  },
+  "tis_interrog": {
+    "type": "pronoun_gender",
+    "lemma": "τίς, τί",
+    "masculine": {
+      "Nominative_sg": "τίς",
+      "Accusative_sg": "τίνα",
+      "Genitive_sg": "τίνος",
+      "Dative_sg": "τίνι",
+      "Nominative_pl": "τίνες",
+      "Accusative_pl": "τίνας",
+      "Genitive_pl": "τίνων",
+      "Dative_pl": "τίσι"
+    },
+    "feminine": {
+      "Nominative_sg": "τίς",
+      "Accusative_sg": "τίνα",
+      "Genitive_sg": "τίνος",
+      "Dative_sg": "τίνι",
+      "Nominative_pl": "τίνες",
+      "Accusative_pl": "τίνας",
+      "Genitive_pl": "τίνων",
+      "Dative_pl": "τίσι"
+    },
+    "neuter": {
+      "Nominative_sg": "τί",
+      "Accusative_sg": "τί",
+      "Genitive_sg": "τίνος",
+      "Dative_sg": "τίνι",
+      "Nominative_pl": "τίνα",
+      "Accusative_pl": "τίνα",
+      "Genitive_pl": "τίνων",
+      "Dative_pl": "τίσι"
+    }
+  },
+  "tis_indef": {
+    "type": "pronoun_gender",
+    "lemma": "τις, τι",
+    "masculine": {
+      "Nominative_sg": "τις",
+      "Accusative_sg": "τινα",
+      "Genitive_sg": "τινος",
+      "Dative_sg": "τινι",
+      "Nominative_pl": "τινες",
+      "Accusative_pl": "τινας",
+      "Genitive_pl": "τινων",
+      "Dative_pl": "τισι"
+    },
+    "feminine": {
+      "Nominative_sg": "τις",
+      "Accusative_sg": "τινα",
+      "Genitive_sg": "τινος",
+      "Dative_sg": "τινι",
+      "Nominative_pl": "τινες",
+      "Accusative_pl": "τινας",
+      "Genitive_pl": "τινων",
+      "Dative_pl": "τισι"
+    },
+    "neuter": {
+      "Nominative_sg": "τι",
+      "Accusative_sg": "τι",
+      "Genitive_sg": "τινος",
+      "Dative_sg": "τινι",
+      "Nominative_pl": "τινα",
+      "Accusative_pl": "τινα",
+      "Genitive_pl": "τινων",
+      "Dative_pl": "τισι"
+    }
   }
 }
