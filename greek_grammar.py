@@ -111,14 +111,34 @@ class GreekGrammarApp:
         mode_frame = ttk.Frame(self.main_frame)
         mode_frame.grid(row=1, column=0, columnspan=3, pady=(0, 20), sticky='ew')
         mode_frame.columnconfigure(1, weight=1)
+        mode_frame.columnconfigure(3, weight=1)
+
+        # Add type selector (Noun vs Adjective)
+        ttk.Label(mode_frame, text="Type:").grid(
+            row=0, column=0, padx=(0, 10)
+        )
+        
+        self.type_var = tk.StringVar(value="Noun")
+        type_dropdown = ttk.Combobox(
+            mode_frame,
+            textvariable=self.type_var,
+            values=["Noun", "Adjective"],
+            font=('Times New Roman', 12),
+            width=12,
+            state='readonly'
+        )
+        type_dropdown.grid(row=0, column=1, sticky='w', padx=(0, 20))
+        type_dropdown.bind('<<ComboboxSelected>>', self.on_type_change)
 
         ttk.Label(mode_frame, text="Select Study Mode:").grid(
-            row=0, column=0, padx=(0, 10)
+            row=0, column=2, padx=(0, 10)
         )
 
         # Setup mode selector
         self.mode_var = tk.StringVar(value="First Declension (μουσα)")
-        self.modes = [
+        
+        # Define noun and adjective modes
+        self.noun_modes = [
             "Article (ὁ, ἡ, το)",
             "First Declension (μουσα)",
             "First Declension -η (τιμη)",
@@ -136,18 +156,26 @@ class GreekGrammarApp:
             "Third Declension Woman (γυνή)",
             "Third Declension City (πόλις)"
         ]
+        
+        self.adjective_modes = [
+            "Three-termination Good (ἀγαθός, ἀγαθή, ἀγαθόν)",
+            "Two-termination Wise (σοφός, σοφόν)"
+        ]
+        
+        # Start with noun modes
+        self.modes = self.noun_modes.copy()
 
         # Setup mode selector with clean styling
-        mode_dropdown = ttk.Combobox(
+        self.mode_dropdown = ttk.Combobox(
             mode_frame,
             textvariable=self.mode_var,
             values=self.modes,
             font=('Times New Roman', 12),
             width=40
         )
-        mode_dropdown.grid(row=0, column=1, sticky='ew', padx=10)
-        mode_dropdown.state(['readonly'])
-        mode_dropdown.bind('<<ComboboxSelected>>', self.on_mode_change)
+        self.mode_dropdown.grid(row=0, column=3, sticky='ew', padx=10)
+        self.mode_dropdown.state(['readonly'])
+        self.mode_dropdown.bind('<<ComboboxSelected>>', self.on_mode_change)
 
         # Word display frame - simplified to remove white patches
         word_frame = ttk.Frame(self.main_frame)
@@ -209,6 +237,10 @@ class GreekGrammarApp:
             word = "πόλις"
         elif "ὁ, ἡ, το" in mode:
             word = "ὁ, ἡ, τό"
+        elif "ἀγαθός" in mode:
+            word = "ἀγαθός, ἀγαθή, ἀγαθόν"
+        elif "σοφός" in mode:
+            word = "σοφός, σοφόν"
         else:
             word = "—"
         
@@ -222,14 +254,64 @@ class GreekGrammarApp:
         self.table_frame = ttk.Frame(self.main_frame)
         self.table_frame.grid(row=3, column=0, columnspan=3, sticky='nsew', pady=(20, 10))
         
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            return
+
+        # Check if this is an adjective or noun
+        current_type = self.type_var.get()
+        
+        if current_type == "Adjective":
+            self.create_adjective_table(current_paradigm)
+        else:
+            self.create_noun_table(current_paradigm)
+        
+        # Bottom button frame positioned after table
+        bottom_button_frame = ttk.Frame(self.main_frame)
+        bottom_button_frame.grid(row=4, column=0, columnspan=3, pady=20)
+        
+        # Style for buttons
+        button_style = ttk.Style()
+        button_style.configure('Large.TButton',
+                             font=('Arial', 12),
+                             padding=(15, 8))
+        
+        # Check answers button
+        check_button = ttk.Button(
+            bottom_button_frame,
+            text="Check Answers",
+            command=self.check_answers,
+            style='Large.TButton',
+            width=15
+        )
+        check_button.grid(row=0, column=0, padx=20)
+        
+        # Reveal answers button
+        reveal_button = ttk.Button(
+            bottom_button_frame,
+            text="Reveal Answers",
+            command=self.reveal_answers,
+            style='Large.TButton',
+            width=15
+        )
+        reveal_button.grid(row=0, column=1, padx=20)
+        
+        # Reset button
+        reset_button = ttk.Button(
+            bottom_button_frame,
+            text="Reset",
+            command=self.reset_table,
+            style='Large.TButton',
+            width=15
+        )
+        reset_button.grid(row=0, column=2, padx=20)
+
+    def create_noun_table(self, current_paradigm):
+        """Create table for noun declensions (2 columns: Singular/Plural)."""
         # Configure grid weights for better expansion
         self.table_frame.grid_columnconfigure(0, weight=1)
         self.table_frame.grid_columnconfigure(1, weight=2)
         self.table_frame.grid_columnconfigure(2, weight=2)
-
-        current_paradigm = self.get_current_paradigm()
-        if not current_paradigm:
-            return
 
         # Headers with better styling
         ttk.Label(
@@ -317,46 +399,130 @@ class GreekGrammarApp:
             error_label_pl.grid(row=i, column=2, sticky='e', padx=15)
             self.error_labels[f"{case}_pl"] = error_label_pl
             error_label_pl.grid_remove()
+
+    def create_adjective_table(self, current_paradigm):
+        """Create table for adjective declensions (3 genders x 2 numbers)."""
+        # Configure grid weights for better expansion (7 columns: Case + M/F/N + 2 spacers)
+        self.table_frame.grid_columnconfigure(0, weight=1)  # Case column
+        for i in range(1, 7):  # Gender columns and spacers
+            self.table_frame.grid_columnconfigure(i, weight=2)
+
+        # Main headers
+        ttk.Label(
+            self.table_frame,
+            text="",
+            font=('Arial', 14, 'bold')
+        ).grid(row=0, column=0, padx=10, pady=15, sticky='e')
         
-        # Bottom button frame positioned after table
-        bottom_button_frame = ttk.Frame(self.main_frame)
-        bottom_button_frame.grid(row=4, column=0, columnspan=3, pady=20)
+        ttk.Label(
+            self.table_frame,
+            text="Masculine",
+            font=('Arial', 14, 'bold')
+        ).grid(row=0, column=1, columnspan=2, padx=10, pady=15)
         
-        # Style for buttons
-        button_style = ttk.Style()
-        button_style.configure('Large.TButton',
-                             font=('Arial', 12),
-                             padding=(15, 8))
+        ttk.Label(
+            self.table_frame,
+            text="Feminine", 
+            font=('Arial', 14, 'bold')
+        ).grid(row=0, column=3, columnspan=2, padx=10, pady=15)
         
-        # Check answers button
-        check_button = ttk.Button(
-            bottom_button_frame,
-            text="Check Answers",
-            command=self.check_answers,
-            style='Large.TButton',
-            width=15
-        )
-        check_button.grid(row=0, column=0, padx=20)
-        
-        # Reveal answers button
-        reveal_button = ttk.Button(
-            bottom_button_frame,
-            text="Reveal Answers",
-            command=self.reveal_answers,
-            style='Large.TButton',
-            width=15
-        )
-        reveal_button.grid(row=0, column=1, padx=20)
-        
-        # Reset button
-        reset_button = ttk.Button(
-            bottom_button_frame,
-            text="Reset",
-            command=self.reset_table,
-            style='Large.TButton',
-            width=15
-        )
-        reset_button.grid(row=0, column=2, padx=20)
+        ttk.Label(
+            self.table_frame,
+            text="Neuter",
+            font=('Arial', 14, 'bold')
+        ).grid(row=0, column=5, columnspan=2, padx=10, pady=15)
+
+        # Sub-headers (Singular/Plural for each gender)
+        genders = ['masculine', 'feminine', 'neuter']
+        for i, gender in enumerate(genders):
+            base_col = 1 + i * 2
+            ttk.Label(
+                self.table_frame,
+                text="Sg.",
+                font=('Arial', 12)
+            ).grid(row=1, column=base_col, padx=5, pady=5)
+            
+            ttk.Label(
+                self.table_frame,
+                text="Pl.",
+                font=('Arial', 12)
+            ).grid(row=1, column=base_col + 1, padx=5, pady=5)
+
+        # Create input fields for each case and gender
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+        for i, case in enumerate(cases, 2):  # Start from row 2
+            # Case label
+            ttk.Label(
+                self.table_frame,
+                text=case,
+                font=('Arial', 12, 'bold')
+            ).grid(row=i, column=0, padx=10, pady=8, sticky=tk.E)
+
+            # Create entries for each gender and number
+            for j, gender in enumerate(genders):
+                base_col = 1 + j * 2
+                
+                # Singular entry
+                entry_sg = tk.Entry(
+                    self.table_frame,
+                    width=18,
+                    font=('Times New Roman', 12),
+                    relief='solid',
+                    borderwidth=1
+                )
+                entry_sg.grid(row=i, column=base_col, padx=5, pady=8, sticky='ew')
+                entry_key_sg = f"{case}_{gender}_sg"
+                self.entries[entry_key_sg] = entry_sg
+                entry_sg.bind('<Key>', self.handle_key_press)
+                
+                # Bind navigation events
+                entry_sg.bind('<KeyRelease>', lambda e, k=entry_key_sg: self.clear_error(k))
+                entry_sg.bind('<Return>', lambda e, k=entry_key_sg: self.handle_enter(e, k))
+                entry_sg.bind('<Up>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'up'))
+                entry_sg.bind('<Down>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'down'))
+                entry_sg.bind('<Left>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'left'))
+                entry_sg.bind('<Right>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'right'))
+
+                # Error label for singular
+                error_label_sg = ttk.Label(
+                    self.table_frame,
+                    text="❌",
+                    foreground='red'
+                )
+                error_label_sg.grid(row=i, column=base_col, sticky='ne', padx=5)
+                self.error_labels[entry_key_sg] = error_label_sg
+                error_label_sg.grid_remove()
+
+                # Plural entry
+                entry_pl = tk.Entry(
+                    self.table_frame,
+                    width=18,
+                    font=('Times New Roman', 12),
+                    relief='solid',
+                    borderwidth=1
+                )
+                entry_pl.grid(row=i, column=base_col + 1, padx=5, pady=8, sticky='ew')
+                entry_key_pl = f"{case}_{gender}_pl"
+                self.entries[entry_key_pl] = entry_pl
+                entry_pl.bind('<Key>', self.handle_key_press)
+                
+                # Bind navigation events
+                entry_pl.bind('<KeyRelease>', lambda e, k=entry_key_pl: self.clear_error(k))
+                entry_pl.bind('<Return>', lambda e, k=entry_key_pl: self.handle_enter(e, k))
+                entry_pl.bind('<Up>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'up'))
+                entry_pl.bind('<Down>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'down'))
+                entry_pl.bind('<Left>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'left'))
+                entry_pl.bind('<Right>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'right'))
+
+                # Error label for plural
+                error_label_pl = ttk.Label(
+                    self.table_frame,
+                    text="❌",
+                    foreground='red'
+                )
+                error_label_pl.grid(row=i, column=base_col + 1, sticky='ne', padx=5)
+                self.error_labels[entry_key_pl] = error_label_pl
+                error_label_pl.grid_remove()
 
     def handle_key_press(self, event):
         """Handle special character input."""
@@ -493,6 +659,24 @@ class GreekGrammarApp:
         
         return result
 
+    def on_type_change(self, event):
+        """Handle type change between Noun and Adjective."""
+        current_type = self.type_var.get()
+        
+        if current_type == "Noun":
+            self.modes = self.noun_modes.copy()
+            self.mode_var.set("First Declension (μουσα)")
+        else:  # Adjective
+            self.modes = self.adjective_modes.copy()
+            self.mode_var.set("Three-termination Good (ἀγαθός, ἀγαθή, ἀγαθόν)")
+        
+        # Update the dropdown values
+        self.mode_dropdown['values'] = self.modes
+        
+        # Recreate the table for the new type
+        self.reset_table()
+        self.update_word_display()
+
     def on_mode_change(self, event):
         """Handle mode change in the dropdown."""
         self.reset_table()
@@ -517,77 +701,149 @@ class GreekGrammarApp:
             "Third Declension Hope (ἐλπίς)": "elpis",
             "Third Declension Orator (ῥήτωρ)": "rhetor",
             "Third Declension Woman (γυνή)": "gyne",
-            "Third Declension City (πόλις)": "polis"
+            "Third Declension City (πόλις)": "polis",
+            "Three-termination Good (ἀγαθός, ἀγαθή, ἀγαθόν)": "agathos",
+            "Two-termination Wise (σοφός, σοφόν)": "sophos"
         }
         
         paradigm_key = paradigm_map.get(mode)
         return self.paradigms.get(paradigm_key) if paradigm_key else None
 
     def check_answers(self):
-        """Check all answers in the declension table."""
+        """Check all user inputs against correct answers."""
+        # Clear previous error indicators
+        for error_label in self.error_labels.values():
+            error_label.grid_remove()
+        
         current_paradigm = self.get_current_paradigm()
         if not current_paradigm:
-            messagebox.showerror("Error", "No paradigm selected")
             return
-
-        for case in ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]:
-            if "singular" in current_paradigm and case.lower() in current_paradigm["singular"]:
-                self.check_single_answer(f"{case}_sg", current_paradigm["singular"][case.lower()])
+        
+        all_correct = True
+        current_type = self.type_var.get()
+        
+        if current_type == "Adjective":
+            # Check adjective answers (3 genders)
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            genders = ["masculine", "feminine", "neuter"]
             
-            if "plural" in current_paradigm and case.lower() in current_paradigm["plural"]:
-                self.check_single_answer(f"{case}_pl", current_paradigm["plural"][case.lower()])
-
-    def check_single_answer(self, entry_key, correct_answer):
-        """Check a single answer."""
-        entry = self.entries[entry_key]
-        error_label = self.error_labels[entry_key]
-        
-        # Normalize and remove accents from both user input and correct answer
-        user_answer = self.remove_accents(self.normalize_greek(entry.get().strip()))
-        correct = self.remove_accents(self.normalize_greek(correct_answer))
-        
-        is_correct = user_answer.lower() == correct.lower()
-        if is_correct:
-            entry.configure(bg='gold')
-            entry.configure(state='readonly')
-            error_label.grid_remove()
+            for case in cases:
+                for gender in genders:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{gender}_{number}"
+                        
+                        if entry_key in self.entries:
+                            user_answer = self.entries[entry_key].get().strip()
+                            
+                            # Navigate to correct answer in nested structure
+                            if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                                correct_answer = current_paradigm[gender][f"{case}_{number}"]
+                                
+                                # Remove accents for comparison
+                                user_answer_no_accents = self.remove_accents(user_answer)
+                                correct_answer_no_accents = self.remove_accents(correct_answer)
+                                
+                                if user_answer_no_accents != correct_answer_no_accents:
+                                    # Show error indicator
+                                    if entry_key in self.error_labels:
+                                        self.error_labels[entry_key].grid()
+                                    all_correct = False
         else:
-            entry.configure(bg='white')
-            error_label.grid()
+            # Check noun answers (simple structure)
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            for case in cases:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{case}_{number}"
+                    
+                    if entry_key in self.entries:
+                        user_answer = self.entries[entry_key].get().strip()
+                        correct_answer = current_paradigm.get(entry_key, "")
+                        
+                        # Remove accents for comparison
+                        user_answer_no_accents = self.remove_accents(user_answer)
+                        correct_answer_no_accents = self.remove_accents(correct_answer)
+                        
+                        if user_answer_no_accents != correct_answer_no_accents:
+                            # Show error indicator
+                            if entry_key in self.error_labels:
+                                self.error_labels[entry_key].grid()
+                            all_correct = False
         
-        return is_correct
+        # Show appropriate message
+        if all_correct:
+            messagebox.showinfo("Results", "🎉 All answers are correct! Well done!")
+        else:
+            messagebox.showinfo("Results", "Some answers need attention. Check the red X marks.")
 
     def clear_error(self, entry_key):
         """Clear error indication for an entry."""
-        entry = self.entries[entry_key]
-        if entry.cget('state') != 'readonly':
-            self.error_labels[entry_key].grid_remove()
-            entry.configure(bg='white')
+        if entry_key in self.entries and entry_key in self.error_labels:
+            entry = self.entries[entry_key]
+            # Only clear if not in readonly mode (i.e., not marked as correct)
+            if entry.cget('state') != 'readonly':
+                self.error_labels[entry_key].grid_remove()
+                entry.configure(bg='white')
 
     def reveal_answers(self):
-        """Reveal correct answers."""
+        """Show the correct answers in all fields."""
         current_paradigm = self.get_current_paradigm()
         if not current_paradigm:
             return
-
-        for case in ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]:
-            for number, key in [("singular", "sg"), ("plural", "pl")]:
-                if number in current_paradigm and case.lower() in current_paradigm[number]:
-                    entry_key = f"{case}_{key}"
-                    if entry_key in self.entries:
+        
+        # Clear error indicators
+        for error_label in self.error_labels.values():
+            error_label.grid_remove()
+        
+        current_type = self.type_var.get()
+        
+        if current_type == "Adjective":
+            # Fill adjective answers (3 genders)
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            genders = ["masculine", "feminine", "neuter"]
+            
+            for case in cases:
+                for gender in genders:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{gender}_{number}"
+                        
+                        if entry_key in self.entries and gender in current_paradigm:
+                            answer_key = f"{case}_{number}"
+                            if answer_key in current_paradigm[gender]:
+                                entry = self.entries[entry_key]
+                                entry.configure(state='normal')
+                                entry.delete(0, tk.END)
+                                entry.insert(0, current_paradigm[gender][answer_key])
+                                entry.configure(state='readonly', bg='lightgray')
+        else:
+            # Fill noun answers (simple structure)
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            for case in cases:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{case}_{number}"
+                    
+                    if entry_key in self.entries and entry_key in current_paradigm:
                         entry = self.entries[entry_key]
                         entry.configure(state='normal')
                         entry.delete(0, tk.END)
-                        entry.insert(0, current_paradigm[number][case.lower()])
+                        entry.insert(0, current_paradigm[entry_key])
                         entry.configure(state='readonly', bg='lightgray')
 
     def reset_table(self):
-        """Reset the declension table."""
-        for key, entry in self.entries.items():
+        """Clear all entries and error indicators."""
+        # Reset visual state of existing entries before clearing
+        for entry in self.entries.values():
             entry.configure(state='normal')
-            entry.delete(0, tk.END)
             entry.configure(bg='white')
-            self.error_labels[key].grid_remove()
+            entry.delete(0, tk.END)
+        
+        # Hide all error indicators
+        for error_label in self.error_labels.values():
+            error_label.grid_remove()
+        
+        # Clear dictionaries and recreate the table
+        self.entries.clear()
+        self.error_labels.clear()
+        self.create_declension_table()
 
     def show_help(self):
         """Show help dialog."""
@@ -633,50 +889,174 @@ Tips:
         if not current_paradigm:
             return "break"
 
-        key_parts = current_key.split('_')
-        case = key_parts[0]
-        number = key_parts[1]
-        number_key = 'singular' if number == 'sg' else 'plural'
-
-        if case.lower() in current_paradigm.get(number_key, {}):
-            if self.check_single_answer(current_key, current_paradigm[number_key][case.lower()]):
-                cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
-                current_idx = cases.index(case)
-                
-                if current_idx < len(cases) - 1:
-                    next_key = f"{cases[current_idx + 1]}_{number}"
-                else:
-                    next_key = f"Nominative_pl" if number == "sg" else f"Nominative_sg"
-                
-                if next_key in self.entries and self.entries[next_key].cget('state') != 'readonly':
-                    self.entries[next_key].focus()
+        # Check if this entry is correct before moving to next
+        if self.check_single_entry(current_key):
+            self.move_to_next_entry(current_key)
 
         return "break"
 
+    def check_single_entry(self, entry_key):
+        """Check if a single entry is correct and apply visual feedback."""
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm or entry_key not in self.entries:
+            return False
+        
+        current_type = self.type_var.get()
+        user_answer = self.entries[entry_key].get().strip()
+        entry = self.entries[entry_key]
+        error_label = self.error_labels.get(entry_key)
+        
+        correct_answer = None
+        
+        if current_type == "Adjective":
+            # Parse adjective entry key: "Case_gender_number"
+            parts = entry_key.split('_')
+            if len(parts) == 3:
+                case, gender, number = parts
+                if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                    correct_answer = current_paradigm[gender][f"{case}_{number}"]
+        else:
+            # Parse noun entry key: "Case_number"
+            if entry_key in current_paradigm:
+                correct_answer = current_paradigm[entry_key]
+        
+        if correct_answer:
+            # Remove accents for comparison
+            user_clean = self.remove_accents(self.normalize_greek(user_answer))
+            correct_clean = self.remove_accents(self.normalize_greek(correct_answer))
+            
+            is_correct = user_clean.lower() == correct_clean.lower()
+            
+            if is_correct:
+                # Mark as correct with visual feedback
+                entry.configure(bg='gold')
+                entry.configure(state='readonly')
+                if error_label:
+                    error_label.grid_remove()
+            else:
+                # Mark as incorrect
+                entry.configure(bg='white')
+                entry.configure(state='normal')
+                if error_label:
+                    error_label.grid()
+            
+            return is_correct
+        
+        return False
+
+    def move_to_next_entry(self, current_key):
+        """Move focus to the next logical entry."""
+        current_type = self.type_var.get()
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+        
+        if current_type == "Adjective":
+            # Parse: "Case_gender_number"
+            parts = current_key.split('_')
+            if len(parts) == 3:
+                case, gender, number = parts
+                case_idx = cases.index(case)
+                genders = ["masculine", "feminine", "neuter"]
+                gender_idx = genders.index(gender)
+                
+                # Try next number in same case/gender
+                if number == "sg":
+                    next_key = f"{case}_{gender}_pl"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                        return
+                
+                # Try next gender in same case
+                if gender_idx < len(genders) - 1:
+                    next_key = f"{case}_{genders[gender_idx + 1]}_sg"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                        return
+                
+                # Try next case, first gender
+                if case_idx < len(cases) - 1:
+                    next_key = f"{cases[case_idx + 1]}_masculine_sg"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                        return
+        else:
+            # Parse: "Case_number" 
+            parts = current_key.split('_')
+            if len(parts) == 2:
+                case, number = parts
+                case_idx = cases.index(case)
+                
+                # Try other number in same case
+                if number == "sg":
+                    next_key = f"{case}_pl"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                        return
+                
+                # Try next case, singular
+                if case_idx < len(cases) - 1:
+                    next_key = f"{cases[case_idx + 1]}_sg"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                        return
+
     def handle_arrow(self, event, current_key, direction):
         """Handle arrow key navigation."""
+        current_type = self.type_var.get()
         cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
-        case, number = current_key.split('_')
-        current_idx = cases.index(case)
         
-        if direction == 'up' and current_idx > 0:
-            next_key = f"{cases[current_idx - 1]}_{number}"
-            self.entries[next_key].focus()
-        elif direction == 'down' and current_idx < len(cases) - 1:
-            next_key = f"{cases[current_idx + 1]}_{number}"
-            self.entries[next_key].focus()
-        elif direction == 'left':
-            # Move from plural to singular
-            if number == 'pl':
-                next_key = f"{case}_sg"
-                if next_key in self.entries:
-                    self.entries[next_key].focus()
-        elif direction == 'right':
-            # Move from singular to plural
-            if number == 'sg':
-                next_key = f"{case}_pl"
-                if next_key in self.entries:
-                    self.entries[next_key].focus()
+        if current_type == "Adjective":
+            # Parse: "Case_gender_number"
+            parts = current_key.split('_')
+            if len(parts) == 3:
+                case, gender, number = parts
+                case_idx = cases.index(case)
+                genders = ["masculine", "feminine", "neuter"]
+                gender_idx = genders.index(gender)
+                
+                if direction == 'up' and case_idx > 0:
+                    next_key = f"{cases[case_idx - 1]}_{gender}_{number}"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                elif direction == 'down' and case_idx < len(cases) - 1:
+                    next_key = f"{cases[case_idx + 1]}_{gender}_{number}"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                elif direction == 'left':
+                    if gender_idx > 0:
+                        next_key = f"{case}_{genders[gender_idx - 1]}_{number}"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                elif direction == 'right':
+                    if gender_idx < len(genders) - 1:
+                        next_key = f"{case}_{genders[gender_idx + 1]}_{number}"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+        else:
+            # Parse: "Case_number"
+            parts = current_key.split('_')
+            if len(parts) == 2:
+                case, number = parts
+                case_idx = cases.index(case)
+                
+                if direction == 'up' and case_idx > 0:
+                    next_key = f"{cases[case_idx - 1]}_{number}"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                elif direction == 'down' and case_idx < len(cases) - 1:
+                    next_key = f"{cases[case_idx + 1]}_{number}"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                elif direction == 'left' and number == 'pl':
+                    # Move from plural to singular
+                    next_key = f"{case}_sg"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                elif direction == 'right' and number == 'sg':
+                    # Move from singular to plural
+                    next_key = f"{case}_pl"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+        
         return "break"
 
 def main():

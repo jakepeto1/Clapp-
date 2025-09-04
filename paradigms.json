@@ -2,91 +2,151 @@
   "geron": {
     "type": "noun",
     "lemma": "γέρων",
-    "singular": {
-      "nominative": "γέρων",
-      "vocative": "γέρον",
-      "accusative": "γέροντα",
-      "genitive": "γέροντος",
-      "dative": "γέροντι"
-    },
-    "plural": {
-      "nominative": "γέροντες",
-      "vocative": "γέροντες",
-      "accusative": "γέροντας",
-      "genitive": "γερόντων",
-      "dative": "γέρουσι"
-    }
+    "Nominative_sg": "γέρων",
+    "Vocative_sg": "γέρον",
+    "Accusative_sg": "γέροντα",
+    "Genitive_sg": "γέροντος",
+    "Dative_sg": "γέροντι",
+    "Nominative_pl": "γέροντες",
+    "Vocative_pl": "γέροντες",
+    "Accusative_pl": "γέροντας",
+    "Genitive_pl": "γερόντων",
+    "Dative_pl": "γέρουσι"
   },
   "aner": {
     "type": "noun",
     "lemma": "ἀνήρ",
-    "singular": {
-      "nominative": "ἀνήρ",
-      "vocative": "ἄνερ",
-      "accusative": "ἄνδρα",
-      "genitive": "ἀνδρός",
-      "dative": "ἀνδρί"
-    },
-    "plural": {
-      "nominative": "ἄνδρες",
-      "vocative": "ἄνδρες",
-      "accusative": "ἄνδρας",
-      "genitive": "ἀνδρῶν",
-      "dative": "ἀνδράσι"
-    }
+    "Nominative_sg": "ἀνήρ",
+    "Vocative_sg": "ἄνερ",
+    "Accusative_sg": "ἄνδρα",
+    "Genitive_sg": "ἀνδρός",
+    "Dative_sg": "ἀνδρί",
+    "Nominative_pl": "ἄνδρες",
+    "Vocative_pl": "ἄνδρες",
+    "Accusative_pl": "ἄνδρας",
+    "Genitive_pl": "ἀνδρῶν",
+    "Dative_pl": "ἀνδράσι"
   },
   "mousa": {
     "type": "noun",
     "lemma": "μούσα",
-    "singular": {
-      "nominative": "μούσα",
-      "vocative": "μούσα",
-      "accusative": "μούσαν",
-      "genitive": "μούσης",
-      "dative": "μούσῃ"
-    },
-    "plural": {
-      "nominative": "μοῦσαι",
-      "vocative": "μοῦσαι",
-      "accusative": "μούσας",
-      "genitive": "μουσῶν",
-      "dative": "μούσαις"
-    }
+    "Nominative_sg": "μούσα",
+    "Vocative_sg": "μούσα",
+    "Accusative_sg": "μούσαν",
+    "Genitive_sg": "μούσης",
+    "Dative_sg": "μούσῃ",
+    "Nominative_pl": "μοῦσαι",
+    "Vocative_pl": "μοῦσαι",
+    "Accusative_pl": "μούσας",
+    "Genitive_pl": "μουσῶν",
+    "Dative_pl": "μούσαις"
   },
   "logos": {
     "type": "noun",
     "lemma": "λόγος",
-    "singular": {
-      "nominative": "λόγος",
-      "vocative": "λόγε",
-      "accusative": "λόγον",
-      "genitive": "λόγου",
-      "dative": "λόγῳ"
-    },
-    "plural": {
-      "nominative": "λόγοι",
-      "vocative": "λόγοι",
-      "accusative": "λόγους",
-      "genitive": "λόγων",
-      "dative": "λόγοις"
-    }
+    "Nominative_sg": "λόγος",
+    "Vocative_sg": "λόγε",
+    "Accusative_sg": "λόγον",
+    "Genitive_sg": "λόγου",
+    "Dative_sg": "λόγῳ",
+    "Nominative_pl": "λόγοι",
+    "Vocative_pl": "λόγοι",
+    "Accusative_pl": "λόγους",
+    "Genitive_pl": "λόγων",
+    "Dative_pl": "λόγοις"
   },
   "pater": {
     "type": "noun",
     "lemma": "πατήρ",
-    "singular": {
-      "nominative": "πατήρ",
-      "vocative": "πάτερ",
-      "accusative": "πατέρα",
-      "genitive": "πατρός",
-      "dative": "πατρί"
+    "Nominative_sg": "πατήρ",
+    "Vocative_sg": "πάτερ",
+    "Accusative_sg": "πατέρα",
+    "Genitive_sg": "πατρός",
+    "Dative_sg": "πατρί",
+    "Nominative_pl": "πατέρες",
+    "Vocative_pl": "πατέρες",
+    "Accusative_pl": "πατέρας",
+    "Genitive_pl": "πατέρων",
+    "Dative_pl": "πατράσι"
+  },
+  "agathos": {
+    "type": "adjective_3termination",
+    "lemma": "ἀγαθός, ἀγαθή, ἀγαθόν",
+    "masculine": {
+      "Nominative_sg": "ἀγαθός",
+      "Vocative_sg": "ἀγαθέ",
+      "Accusative_sg": "ἀγαθόν",
+      "Genitive_sg": "ἀγαθοῦ",
+      "Dative_sg": "ἀγαθῷ",
+      "Nominative_pl": "ἀγαθοί",
+      "Vocative_pl": "ἀγαθοί",
+      "Accusative_pl": "ἀγαθούς",
+      "Genitive_pl": "ἀγαθῶν",
+      "Dative_pl": "ἀγαθοῖς"
     },
-    "plural": {
-      "nominative": "πατέρες",
-      "vocative": "πατέρες",
-      "accusative": "πατέρας",
-      "genitive": "πατέρων",
-      "dative": "πατράσι"
+    "feminine": {
+      "Nominative_sg": "ἀγαθή",
+      "Vocative_sg": "ἀγαθή",
+      "Accusative_sg": "ἀγαθήν",
+      "Genitive_sg": "ἀγαθῆς",
+      "Dative_sg": "ἀγαθῇ",
+      "Nominative_pl": "ἀγαθαί",
+      "Vocative_pl": "ἀγαθαί",
+      "Accusative_pl": "ἀγαθάς",
+      "Genitive_pl": "ἀγαθῶν",
+      "Dative_pl": "ἀγαθαῖς"
+    },
+    "neuter": {
+      "Nominative_sg": "ἀγαθόν",
+      "Vocative_sg": "ἀγαθόν",
+      "Accusative_sg": "ἀγαθόν",
+      "Genitive_sg": "ἀγαθοῦ",
+      "Dative_sg": "ἀγαθῷ",
+      "Nominative_pl": "ἀγαθά",
+      "Vocative_pl": "ἀγαθά",
+      "Accusative_pl": "ἀγαθά",
+      "Genitive_pl": "ἀγαθῶν",
+      "Dative_pl": "ἀγαθοῖς"
+    }
+  },
+  "sophos": {
+    "type": "adjective_2termination",
+    "lemma": "σοφός, σοφόν",
+    "masculine": {
+      "Nominative_sg": "σοφός",
+      "Vocative_sg": "σοφέ",
+      "Accusative_sg": "σοφόν",
+      "Genitive_sg": "σοφοῦ",
+      "Dative_sg": "σοφῷ",
+      "Nominative_pl": "σοφοί",
+      "Vocative_pl": "σοφοί",
+      "Accusative_pl": "σοφούς",
+      "Genitive_pl": "σοφῶν",
+      "Dative_pl": "σοφοῖς"
+    },
+    "feminine": {
+      "Nominative_sg": "σοφός",
+      "Vocative_sg": "σοφέ",
+      "Accusative_sg": "σοφόν",
+      "Genitive_sg": "σοφοῦ",
+      "Dative_sg": "σοφῷ",
+      "Nominative_pl": "σοφοί",
+      "Vocative_pl": "σοφοί",
+      "Accusative_pl": "σοφούς",
+      "Genitive_pl": "σοφῶν",
+      "Dative_pl": "σοφοῖς"
+    },
+    "neuter": {
+      "Nominative_sg": "σοφόν",
+      "Vocative_sg": "σοφόν",
+      "Accusative_sg": "σοφόν",
+      "Genitive_sg": "σοφοῦ",
+      "Dative_sg": "σοφῷ",
+      "Nominative_pl": "σοφά",
+      "Vocative_pl": "σοφά",
+      "Accusative_pl": "σοφά",
+      "Genitive_pl": "σοφῶν",
+      "Dative_pl": "σοφοῖς"
     }
   }
 }
