@@ -925,12 +925,25 @@ class GreekGrammarApp:
             tense_value = current_tense.get() if current_tense else "Present"
         except:
             tense_value = "Present"
+        
+        # Determine available tenses based on current verb
+        mode = self.mode_var.get()
+        if "λύω" in mode:
+            available_tenses = ["Present", "Imperfect", "Aorist"]
+        elif "εἰμί" in mode:
+            available_tenses = ["Present", "Imperfect"]
+            # If user had Aorist selected but switched to εἰμί, default to Present
+            if tense_value == "Aorist":
+                tense_value = "Present"
+        else:
+            available_tenses = ["Present", "Imperfect", "Aorist"]
+        
         self.tense_var = tk.StringVar(value=tense_value)
         
         self.tense_dropdown = ttk.Combobox(
             selectors_frame,
             textvariable=self.tense_var,
-            values=["Present", "Imperfect"],
+            values=available_tenses,
             state="readonly",
             width=12,
             font=('Arial', 10)
@@ -1201,9 +1214,11 @@ class GreekGrammarApp:
         else:  # Verb
             self.modes = self.verb_modes.copy()
             self.mode_var.set("Present Indicative Active - Release (λύω)")
+            print(f"DEBUG: Verb modes set to: {self.modes}")
         
         # Update the dropdown values
         self.mode_dropdown['values'] = self.modes
+        print(f"DEBUG: Dropdown values updated to: {self.mode_dropdown['values']}")
         
         # Recreate the table for the new type
         self.reset_table()
@@ -1248,7 +1263,8 @@ class GreekGrammarApp:
                 # Map tense names to paradigm keys
                 tense_map = {
                     "present": "pres",
-                    "imperfect": "impf"
+                    "imperfect": "impf",
+                    "aorist": "aor"
                 }
                 tense_key = tense_map.get(tense_val, tense_val)
                 

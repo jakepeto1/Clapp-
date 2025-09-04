@@ -1054,5 +1054,18 @@
     "1st_pl": "ἦμεν",
     "2nd_pl": "ἦτε",
     "3rd_pl": "ἦσαν"
+  },
+  "luo_aor_ind_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "indicative",
+    "voice": "active",
+    "lemma": "λύω",
+    "1st_sg": "ἔλυσα",
+    "2nd_sg": "ἔλυσας",
+    "3rd_sg": "ἔλυσε",
+    "1st_pl": "ἐλύσαμεν",
+    "2nd_pl": "ἐλύσατε",
+    "3rd_pl": "ἔλυσαν"
   }
 }
