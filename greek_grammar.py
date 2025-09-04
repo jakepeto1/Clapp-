@@ -186,7 +186,18 @@ class GreekGrammarApp:
         
         self.verb_modes = [
             "Present Indicative Active - Release (λύω)",
-            "Present Indicative Active - To Be (εἰμί)"
+            "Present Indicative Active - To Be (εἰμί)",
+            "Present Indicative Active - Love (φιλέω)",
+            "Present Indicative Active - Honor (τιμάω)",
+            "Present Indicative Active - Make Clear (δηλόω)",
+            "Present Indicative Active - Throw (βάλλω)",
+            "Present Indicative Active - Give (δίδωμι)",
+            "Present Indicative Active - Place (τίθημι)",
+            "Present Indicative Active - Stand (ἵστημι)",
+            "Present Indicative Active - Know (οἶδα)",
+            "Present Indicative Active - Go (εἶμι)",
+            "Present Indicative Active - Say (φημί)",
+            "Present Indicative Active - Send (ἵημι)"
         ]
         
         # Start with noun modes
@@ -310,6 +321,28 @@ class GreekGrammarApp:
             word = "λύω"
         elif "εἰμί" in mode:
             word = "εἰμί"
+        elif "φιλέω" in mode:
+            word = "φιλέω"
+        elif "τιμάω" in mode:
+            word = "τιμάω"
+        elif "δηλόω" in mode:
+            word = "δηλόω"
+        elif "βάλλω" in mode:
+            word = "βάλλω"
+        elif "δίδωμι" in mode:
+            word = "δίδωμι"
+        elif "τίθημι" in mode:
+            word = "τίθημι"
+        elif "ἵστημι" in mode:
+            word = "ἵστημι"
+        elif "οἶδα" in mode:
+            word = "οἶδα"
+        elif "εἶμι" in mode:
+            word = "εἶμι"
+        elif "φημί" in mode:
+            word = "φημί"
+        elif "ἵημι" in mode:
+            word = "ἵημι"
         else:
             word = "—"
         
@@ -928,15 +961,25 @@ class GreekGrammarApp:
         
         # Determine available tenses based on current verb
         mode = self.mode_var.get()
-        if "λύω" in mode:
-            available_tenses = ["Present", "Imperfect", "Aorist"]
+        if "λύω" in mode or "φιλέω" in mode or "τιμάω" in mode or "δηλόω" in mode or "βάλλω" in mode or "δίδωμι" in mode or "τίθημι" in mode or "ἵστημι" in mode or "φημί" in mode or "ἵημι" in mode:
+            available_tenses = ["Present", "Imperfect", "Aorist", "Future"]
         elif "εἰμί" in mode:
-            available_tenses = ["Present", "Imperfect"]
+            available_tenses = ["Present", "Imperfect", "Future"]
             # If user had Aorist selected but switched to εἰμί, default to Present
             if tense_value == "Aorist":
                 tense_value = "Present"
+        elif "οἶδα" in mode:
+            available_tenses = ["Present", "Imperfect"]
+            # οἶδα is a perfect with present meaning, limited forms
+            if tense_value in ["Aorist", "Future"]:
+                tense_value = "Present"
+        elif "εἶμι" in mode:
+            available_tenses = ["Present", "Imperfect", "Future"]
+            # εἶμι (go) has no aorist
+            if tense_value == "Aorist":
+                tense_value = "Present"
         else:
-            available_tenses = ["Present", "Imperfect", "Aorist"]
+            available_tenses = ["Present", "Imperfect", "Aorist", "Future"]
         
         self.tense_var = tk.StringVar(value=tense_value)
         
@@ -960,12 +1003,22 @@ class GreekGrammarApp:
             voice_value = current_voice.get() if current_voice else "Active"
         except:
             voice_value = "Active"
+        
+        # Determine available voices based on current verb
+        if "εἰμί" in mode or "εἶμι" in mode:
+            available_voices = ["Active"]
+            # If user had Middle/Passive selected but switched to εἰμί/εἶμι, default to Active
+            if voice_value in ["Middle", "Passive"]:
+                voice_value = "Active"
+        else:
+            available_voices = ["Active", "Middle", "Passive"]
+        
         self.voice_var = tk.StringVar(value=voice_value)
         
         self.voice_dropdown = ttk.Combobox(
             selectors_frame,
             textvariable=self.voice_var,
-            values=["Active"],
+            values=available_voices,
             state="readonly",
             width=12,
             font=('Arial', 10)
@@ -982,11 +1035,29 @@ class GreekGrammarApp:
             mood_value = current_mood.get() if current_mood else "Indicative"
         except:
             mood_value = "Indicative"
+        
+        # Determine available moods based on current tense
+        tense_value = self.tense_var.get()
+        if tense_value == "Present":
+            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative"]
+        elif tense_value == "Imperfect":
+            available_moods = ["Indicative", "Optative"]
+        elif tense_value == "Aorist":
+            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative"]
+        elif tense_value == "Future":
+            available_moods = ["Indicative", "Optative"]
+        else:
+            available_moods = ["Indicative"]
+        
+        # If current mood is not available in this tense, default to Indicative
+        if mood_value not in available_moods:
+            mood_value = "Indicative"
+        
         self.mood_var = tk.StringVar(value=mood_value)
         self.mood_dropdown = ttk.Combobox(
             selectors_frame,
             textvariable=self.mood_var,
-            values=["Indicative"],
+            values=available_moods,
             state="readonly",
             width=12,
             font=('Arial', 10)
@@ -1214,11 +1285,9 @@ class GreekGrammarApp:
         else:  # Verb
             self.modes = self.verb_modes.copy()
             self.mode_var.set("Present Indicative Active - Release (λύω)")
-            print(f"DEBUG: Verb modes set to: {self.modes}")
         
         # Update the dropdown values
         self.mode_dropdown['values'] = self.modes
-        print(f"DEBUG: Dropdown values updated to: {self.mode_dropdown['values']}")
         
         # Recreate the table for the new type
         self.reset_table()
@@ -1247,6 +1316,28 @@ class GreekGrammarApp:
                 verb_base = "luo"
             elif "εἰμί" in mode:
                 verb_base = "eimi"
+            elif "φιλέω" in mode:
+                verb_base = "phileo"
+            elif "τιμάω" in mode:
+                verb_base = "timao"
+            elif "δηλόω" in mode:
+                verb_base = "deloo"
+            elif "βάλλω" in mode:
+                verb_base = "ballo"
+            elif "δίδωμι" in mode:
+                verb_base = "didomi"
+            elif "τίθημι" in mode:
+                verb_base = "tithemi"
+            elif "ἵστημι" in mode:
+                verb_base = "histemi"
+            elif "οἶδα" in mode:
+                verb_base = "oida"
+            elif "εἶμι" in mode:
+                verb_base = "eimi_go"
+            elif "φημί" in mode:
+                verb_base = "phemi"
+            elif "ἵημι" in mode:
+                verb_base = "hiemi"
             else:
                 return None
             
@@ -1264,19 +1355,25 @@ class GreekGrammarApp:
                 tense_map = {
                     "present": "pres",
                     "imperfect": "impf",
-                    "aorist": "aor"
+                    "aorist": "aor",
+                    "future": "fut"
                 }
                 tense_key = tense_map.get(tense_val, tense_val)
                 
                 # Map mood names to paradigm keys
                 mood_map = {
-                    "indicative": "ind"
+                    "indicative": "ind",
+                    "subjunctive": "subj",
+                    "optative": "opt",
+                    "imperative": "imp"
                 }
                 mood_key = mood_map.get(mood_val, mood_val)
                 
                 # Map voice names to paradigm keys  
                 voice_map = {
-                    "active": "act"
+                    "active": "act",
+                    "middle": "mid",
+                    "passive": "pass"
                 }
                 voice_key = voice_map.get(voice_val, voice_val)
                 
