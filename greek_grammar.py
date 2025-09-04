@@ -122,7 +122,7 @@ class GreekGrammarApp:
         type_dropdown = ttk.Combobox(
             mode_frame,
             textvariable=self.type_var,
-            values=["Noun", "Adjective", "Pronoun"],
+            values=["Noun", "Adjective", "Pronoun", "Verb"],
             font=('Times New Roman', 12),
             width=12,
             state='readonly'
@@ -182,6 +182,11 @@ class GreekGrammarApp:
             "Relative Who/Which (ὅς, ἥ, ὅ)",
             "Interrogative Who/What (τίς, τί)",
             "Indefinite Someone/Something (τις, τι)"
+        ]
+        
+        self.verb_modes = [
+            "Present Indicative Active - Release (λύω)",
+            "Present Indicative Active - To Be (εἰμί)"
         ]
         
         # Start with noun modes
@@ -301,6 +306,10 @@ class GreekGrammarApp:
             word = "τίς, τί"
         elif "τις, τι" in mode:
             word = "τις, τι"
+        elif "λύω" in mode:
+            word = "λύω"
+        elif "εἰμί" in mode:
+            word = "εἰμί"
         else:
             word = "—"
         
@@ -318,13 +327,15 @@ class GreekGrammarApp:
         if not current_paradigm:
             return
 
-        # Check if this is an adjective, noun, or pronoun
+        # Check if this is an adjective, noun, pronoun, or verb
         current_type = self.type_var.get()
         
         if current_type == "Adjective":
             self.create_adjective_table(current_paradigm)
         elif current_type == "Pronoun":
             self.create_pronoun_table(current_paradigm)
+        elif current_type == "Verb":
+            self.create_verb_table(current_paradigm)
         else:
             self.create_noun_table(current_paradigm)
         
@@ -895,6 +906,150 @@ class GreekGrammarApp:
                         )
                         entry.grid(row=i, column=col, padx=5, pady=8, sticky='ew')
 
+    def create_verb_table(self, current_paradigm):
+        """Create the verb conjugation table with input fields for each person/number."""
+        
+        # Add verb form selectors at the top
+        selectors_frame = ttk.Frame(self.table_frame)
+        selectors_frame.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky='ew')
+        selectors_frame.grid_columnconfigure(0, weight=1)
+        selectors_frame.grid_columnconfigure(1, weight=1)
+        selectors_frame.grid_columnconfigure(2, weight=1)
+        
+        # Tense selector
+        ttk.Label(selectors_frame, text="Tense:", font=('Arial', 10, 'bold')).grid(row=0, column=0, sticky='w', padx=(0, 5))
+        
+        # Preserve existing tense selection or default to "Present"
+        current_tense = getattr(self, 'tense_var', None)
+        try:
+            tense_value = current_tense.get() if current_tense else "Present"
+        except:
+            tense_value = "Present"
+        self.tense_var = tk.StringVar(value=tense_value)
+        
+        self.tense_dropdown = ttk.Combobox(
+            selectors_frame,
+            textvariable=self.tense_var,
+            values=["Present", "Imperfect"],
+            state="readonly",
+            width=12,
+            font=('Arial', 10)
+        )
+        self.tense_dropdown.grid(row=1, column=0, sticky='ew', padx=(0, 10))
+        self.tense_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
+        
+        # Voice selector
+        ttk.Label(selectors_frame, text="Voice:", font=('Arial', 10, 'bold')).grid(row=0, column=1, sticky='w', padx=(0, 5))
+        
+        # Preserve existing voice selection or default to "Active"
+        current_voice = getattr(self, 'voice_var', None)
+        try:
+            voice_value = current_voice.get() if current_voice else "Active"
+        except:
+            voice_value = "Active"
+        self.voice_var = tk.StringVar(value=voice_value)
+        
+        self.voice_dropdown = ttk.Combobox(
+            selectors_frame,
+            textvariable=self.voice_var,
+            values=["Active"],
+            state="readonly",
+            width=12,
+            font=('Arial', 10)
+        )
+        self.voice_dropdown.grid(row=1, column=1, sticky='ew', padx=(0, 10))
+        self.voice_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
+        
+        # Mood selector
+        ttk.Label(selectors_frame, text="Mood:", font=('Arial', 10, 'bold')).grid(row=0, column=2, sticky='w', padx=(0, 5))
+        
+        # Preserve existing mood selection or default to "Indicative"
+        current_mood = getattr(self, 'mood_var', None)
+        try:
+            mood_value = current_mood.get() if current_mood else "Indicative"
+        except:
+            mood_value = "Indicative"
+        self.mood_var = tk.StringVar(value=mood_value)
+        self.mood_dropdown = ttk.Combobox(
+            selectors_frame,
+            textvariable=self.mood_var,
+            values=["Indicative"],
+            state="readonly",
+            width=12,
+            font=('Arial', 10)
+        )
+        self.mood_dropdown.grid(row=1, column=2, sticky='ew')
+        self.mood_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
+        
+        # Configure main table columns
+        self.table_frame.grid_columnconfigure(0, weight=1)  # Person column
+        self.table_frame.grid_columnconfigure(1, weight=1)  # Singular column  
+        self.table_frame.grid_columnconfigure(2, weight=1)  # Plural column
+
+        # Headers (shifted down to row 2)
+        ttk.Label(
+            self.table_frame,
+            text="Person",
+            font=('Arial', 12, 'bold')
+        ).grid(row=2, column=0, padx=10, pady=10)
+
+        ttk.Label(
+            self.table_frame,
+            text="Singular",
+            font=('Arial', 12, 'bold')
+        ).grid(row=2, column=1, padx=10, pady=10)
+
+        ttk.Label(
+            self.table_frame,
+            text="Plural",
+            font=('Arial', 12, 'bold')
+        ).grid(row=2, column=2, padx=10, pady=10)
+
+        # Create input fields for each person (shifted down to start at row 3)
+        persons = ["1st", "2nd", "3rd"]
+        for i, person in enumerate(persons, 3):
+            # Person label
+            ttk.Label(
+                self.table_frame,
+                text=person.replace("st", "st").replace("nd", "nd").replace("rd", "rd"),
+                font=('Arial', 12, 'bold')
+            ).grid(row=i, column=0, padx=10, pady=8)
+
+            # Singular and plural entry fields for this person
+            for j, number in enumerate(["sg", "pl"], 1):
+                # Create a frame to hold the entry and error label
+                entry_frame = tk.Frame(self.table_frame)
+                entry_frame.grid(row=i, column=j, padx=5, pady=8, sticky='ew')
+                entry_frame.grid_columnconfigure(0, weight=1)
+
+                entry_key = f"{person}_{number}"
+                entry = tk.Entry(
+                    entry_frame,
+                    width=18,
+                    font=('Times New Roman', 12),
+                    relief='solid',
+                    borderwidth=1
+                )
+                entry.grid(row=0, column=0, sticky='ew')
+                entry.bind('<Key>', self.handle_key_press)
+                entry.bind('<Return>', lambda e, key=entry_key: self.handle_enter(e, key))
+                entry.bind('<Up>', lambda e, key=entry_key: self.handle_arrow(e, key, 'up'))
+                entry.bind('<Down>', lambda e, key=entry_key: self.handle_arrow(e, key, 'down'))
+                entry.bind('<Left>', lambda e, key=entry_key: self.handle_arrow(e, key, 'left'))
+                entry.bind('<Right>', lambda e, key=entry_key: self.handle_arrow(e, key, 'right'))
+                self.entries[entry_key] = entry
+
+                # Create error label positioned to the right of the entry
+                error_label = ttk.Label(
+                    entry_frame,
+                    text="X",
+                    foreground='red',
+                    font=('Arial', 10, 'bold')
+                )
+                error_label.grid(row=0, column=1, padx=(5, 0))
+                error_label.grid_remove()  # Hide initially
+                self.error_labels[entry_key] = error_label
+
     def handle_key_press(self, event):
         """Handle special character input."""
         char = event.char
@@ -1031,7 +1186,7 @@ class GreekGrammarApp:
         return result
 
     def on_type_change(self, event):
-        """Handle type change between Noun, Adjective, and Pronoun."""
+        """Handle type change between Noun, Adjective, Pronoun, and Verb."""
         current_type = self.type_var.get()
         
         if current_type == "Noun":
@@ -1040,9 +1195,12 @@ class GreekGrammarApp:
         elif current_type == "Adjective":
             self.modes = self.adjective_modes.copy()
             self.mode_var.set("Three-termination Good (ἀγαθός, ἀγαθή, ἀγαθόν)")
-        else:  # Pronoun
+        elif current_type == "Pronoun":
             self.modes = self.pronoun_modes.copy()
             self.mode_var.set("Personal I (ἐγώ)")
+        else:  # Verb
+            self.modes = self.verb_modes.copy()
+            self.mode_var.set("Present Indicative Active - Release (λύω)")
         
         # Update the dropdown values
         self.mode_dropdown['values'] = self.modes
@@ -1056,9 +1214,65 @@ class GreekGrammarApp:
         self.reset_table()
         self.update_word_display()
 
+    def on_verb_form_change(self, event):
+        """Handle changes to verb tense, voice, or mood selectors."""
+        if self.type_var.get() == "Verb":
+            self.reset_table()
+            self.update_word_display()
+
     def get_current_paradigm(self):
         """Get the currently selected paradigm."""
         mode = self.mode_var.get()
+        current_type = self.type_var.get()
+        
+        # For verbs, use dropdown selections to determine paradigm
+        if current_type == "Verb":
+            # Get the base verb from the mode
+            if "λύω" in mode:
+                verb_base = "luo"
+            elif "εἰμί" in mode:
+                verb_base = "eimi"
+            else:
+                return None
+            
+            # Get tense, voice, mood from dropdowns (if they exist)
+            tense = getattr(self, 'tense_var', None)
+            voice = getattr(self, 'voice_var', None)
+            mood = getattr(self, 'mood_var', None)
+            
+            if tense and voice and mood:
+                tense_val = tense.get().lower()
+                voice_val = voice.get().lower()
+                mood_val = mood.get().lower()
+                
+                # Map tense names to paradigm keys
+                tense_map = {
+                    "present": "pres",
+                    "imperfect": "impf"
+                }
+                tense_key = tense_map.get(tense_val, tense_val)
+                
+                # Map mood names to paradigm keys
+                mood_map = {
+                    "indicative": "ind"
+                }
+                mood_key = mood_map.get(mood_val, mood_val)
+                
+                # Map voice names to paradigm keys  
+                voice_map = {
+                    "active": "act"
+                }
+                voice_key = voice_map.get(voice_val, voice_val)
+                
+                # Construct paradigm key
+                paradigm_key = f"{verb_base}_{tense_key}_{mood_key}_{voice_key}"
+                return self.paradigms.get(paradigm_key)
+            else:
+                # Fallback to present indicative active
+                paradigm_key = f"{verb_base}_pres_ind_act"
+                return self.paradigms.get(paradigm_key)
+        
+        # For non-verbs, use the existing paradigm map
         paradigm_map = {
             "Article (ὁ, ἡ, το)": "article",
             "First Declension (μουσα)": "mousa",
@@ -1096,7 +1310,9 @@ class GreekGrammarApp:
             "Demonstrative This (οὗτος, αὕτη, τοῦτο)": "houtos",
             "Relative Who/Which (ὅς, ἥ, ὅ)": "hos",
             "Interrogative Who/What (τίς, τί)": "tis_interrog",
-            "Indefinite Someone/Something (τις, τι)": "tis_indef"
+            "Indefinite Someone/Something (τις, τι)": "tis_indef",
+            "Present Indicative Active - Release (λύω)": "luo_pres_ind_act",
+            "Present Indicative Active - To Be (εἰμί)": "eimi_pres_ind_act"
         }
         
         paradigm_key = paradigm_map.get(mode)
@@ -1196,6 +1412,26 @@ class GreekGrammarApp:
                                         if entry_key in self.error_labels:
                                             self.error_labels[entry_key].grid()
                                         all_correct = False
+        elif current_type == "Verb":
+            # Check verb answers (person/number structure)
+            persons = ["1st", "2nd", "3rd"]
+            for person in persons:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{person}_{number}"
+                    
+                    if entry_key in self.entries:
+                        user_answer = self.entries[entry_key].get().strip()
+                        correct_answer = current_paradigm.get(entry_key, "")
+                        
+                        # Remove accents for comparison
+                        user_answer_no_accents = self.remove_accents(user_answer)
+                        correct_answer_no_accents = self.remove_accents(correct_answer)
+                        
+                        if user_answer_no_accents != correct_answer_no_accents:
+                            # Show error indicator
+                            if entry_key in self.error_labels:
+                                self.error_labels[entry_key].grid()
+                            all_correct = False
         else:
             # Check noun answers (simple structure)
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
@@ -1302,6 +1538,19 @@ class GreekGrammarApp:
                                     entry.delete(0, tk.END)
                                     entry.insert(0, current_paradigm[gender][answer_key])
                                     entry.configure(state='readonly', bg='lightgray')
+        elif current_type == "Verb":
+            # Fill verb answers (person/number structure)
+            persons = ["1st", "2nd", "3rd"]
+            for person in persons:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{person}_{number}"
+                    
+                    if entry_key in self.entries and entry_key in current_paradigm:
+                        entry = self.entries[entry_key]
+                        entry.configure(state='normal')
+                        entry.delete(0, tk.END)
+                        entry.insert(0, current_paradigm[entry_key])
+                        entry.configure(state='readonly', bg='lightgray')
         else:
             # Fill noun answers (simple structure)
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
@@ -1417,6 +1666,10 @@ Tips:
                     case, gender, number = parts
                     if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
                         correct_answer = current_paradigm[gender][f"{case}_{number}"]
+        elif current_type == "Verb":
+            # Parse verb entry key: "person_number" (e.g., "1st_sg", "3rd_pl")
+            if entry_key in current_paradigm:
+                correct_answer = current_paradigm[entry_key]
         else:
             # Parse noun entry key: "Case_number"
             if entry_key in current_paradigm:
@@ -1571,6 +1824,29 @@ Tips:
                                 if next_key:
                                     self.entries[next_key].focus()
                                     return
+        elif current_type == "Verb":
+            # Parse: "person_number" (e.g., "1st_sg", "2nd_pl")
+            parts = current_key.split('_')
+            if len(parts) == 2:
+                person, number = parts
+                persons = ["1st", "2nd", "3rd"]
+                person_idx = persons.index(person)
+                
+                # Try next person in same number column first (downward movement)
+                if person_idx < len(persons) - 1:
+                    candidates = [f"{persons[i]}_{number}" for i in range(person_idx + 1, len(persons))]
+                    next_key = self.find_next_empty_entry(candidates)
+                    if next_key:
+                        self.entries[next_key].focus()
+                        return
+                
+                # If we've finished all persons in sg column, move to pl column
+                if number == "sg":
+                    candidates = [f"{persons[i]}_pl" for i in range(len(persons))]
+                    next_key = self.find_next_empty_entry(candidates)
+                    if next_key:
+                        self.entries[next_key].focus()
+                        return
         else:
             # Parse: "Case_number" 
             parts = current_key.split('_')
@@ -1726,6 +2002,32 @@ Tips:
                                 next_key = f"{case}_{genders[gender_idx + 1]}_{number}"
                                 if next_key in self.entries:
                                     self.entries[next_key].focus()
+        elif current_type == "Verb":
+            # Handle verb navigation (person/number structure)
+            parts = current_key.split('_')
+            if len(parts) == 2:
+                person, number = parts
+                persons = ["1st", "2nd", "3rd"]
+                person_idx = persons.index(person)
+                
+                if direction == 'up' and person_idx > 0:
+                    next_key = f"{persons[person_idx - 1]}_{number}"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                elif direction == 'down' and person_idx < len(persons) - 1:
+                    next_key = f"{persons[person_idx + 1]}_{number}"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                elif direction == 'left' and number == 'pl':
+                    # Move from plural to singular
+                    next_key = f"{person}_sg"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
+                elif direction == 'right' and number == 'sg':
+                    # Move from singular to plural
+                    next_key = f"{person}_pl"
+                    if next_key in self.entries:
+                        self.entries[next_key].focus()
         else:
             # Parse: "Case_number"
             parts = current_key.split('_')

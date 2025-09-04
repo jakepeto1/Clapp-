@@ -1002,5 +1002,57 @@
       "Genitive_pl": "τινων",
       "Dative_pl": "τισι"
     }
+  },
+  "luo_pres_ind_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "indicative", 
+    "voice": "active",
+    "lemma": "λύω",
+    "1st_sg": "λύω",
+    "2nd_sg": "λύεις",
+    "3rd_sg": "λύει",
+    "1st_pl": "λύομεν",
+    "2nd_pl": "λύετε",
+    "3rd_pl": "λύουσι"
+  },
+  "eimi_pres_ind_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "indicative",
+    "voice": "active", 
+    "lemma": "εἰμί",
+    "1st_sg": "εἰμί",
+    "2nd_sg": "εἶ",
+    "3rd_sg": "ἐστί",
+    "1st_pl": "ἐσμέν",
+    "2nd_pl": "ἐστέ",
+    "3rd_pl": "εἰσί"
+  },
+  "luo_impf_ind_act": {
+    "type": "verb",
+    "tense": "imperfect",
+    "mood": "indicative",
+    "voice": "active",
+    "lemma": "λύω",
+    "1st_sg": "ἔλυον",
+    "2nd_sg": "ἔλυες",
+    "3rd_sg": "ἔλυε",
+    "1st_pl": "ἐλύομεν",
+    "2nd_pl": "ἐλύετε",
+    "3rd_pl": "ἔλυον"
+  },
+  "eimi_impf_ind_act": {
+    "type": "verb",
+    "tense": "imperfect",
+    "mood": "indicative",
+    "voice": "active",
+    "lemma": "εἰμί",
+    "1st_sg": "ἦ",
+    "2nd_sg": "ἦσθα",
+    "3rd_sg": "ἦν",
+    "1st_pl": "ἦμεν",
+    "2nd_pl": "ἦτε",
+    "3rd_pl": "ἦσαν"
   }
 }
