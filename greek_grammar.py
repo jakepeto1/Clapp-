@@ -414,6 +414,10 @@ class GreekGrammarApp:
 
     def create_noun_table(self, current_paradigm):
         """Create table for noun declensions (2 columns: Singular/Plural)."""
+        # Clear any existing widgets in the table frame (except the frame itself)
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+        
         # Configure grid weights for better expansion
         self.table_frame.grid_columnconfigure(0, weight=1)
         self.table_frame.grid_columnconfigure(1, weight=2)
@@ -508,6 +512,10 @@ class GreekGrammarApp:
 
     def create_adjective_table(self, current_paradigm):
         """Create table for adjective declensions (2 or 3 genders based on type)."""
+        # Clear any existing widgets in the table frame (except the frame itself)
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+        
         # Determine if this is a 2-termination or 3-termination adjective
         adjective_type = current_paradigm.get("type", "")
         is_two_termination = adjective_type == "adjective_2termination"
@@ -743,6 +751,10 @@ class GreekGrammarApp:
 
     def create_pronoun_table(self, current_paradigm):
         """Create the pronoun table with appropriate layout based on pronoun type."""
+        # Clear any existing widgets in the table frame (except the frame itself)
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+        
         mode = self.mode_var.get()
         
         # Determine layout based on pronoun type
@@ -942,6 +954,14 @@ class GreekGrammarApp:
     def create_verb_table(self, current_paradigm):
         """Create the verb conjugation table with input fields for each person/number."""
         
+        # Clear any existing widgets in the table frame (except the frame itself)
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+        
+        # Reset grid configuration
+        for i in range(10):  # Clear up to 10 columns
+            self.table_frame.grid_columnconfigure(i, weight=0)
+        
         # Add verb form selectors at the top
         selectors_frame = ttk.Frame(self.table_frame)
         selectors_frame.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky='ew')
@@ -1039,13 +1059,13 @@ class GreekGrammarApp:
         # Determine available moods based on current tense
         tense_value = self.tense_var.get()
         if tense_value == "Present":
-            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative"]
+            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative", "Infinitive"]
         elif tense_value == "Imperfect":
             available_moods = ["Indicative", "Optative"]
         elif tense_value == "Aorist":
-            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative"]
+            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative", "Infinitive"]
         elif tense_value == "Future":
-            available_moods = ["Indicative", "Optative"]
+            available_moods = ["Indicative", "Optative", "Infinitive"]
         else:
             available_moods = ["Indicative"]
         
@@ -1065,6 +1085,84 @@ class GreekGrammarApp:
         self.mood_dropdown.grid(row=1, column=2, sticky='ew')
         self.mood_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
         
+        # Check if we're dealing with infinitive - different table layout needed
+        current_mood = self.mood_var.get()
+        if current_mood == "Infinitive":
+            # Update selectors frame for infinitive layout (2 columns)
+            selectors_frame.grid_configure(columnspan=2)
+            self.create_infinitive_table()
+        else:
+            # Update selectors frame for finite verb layout (3 columns)
+            selectors_frame.grid_configure(columnspan=3)
+            self.create_finite_verb_table()
+    
+    def create_infinitive_table(self):
+        """Create a simple table for infinitive forms (tense × voice combinations)."""
+        # Configure main table columns for infinitive layout
+        self.table_frame.grid_columnconfigure(0, weight=1)  # Tense/Voice label column
+        self.table_frame.grid_columnconfigure(1, weight=2)  # Infinitive form column
+
+        # Headers (shifted down to row 2)
+        ttk.Label(
+            self.table_frame,
+            text="Tense × Voice",
+            font=('Arial', 12, 'bold')
+        ).grid(row=2, column=0, padx=10, pady=10)
+
+        ttk.Label(
+            self.table_frame,
+            text="Infinitive Form",
+            font=('Arial', 12, 'bold')
+        ).grid(row=2, column=1, padx=10, pady=10)
+
+        # Get current tense
+        current_tense = self.tense_var.get()
+        
+        # Define voice options (will show all three for the selected tense)
+        voices = ["Active", "Middle", "Passive"]
+        
+        # Create input fields for each voice in the current tense
+        for i, voice in enumerate(voices, 3):
+            # Tense × Voice label
+            ttk.Label(
+                self.table_frame,
+                text=f"{current_tense} {voice}",
+                font=('Arial', 12, 'bold')
+            ).grid(row=i, column=0, padx=10, pady=8, sticky='w')
+
+            # Create a frame to hold the entry and error label
+            entry_frame = tk.Frame(self.table_frame)
+            entry_frame.grid(row=i, column=1, padx=5, pady=8, sticky='ew')
+            entry_frame.grid_columnconfigure(0, weight=1)
+
+            entry_key = f"inf_{voice.lower()}"
+            entry = tk.Entry(
+                entry_frame,
+                width=25,
+                font=('Times New Roman', 12),
+                relief='solid',
+                borderwidth=1
+            )
+            entry.grid(row=0, column=0, sticky='ew')
+            entry.bind('<Key>', self.handle_key_press)
+            entry.bind('<Return>', lambda e, key=entry_key: self.handle_enter(e, key))
+            entry.bind('<Up>', lambda e, key=entry_key: self.handle_arrow(e, key, 'up'))
+            entry.bind('<Down>', lambda e, key=entry_key: self.handle_arrow(e, key, 'down'))
+            self.entries[entry_key] = entry
+
+            # Create error label positioned to the right of the entry
+            error_label = ttk.Label(
+                entry_frame,
+                text="X",
+                foreground='red',
+                font=('Arial', 10, 'bold')
+            )
+            error_label.grid(row=0, column=1, padx=(5, 0))
+            error_label.grid_remove()  # Hide initially
+            self.error_labels[entry_key] = error_label
+
+    def create_finite_verb_table(self):
+        """Create the standard verb conjugation table for finite verbs (person × number)."""
         # Configure main table columns
         self.table_frame.grid_columnconfigure(0, weight=1)  # Person column
         self.table_frame.grid_columnconfigure(1, weight=1)  # Singular column  
@@ -1295,6 +1393,16 @@ class GreekGrammarApp:
 
     def on_mode_change(self, event):
         """Handle mode change in the dropdown."""
+        # For verbs, reset tense/voice/mood to defaults when switching between different verbs
+        if self.type_var.get() == "Verb":
+            # Reset verb form selectors to defaults
+            if hasattr(self, 'tense_var'):
+                self.tense_var.set("Present")
+            if hasattr(self, 'voice_var'):
+                self.voice_var.set("Active")
+            if hasattr(self, 'mood_var'):
+                self.mood_var.set("Indicative")
+        
         self.reset_table()
         self.update_word_display()
 
@@ -1365,7 +1473,8 @@ class GreekGrammarApp:
                     "indicative": "ind",
                     "subjunctive": "subj",
                     "optative": "opt",
-                    "imperative": "imp"
+                    "imperative": "imp",
+                    "infinitive": "inf"
                 }
                 mood_key = mood_map.get(mood_val, mood_val)
                 
@@ -1682,13 +1791,21 @@ class GreekGrammarApp:
         """Clear all entries and error indicators."""
         # Reset visual state of existing entries before clearing
         for entry in self.entries.values():
-            entry.configure(state='normal')
-            entry.configure(bg='white')
-            entry.delete(0, tk.END)
+            try:
+                entry.configure(state='normal')
+                entry.configure(bg='white')
+                entry.delete(0, tk.END)
+            except tk.TclError:
+                # Widget may have been destroyed already
+                pass
         
         # Hide all error indicators
         for error_label in self.error_labels.values():
-            error_label.grid_remove()
+            try:
+                error_label.grid_remove()
+            except tk.TclError:
+                # Widget may have been destroyed already
+                pass
         
         # Clear dictionaries and recreate the table
         self.entries.clear()
@@ -1780,9 +1897,16 @@ Tips:
                     if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
                         correct_answer = current_paradigm[gender][f"{case}_{number}"]
         elif current_type == "Verb":
-            # Parse verb entry key: "person_number" (e.g., "1st_sg", "3rd_pl")
-            if entry_key in current_paradigm:
-                correct_answer = current_paradigm[entry_key]
+            # Handle different verb entry key formats
+            current_mood = self.mood_var.get()
+            if current_mood == "Infinitive":
+                # Parse infinitive entry key: "inf_voice" (e.g., "inf_active", "inf_middle", "inf_passive")
+                if entry_key in current_paradigm:
+                    correct_answer = current_paradigm[entry_key]
+            else:
+                # Parse finite verb entry key: "person_number" (e.g., "1st_sg", "3rd_pl")
+                if entry_key in current_paradigm:
+                    correct_answer = current_paradigm[entry_key]
         else:
             # Parse noun entry key: "Case_number"
             if entry_key in current_paradigm:
@@ -1938,28 +2062,47 @@ Tips:
                                     self.entries[next_key].focus()
                                     return
         elif current_type == "Verb":
-            # Parse: "person_number" (e.g., "1st_sg", "2nd_pl")
-            parts = current_key.split('_')
-            if len(parts) == 2:
-                person, number = parts
-                persons = ["1st", "2nd", "3rd"]
-                person_idx = persons.index(person)
-                
-                # Try next person in same number column first (downward movement)
-                if person_idx < len(persons) - 1:
-                    candidates = [f"{persons[i]}_{number}" for i in range(person_idx + 1, len(persons))]
-                    next_key = self.find_next_empty_entry(candidates)
-                    if next_key:
-                        self.entries[next_key].focus()
-                        return
-                
-                # If we've finished all persons in sg column, move to pl column
-                if number == "sg":
-                    candidates = [f"{persons[i]}_pl" for i in range(len(persons))]
-                    next_key = self.find_next_empty_entry(candidates)
-                    if next_key:
-                        self.entries[next_key].focus()
-                        return
+            # Handle different verb entry key formats
+            current_mood = self.mood_var.get()
+            if current_mood == "Infinitive":
+                # Parse infinitive: "inf_voice" (e.g., "inf_active", "inf_middle", "inf_passive")
+                parts = current_key.split('_')
+                if len(parts) == 2 and parts[0] == "inf":
+                    voice = parts[1]
+                    voices = ["active", "middle", "passive"]
+                    if voice in voices:
+                        voice_idx = voices.index(voice)
+                        
+                        # Try next voice (downward movement through the list)
+                        if voice_idx < len(voices) - 1:
+                            candidates = [f"inf_{voices[i]}" for i in range(voice_idx + 1, len(voices))]
+                            next_key = self.find_next_empty_entry(candidates)
+                            if next_key:
+                                self.entries[next_key].focus()
+                                return
+            else:
+                # Parse finite verb: "person_number" (e.g., "1st_sg", "2nd_pl")
+                parts = current_key.split('_')
+                if len(parts) == 2:
+                    person, number = parts
+                    persons = ["1st", "2nd", "3rd"]
+                    person_idx = persons.index(person)
+                    
+                    # Try next person in same number column first (downward movement)
+                    if person_idx < len(persons) - 1:
+                        candidates = [f"{persons[i]}_{number}" for i in range(person_idx + 1, len(persons))]
+                        next_key = self.find_next_empty_entry(candidates)
+                        if next_key:
+                            self.entries[next_key].focus()
+                            return
+                    
+                    # If we've finished all persons in sg column, move to pl column
+                    if number == "sg":
+                        candidates = [f"{persons[i]}_pl" for i in range(len(persons))]
+                        next_key = self.find_next_empty_entry(candidates)
+                        if next_key:
+                            self.entries[next_key].focus()
+                            return
         else:
             # Parse: "Case_number" 
             parts = current_key.split('_')
@@ -2116,31 +2259,52 @@ Tips:
                                 if next_key in self.entries:
                                     self.entries[next_key].focus()
         elif current_type == "Verb":
-            # Handle verb navigation (person/number structure)
-            parts = current_key.split('_')
-            if len(parts) == 2:
-                person, number = parts
-                persons = ["1st", "2nd", "3rd"]
-                person_idx = persons.index(person)
-                
-                if direction == 'up' and person_idx > 0:
-                    next_key = f"{persons[person_idx - 1]}_{number}"
-                    if next_key in self.entries:
-                        self.entries[next_key].focus()
-                elif direction == 'down' and person_idx < len(persons) - 1:
-                    next_key = f"{persons[person_idx + 1]}_{number}"
-                    if next_key in self.entries:
-                        self.entries[next_key].focus()
-                elif direction == 'left' and number == 'pl':
-                    # Move from plural to singular
-                    next_key = f"{person}_sg"
-                    if next_key in self.entries:
-                        self.entries[next_key].focus()
-                elif direction == 'right' and number == 'sg':
-                    # Move from singular to plural
-                    next_key = f"{person}_pl"
-                    if next_key in self.entries:
-                        self.entries[next_key].focus()
+            # Handle different verb navigation patterns
+            current_mood = self.mood_var.get()
+            if current_mood == "Infinitive":
+                # Handle infinitive navigation (inf_voice structure)
+                parts = current_key.split('_')
+                if len(parts) == 2 and parts[0] == "inf":
+                    voice = parts[1]
+                    voices = ["active", "middle", "passive"]
+                    if voice in voices:
+                        voice_idx = voices.index(voice)
+                        
+                        if direction == 'up' and voice_idx > 0:
+                            next_key = f"inf_{voices[voice_idx - 1]}"
+                            if next_key in self.entries:
+                                self.entries[next_key].focus()
+                        elif direction == 'down' and voice_idx < len(voices) - 1:
+                            next_key = f"inf_{voices[voice_idx + 1]}"
+                            if next_key in self.entries:
+                                self.entries[next_key].focus()
+                        # Left/right navigation is not meaningful for infinitives (single column)
+            else:
+                # Handle finite verb navigation (person/number structure)
+                parts = current_key.split('_')
+                if len(parts) == 2:
+                    person, number = parts
+                    persons = ["1st", "2nd", "3rd"]
+                    person_idx = persons.index(person)
+                    
+                    if direction == 'up' and person_idx > 0:
+                        next_key = f"{persons[person_idx - 1]}_{number}"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                    elif direction == 'down' and person_idx < len(persons) - 1:
+                        next_key = f"{persons[person_idx + 1]}_{number}"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                    elif direction == 'left' and number == 'pl':
+                        # Move from plural to singular
+                        next_key = f"{person}_sg"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                    elif direction == 'right' and number == 'sg':
+                        # Move from singular to plural
+                        next_key = f"{person}_pl"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
         else:
             # Parse: "Case_number"
             parts = current_key.split('_')

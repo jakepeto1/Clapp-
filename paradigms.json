@@ -1835,6 +1835,30 @@
     "2nd_pl": "λύεσθε",
     "3rd_pl": "λυέσθων"
   },
+  "luo_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "λύω",
+    "inf_active": "λύειν"
+  },
+  "luo_pres_inf_mid": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "λύω",
+    "inf_middle": "λύεσθαι"
+  },
+  "luo_pres_inf_pass": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "λύω",
+    "inf_passive": "λύεσθαι"
+  },
   "eimi_pres_opt_act": {
     "type": "verb",
     "tense": "present",
@@ -1860,6 +1884,14 @@
     "1st_pl": "—",
     "2nd_pl": "ἔστε",
     "3rd_pl": "ὄντων"
+  },
+  "eimi_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "εἰμί",
+    "inf_active": "εἶναι"
   },
   "luo_aor_opt_act": {
     "type": "verb",
@@ -1939,6 +1971,30 @@
     "2nd_pl": "λύθητε",
     "3rd_pl": "λυθήντων"
   },
+  "luo_aor_inf_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "λύω",
+    "inf_active": "λῦσαι"
+  },
+  "luo_aor_inf_mid": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "λύω",
+    "inf_middle": "λύσασθαι"
+  },
+  "luo_aor_inf_pass": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "λύω",
+    "inf_passive": "λυθῆναι"
+  },
   "phileo_pres_subj_act": {
     "type": "verb",
     "tense": "present",
@@ -1951,6 +2007,78 @@
     "1st_pl": "φιλῶμεν",
     "2nd_pl": "φιλῆτε",
     "3rd_pl": "φιλῶσι"
+  },
+  "phileo_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "φιλέω",
+    "inf_active": "φιλεῖν"
+  },
+  "phileo_pres_inf_mid": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "φιλέω",
+    "inf_middle": "φιλεῖσθαι"
+  },
+  "phileo_pres_inf_pass": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "φιλέω",
+    "inf_passive": "φιλεῖσθαι"
+  },
+  "phileo_aor_inf_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "φιλέω",
+    "inf_active": "φιλῆσαι"
+  },
+  "phileo_aor_inf_mid": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "φιλέω",
+    "inf_middle": "φιλήσασθαι"
+  },
+  "phileo_aor_inf_pass": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "φιλέω",
+    "inf_passive": "φιληθῆναι"
+  },
+  "phileo_fut_inf_act": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "φιλέω",
+    "inf_active": "φιλήσειν"
+  },
+  "phileo_fut_inf_mid": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "φιλέω",
+    "inf_middle": "φιλήσεσθαι"
+  },
+  "phileo_fut_inf_pass": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "φιλέω",
+    "inf_passive": "φιληθήσεσθαι"
   },
   "timao_pres_subj_act": {
     "type": "verb",
@@ -1965,6 +2093,78 @@
     "2nd_pl": "τιμᾶτε",
     "3rd_pl": "τιμῶσι"
   },
+  "timao_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "τιμάω",
+    "inf_active": "τιμᾶν"
+  },
+  "timao_pres_inf_mid": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "τιμάω",
+    "inf_middle": "τιμᾶσθαι"
+  },
+  "timao_pres_inf_pass": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "τιμάω",
+    "inf_passive": "τιμᾶσθαι"
+  },
+  "timao_aor_inf_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "τιμάω",
+    "inf_active": "τιμῆσαι"
+  },
+  "timao_aor_inf_mid": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "τιμάω",
+    "inf_middle": "τιμήσασθαι"
+  },
+  "timao_aor_inf_pass": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "τιμάω",
+    "inf_passive": "τιμηθῆναι"
+  },
+  "timao_fut_inf_act": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "τιμάω",
+    "inf_active": "τιμήσειν"
+  },
+  "timao_fut_inf_mid": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "τιμάω",
+    "inf_middle": "τιμήσεσθαι"
+  },
+  "timao_fut_inf_pass": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "τιμάω",
+    "inf_passive": "τιμηθήσεσθαι"
+  },
   "deloo_pres_subj_act": {
     "type": "verb",
     "tense": "present",
@@ -1977,6 +2177,78 @@
     "1st_pl": "δηλῶμεν",
     "2nd_pl": "δηλῶτε",
     "3rd_pl": "δηλῶσι"
+  },
+  "deloo_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "δηλόω",
+    "inf_active": "δηλοῦν"
+  },
+  "deloo_pres_inf_mid": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "δηλόω",
+    "inf_middle": "δηλοῦσθαι"
+  },
+  "deloo_pres_inf_pass": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "δηλόω",
+    "inf_passive": "δηλοῦσθαι"
+  },
+  "deloo_aor_inf_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "δηλόω",
+    "inf_active": "δηλῶσαι"
+  },
+  "deloo_aor_inf_mid": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "δηλόω",
+    "inf_middle": "δηλώσασθαι"
+  },
+  "deloo_aor_inf_pass": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "δηλόω",
+    "inf_passive": "δηλωθῆναι"
+  },
+  "deloo_fut_inf_act": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "δηλόω",
+    "inf_active": "δηλώσειν"
+  },
+  "deloo_fut_inf_mid": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "δηλόω",
+    "inf_middle": "δηλώσεσθαι"
+  },
+  "deloo_fut_inf_pass": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "δηλόω",
+    "inf_passive": "δηλωθήσεσθαι"
   },
   "luo_impf_opt_act": {
     "type": "verb",
@@ -2003,6 +2275,30 @@
     "1st_pl": "λύσοιμεν",
     "2nd_pl": "λύσοιτε",
     "3rd_pl": "λύσοιεν"
+  },
+  "luo_fut_inf_act": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "λύω",
+    "inf_active": "λύσειν"
+  },
+  "luo_fut_inf_mid": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "λύω",
+    "inf_middle": "λύσεσθαι"
+  },
+  "luo_fut_inf_pass": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "λύω",
+    "inf_passive": "λυθήσεσθαι"
   },
   "eimi_impf_opt_act": {
     "type": "verb",
@@ -2316,6 +2612,78 @@
     "2nd_pl": "βάλετε",
     "3rd_pl": "βαλόντων"
   },
+  "ballo_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "βάλλω",
+    "inf_active": "βάλλειν"
+  },
+  "ballo_pres_inf_mid": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "βάλλω",
+    "inf_middle": "βάλλεσθαι"
+  },
+  "ballo_pres_inf_pass": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "βάλλω",
+    "inf_passive": "βάλλεσθαι"
+  },
+  "ballo_aor_inf_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "βάλλω",
+    "inf_active": "βαλεῖν"
+  },
+  "ballo_aor_inf_mid": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "βάλλω",
+    "inf_middle": "βαλέσθαι"
+  },
+  "ballo_aor_inf_pass": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "βάλλω",
+    "inf_passive": "βληθῆναι"
+  },
+  "ballo_fut_inf_act": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "βάλλω",
+    "inf_active": "βαλεῖν"
+  },
+  "ballo_fut_inf_mid": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "βάλλω",
+    "inf_middle": "βαλεῖσθαι"
+  },
+  "ballo_fut_inf_pass": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "passive",
+    "lemma": "βάλλω",
+    "inf_passive": "βληθήσεσθαι"
+  },
   "didomi_pres_ind_act": {
     "type": "verb",
     "tense": "present",
@@ -2537,6 +2905,38 @@
     "2nd_pl": "δίδοτε",
     "3rd_pl": "διδόντων"
   },
+  "didomi_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "δίδωμι",
+    "inf_active": "διδόναι"
+  },
+  "didomi_pres_inf_mid": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "δίδωμι",
+    "inf_middle": "δίδοσθαι"
+  },
+  "didomi_aor_inf_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "δίδωμι",
+    "inf_active": "δοῦναι"
+  },
+  "didomi_aor_inf_mid": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "δίδωμι",
+    "inf_middle": "δόσθαι"
+  },
   "tithemi_pres_subj_act": {
     "type": "verb",
     "tense": "present",
@@ -2562,6 +2962,38 @@
     "1st_pl": "θῶμεν",
     "2nd_pl": "θῆτε",
     "3rd_pl": "θῶσι"
+  },
+  "tithemi_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "τίθημι",
+    "inf_active": "τιθέναι"
+  },
+  "tithemi_pres_inf_mid": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "τίθημι",
+    "inf_middle": "τίθεσθαι"
+  },
+  "tithemi_aor_inf_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "τίθημι",
+    "inf_active": "θεῖναι"
+  },
+  "tithemi_aor_inf_mid": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "τίθημι",
+    "inf_middle": "θέσθαι"
   },
   "histemi_pres_subj_act": {
     "type": "verb",
@@ -2589,6 +3021,38 @@
     "2nd_pl": "στήσητε",
     "3rd_pl": "στήσωσι"
   },
+  "histemi_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "ἵστημι",
+    "inf_active": "ἱστάναι"
+  },
+  "histemi_pres_inf_mid": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "ἵστημι",
+    "inf_middle": "ἵστασθαι"
+  },
+  "histemi_aor_inf_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "ἵστημι",
+    "inf_active": "στῆσαι"
+  },
+  "histemi_aor_inf_mid": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "middle",
+    "lemma": "ἵστημι",
+    "inf_middle": "στήσασθαι"
+  },
   "oida_pres_ind_act": {
     "type": "verb",
     "tense": "present",
@@ -2601,6 +3065,14 @@
     "1st_pl": "ἴσμεν",
     "2nd_pl": "ἴστε",
     "3rd_pl": "ἴσασι"
+  },
+  "oida_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "οἶδα",
+    "inf_active": "εἰδέναι"
   },
   "oida_impf_ind_act": {
     "type": "verb",
@@ -2745,6 +3217,22 @@
     "2nd_pl": "ἴητε",
     "3rd_pl": "ἴωσι"
   },
+  "eimi_go_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "εἶμι",
+    "inf_active": "ἰέναι"
+  },
+  "eimi_go_fut_inf_act": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "εἶμι",
+    "inf_active": "ἰέναι"
+  },
   "phemi_pres_subj_act": {
     "type": "verb",
     "tense": "present",
@@ -2757,6 +3245,22 @@
     "1st_pl": "φῶμεν",
     "2nd_pl": "φῆτε",
     "3rd_pl": "φῶσι"
+  },
+  "phemi_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "φημί",
+    "inf_active": "φάναι"
+  },
+  "phemi_fut_inf_act": {
+    "type": "verb",
+    "tense": "future",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "φημί",
+    "inf_active": "φήσειν"
   },
   "hiemi_pres_subj_act": {
     "type": "verb",
@@ -2783,6 +3287,22 @@
     "1st_pl": "ὧμεν",
     "2nd_pl": "ἧτε",
     "3rd_pl": "ὧσι"
+  },
+  "hiemi_pres_inf_act": {
+    "type": "verb",
+    "tense": "present",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "ἵημι",
+    "inf_active": "ἱέναι"
+  },
+  "hiemi_aor_inf_act": {
+    "type": "verb",
+    "tense": "aorist",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "ἵημι",
+    "inf_active": "εἷναι"
   },
   "phemi_fut_ind_act": {
     "type": "verb",
