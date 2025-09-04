@@ -401,128 +401,239 @@ class GreekGrammarApp:
             error_label_pl.grid_remove()
 
     def create_adjective_table(self, current_paradigm):
-        """Create table for adjective declensions (3 genders x 2 numbers)."""
-        # Configure grid weights for better expansion (7 columns: Case + M/F/N + 2 spacers)
-        self.table_frame.grid_columnconfigure(0, weight=1)  # Case column
-        for i in range(1, 7):  # Gender columns and spacers
-            self.table_frame.grid_columnconfigure(i, weight=2)
+        """Create table for adjective declensions (2 or 3 genders based on type)."""
+        # Determine if this is a 2-termination or 3-termination adjective
+        adjective_type = current_paradigm.get("type", "")
+        is_two_termination = adjective_type == "adjective_2termination"
+        
+        if is_two_termination:
+            # 2-termination: Masculine/Feminine + Neuter (4 columns total)
+            self.table_frame.grid_columnconfigure(0, weight=1)  # Case column
+            for i in range(1, 5):  # Gender columns
+                self.table_frame.grid_columnconfigure(i, weight=2)
 
-        # Main headers
-        ttk.Label(
-            self.table_frame,
-            text="",
-            font=('Arial', 14, 'bold')
-        ).grid(row=0, column=0, padx=10, pady=15, sticky='e')
-        
-        ttk.Label(
-            self.table_frame,
-            text="Masculine",
-            font=('Arial', 14, 'bold')
-        ).grid(row=0, column=1, columnspan=2, padx=10, pady=15)
-        
-        ttk.Label(
-            self.table_frame,
-            text="Feminine", 
-            font=('Arial', 14, 'bold')
-        ).grid(row=0, column=3, columnspan=2, padx=10, pady=15)
-        
-        ttk.Label(
-            self.table_frame,
-            text="Neuter",
-            font=('Arial', 14, 'bold')
-        ).grid(row=0, column=5, columnspan=2, padx=10, pady=15)
-
-        # Sub-headers (Singular/Plural for each gender)
-        genders = ['masculine', 'feminine', 'neuter']
-        for i, gender in enumerate(genders):
-            base_col = 1 + i * 2
+            # Main headers
             ttk.Label(
                 self.table_frame,
-                text="Sg.",
-                font=('Arial', 12)
-            ).grid(row=1, column=base_col, padx=5, pady=5)
+                text="",
+                font=('Arial', 14, 'bold')
+            ).grid(row=0, column=0, padx=10, pady=15, sticky='e')
             
             ttk.Label(
                 self.table_frame,
-                text="Pl.",
-                font=('Arial', 12)
-            ).grid(row=1, column=base_col + 1, padx=5, pady=5)
-
-        # Create input fields for each case and gender
-        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
-        for i, case in enumerate(cases, 2):  # Start from row 2
-            # Case label
+                text="Masculine/Feminine",
+                font=('Arial', 14, 'bold')
+            ).grid(row=0, column=1, columnspan=2, padx=10, pady=15)
+            
             ttk.Label(
                 self.table_frame,
-                text=case,
-                font=('Arial', 12, 'bold')
-            ).grid(row=i, column=0, padx=10, pady=8, sticky=tk.E)
+                text="Neuter",
+                font=('Arial', 14, 'bold')
+            ).grid(row=0, column=3, columnspan=2, padx=10, pady=15)
 
-            # Create entries for each gender and number
-            for j, gender in enumerate(genders):
-                base_col = 1 + j * 2
+            # Sub-headers (Singular/Plural)
+            for i, header in enumerate(["Sg.", "Pl.", "Sg.", "Pl."]):
+                ttk.Label(
+                    self.table_frame,
+                    text=header,
+                    font=('Arial', 12)
+                ).grid(row=1, column=i + 1, padx=5, pady=5)
+
+            # Create input fields for each case
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            for i, case in enumerate(cases, 2):  # Start from row 2
+                # Case label
+                ttk.Label(
+                    self.table_frame,
+                    text=case,
+                    font=('Arial', 12, 'bold')
+                ).grid(row=i, column=0, padx=10, pady=8, sticky=tk.E)
+
+                # Masculine/Feminine columns (use masculine data since they're identical)
+                for j, number in enumerate(["sg", "pl"]):
+                    entry = tk.Entry(
+                        self.table_frame,
+                        width=18,
+                        font=('Times New Roman', 12),
+                        relief='solid',
+                        borderwidth=1
+                    )
+                    entry.grid(row=i, column=j + 1, padx=5, pady=8, sticky='ew')
+                    entry_key = f"{case}_masculine_{number}"  # Use masculine data
+                    self.entries[entry_key] = entry
+                    entry.bind('<Key>', self.handle_key_press)
+                    
+                    # Bind navigation events
+                    entry.bind('<KeyRelease>', lambda e, k=entry_key: self.clear_error(k))
+                    entry.bind('<Return>', lambda e, k=entry_key: self.handle_enter(e, k))
+                    entry.bind('<Up>', lambda e, k=entry_key: self.handle_arrow(e, k, 'up'))
+                    entry.bind('<Down>', lambda e, k=entry_key: self.handle_arrow(e, k, 'down'))
+                    entry.bind('<Left>', lambda e, k=entry_key: self.handle_arrow(e, k, 'left'))
+                    entry.bind('<Right>', lambda e, k=entry_key: self.handle_arrow(e, k, 'right'))
+
+                    # Error label
+                    error_label = ttk.Label(
+                        self.table_frame,
+                        text="❌",
+                        foreground='red'
+                    )
+                    error_label.grid(row=i, column=j + 1, sticky='ne', padx=5)
+                    self.error_labels[entry_key] = error_label
+                    error_label.grid_remove()
+
+                # Neuter columns
+                for j, number in enumerate(["sg", "pl"]):
+                    entry = tk.Entry(
+                        self.table_frame,
+                        width=18,
+                        font=('Times New Roman', 12),
+                        relief='solid',
+                        borderwidth=1
+                    )
+                    entry.grid(row=i, column=j + 3, padx=5, pady=8, sticky='ew')
+                    entry_key = f"{case}_neuter_{number}"
+                    self.entries[entry_key] = entry
+                    entry.bind('<Key>', self.handle_key_press)
+                    
+                    # Bind navigation events
+                    entry.bind('<KeyRelease>', lambda e, k=entry_key: self.clear_error(k))
+                    entry.bind('<Return>', lambda e, k=entry_key: self.handle_enter(e, k))
+                    entry.bind('<Up>', lambda e, k=entry_key: self.handle_arrow(e, k, 'up'))
+                    entry.bind('<Down>', lambda e, k=entry_key: self.handle_arrow(e, k, 'down'))
+                    entry.bind('<Left>', lambda e, k=entry_key: self.handle_arrow(e, k, 'left'))
+                    entry.bind('<Right>', lambda e, k=entry_key: self.handle_arrow(e, k, 'right'))
+
+                    # Error label
+                    error_label = ttk.Label(
+                        self.table_frame,
+                        text="❌",
+                        foreground='red'
+                    )
+                    error_label.grid(row=i, column=j + 3, sticky='ne', padx=5)
+                    self.error_labels[entry_key] = error_label
+                    error_label.grid_remove()
+        else:
+            # 3-termination: Masculine + Feminine + Neuter (7 columns total)
+            self.table_frame.grid_columnconfigure(0, weight=1)  # Case column
+            for i in range(1, 7):  # Gender columns and spacers
+                self.table_frame.grid_columnconfigure(i, weight=2)
+
+            # Main headers
+            ttk.Label(
+                self.table_frame,
+                text="",
+                font=('Arial', 14, 'bold')
+            ).grid(row=0, column=0, padx=10, pady=15, sticky='e')
+            
+            ttk.Label(
+                self.table_frame,
+                text="Masculine",
+                font=('Arial', 14, 'bold')
+            ).grid(row=0, column=1, columnspan=2, padx=10, pady=15)
+            
+            ttk.Label(
+                self.table_frame,
+                text="Feminine", 
+                font=('Arial', 14, 'bold')
+            ).grid(row=0, column=3, columnspan=2, padx=10, pady=15)
+            
+            ttk.Label(
+                self.table_frame,
+                text="Neuter",
+                font=('Arial', 14, 'bold')
+            ).grid(row=0, column=5, columnspan=2, padx=10, pady=15)
+
+            # Sub-headers (Singular/Plural for each gender)
+            genders = ['masculine', 'feminine', 'neuter']
+            for i, gender in enumerate(genders):
+                base_col = 1 + i * 2
+                ttk.Label(
+                    self.table_frame,
+                    text="Sg.",
+                    font=('Arial', 12)
+                ).grid(row=1, column=base_col, padx=5, pady=5)
                 
-                # Singular entry
-                entry_sg = tk.Entry(
+                ttk.Label(
                     self.table_frame,
-                    width=18,
-                    font=('Times New Roman', 12),
-                    relief='solid',
-                    borderwidth=1
-                )
-                entry_sg.grid(row=i, column=base_col, padx=5, pady=8, sticky='ew')
-                entry_key_sg = f"{case}_{gender}_sg"
-                self.entries[entry_key_sg] = entry_sg
-                entry_sg.bind('<Key>', self.handle_key_press)
-                
-                # Bind navigation events
-                entry_sg.bind('<KeyRelease>', lambda e, k=entry_key_sg: self.clear_error(k))
-                entry_sg.bind('<Return>', lambda e, k=entry_key_sg: self.handle_enter(e, k))
-                entry_sg.bind('<Up>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'up'))
-                entry_sg.bind('<Down>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'down'))
-                entry_sg.bind('<Left>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'left'))
-                entry_sg.bind('<Right>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'right'))
+                    text="Pl.",
+                    font=('Arial', 12)
+                ).grid(row=1, column=base_col + 1, padx=5, pady=5)
 
-                # Error label for singular
-                error_label_sg = ttk.Label(
+            # Create input fields for each case and gender
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            for i, case in enumerate(cases, 2):  # Start from row 2
+                # Case label
+                ttk.Label(
                     self.table_frame,
-                    text="❌",
-                    foreground='red'
-                )
-                error_label_sg.grid(row=i, column=base_col, sticky='ne', padx=5)
-                self.error_labels[entry_key_sg] = error_label_sg
-                error_label_sg.grid_remove()
+                    text=case,
+                    font=('Arial', 12, 'bold')
+                ).grid(row=i, column=0, padx=10, pady=8, sticky=tk.E)
 
-                # Plural entry
-                entry_pl = tk.Entry(
-                    self.table_frame,
-                    width=18,
-                    font=('Times New Roman', 12),
-                    relief='solid',
-                    borderwidth=1
-                )
-                entry_pl.grid(row=i, column=base_col + 1, padx=5, pady=8, sticky='ew')
-                entry_key_pl = f"{case}_{gender}_pl"
-                self.entries[entry_key_pl] = entry_pl
-                entry_pl.bind('<Key>', self.handle_key_press)
-                
-                # Bind navigation events
-                entry_pl.bind('<KeyRelease>', lambda e, k=entry_key_pl: self.clear_error(k))
-                entry_pl.bind('<Return>', lambda e, k=entry_key_pl: self.handle_enter(e, k))
-                entry_pl.bind('<Up>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'up'))
-                entry_pl.bind('<Down>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'down'))
-                entry_pl.bind('<Left>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'left'))
-                entry_pl.bind('<Right>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'right'))
+                # Create entries for each gender and number
+                for j, gender in enumerate(genders):
+                    base_col = 1 + j * 2
+                    
+                    # Singular entry
+                    entry_sg = tk.Entry(
+                        self.table_frame,
+                        width=18,
+                        font=('Times New Roman', 12),
+                        relief='solid',
+                        borderwidth=1
+                    )
+                    entry_sg.grid(row=i, column=base_col, padx=5, pady=8, sticky='ew')
+                    entry_key_sg = f"{case}_{gender}_sg"
+                    self.entries[entry_key_sg] = entry_sg
+                    entry_sg.bind('<Key>', self.handle_key_press)
+                    
+                    # Bind navigation events
+                    entry_sg.bind('<KeyRelease>', lambda e, k=entry_key_sg: self.clear_error(k))
+                    entry_sg.bind('<Return>', lambda e, k=entry_key_sg: self.handle_enter(e, k))
+                    entry_sg.bind('<Up>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'up'))
+                    entry_sg.bind('<Down>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'down'))
+                    entry_sg.bind('<Left>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'left'))
+                    entry_sg.bind('<Right>', lambda e, k=entry_key_sg: self.handle_arrow(e, k, 'right'))
 
-                # Error label for plural
-                error_label_pl = ttk.Label(
-                    self.table_frame,
-                    text="❌",
-                    foreground='red'
-                )
-                error_label_pl.grid(row=i, column=base_col + 1, sticky='ne', padx=5)
-                self.error_labels[entry_key_pl] = error_label_pl
-                error_label_pl.grid_remove()
+                    # Error label for singular
+                    error_label_sg = ttk.Label(
+                        self.table_frame,
+                        text="❌",
+                        foreground='red'
+                    )
+                    error_label_sg.grid(row=i, column=base_col, sticky='ne', padx=5)
+                    self.error_labels[entry_key_sg] = error_label_sg
+                    error_label_sg.grid_remove()
+
+                    # Plural entry
+                    entry_pl = tk.Entry(
+                        self.table_frame,
+                        width=18,
+                        font=('Times New Roman', 12),
+                        relief='solid',
+                        borderwidth=1
+                    )
+                    entry_pl.grid(row=i, column=base_col + 1, padx=5, pady=8, sticky='ew')
+                    entry_key_pl = f"{case}_{gender}_pl"
+                    self.entries[entry_key_pl] = entry_pl
+                    entry_pl.bind('<Key>', self.handle_key_press)
+                    
+                    # Bind navigation events
+                    entry_pl.bind('<KeyRelease>', lambda e, k=entry_key_pl: self.clear_error(k))
+                    entry_pl.bind('<Return>', lambda e, k=entry_key_pl: self.handle_enter(e, k))
+                    entry_pl.bind('<Up>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'up'))
+                    entry_pl.bind('<Down>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'down'))
+                    entry_pl.bind('<Left>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'left'))
+                    entry_pl.bind('<Right>', lambda e, k=entry_key_pl: self.handle_arrow(e, k, 'right'))
+
+                    # Error label for plural
+                    error_label_pl = ttk.Label(
+                        self.table_frame,
+                        text="❌",
+                        foreground='red'
+                    )
+                    error_label_pl.grid(row=i, column=base_col + 1, sticky='ne', padx=5)
+                    self.error_labels[entry_key_pl] = error_label_pl
+                    error_label_pl.grid_remove()
 
     def handle_key_press(self, event):
         """Handle special character input."""
@@ -723,9 +834,15 @@ class GreekGrammarApp:
         current_type = self.type_var.get()
         
         if current_type == "Adjective":
-            # Check adjective answers (3 genders)
+            # Check adjective answers 
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
-            genders = ["masculine", "feminine", "neuter"]
+            
+            # Determine which genders to check based on adjective type
+            is_two_termination = current_paradigm.get("type") == "adjective_2termination"
+            if is_two_termination:
+                genders = ["masculine", "neuter"]  # Only check masculine and neuter for 2-termination
+            else:
+                genders = ["masculine", "feminine", "neuter"]  # Check all three for 3-termination
             
             for case in cases:
                 for gender in genders:
@@ -797,9 +914,15 @@ class GreekGrammarApp:
         current_type = self.type_var.get()
         
         if current_type == "Adjective":
-            # Fill adjective answers (3 genders)
+            # Fill adjective answers
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
-            genders = ["masculine", "feminine", "neuter"]
+            
+            # Determine which genders to fill based on adjective type
+            is_two_termination = current_paradigm.get("type") == "adjective_2termination"
+            if is_two_termination:
+                genders = ["masculine", "neuter"]  # Only fill masculine and neuter for 2-termination
+            else:
+                genders = ["masculine", "feminine", "neuter"]  # Fill all three for 3-termination
             
             for case in cases:
                 for gender in genders:
@@ -950,34 +1073,44 @@ Tips:
         cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
         
         if current_type == "Adjective":
+            # Check if this is 2-termination or 3-termination
+            current_paradigm = self.get_current_paradigm()
+            is_two_termination = current_paradigm and current_paradigm.get("type") == "adjective_2termination"
+            
             # Parse: "Case_gender_number"
             parts = current_key.split('_')
             if len(parts) == 3:
                 case, gender, number = parts
                 case_idx = cases.index(case)
-                genders = ["masculine", "feminine", "neuter"]
-                gender_idx = genders.index(gender)
                 
-                # Try next number in same case/gender
-                if number == "sg":
-                    next_key = f"{case}_{gender}_pl"
-                    if next_key in self.entries:
-                        self.entries[next_key].focus()
-                        return
+                if is_two_termination:
+                    genders = ["masculine", "neuter"]
+                else:
+                    genders = ["masculine", "feminine", "neuter"]
                 
-                # Try next gender in same case
-                if gender_idx < len(genders) - 1:
-                    next_key = f"{case}_{genders[gender_idx + 1]}_sg"
-                    if next_key in self.entries:
-                        self.entries[next_key].focus()
-                        return
-                
-                # Try next case, first gender
-                if case_idx < len(cases) - 1:
-                    next_key = f"{cases[case_idx + 1]}_masculine_sg"
-                    if next_key in self.entries:
-                        self.entries[next_key].focus()
-                        return
+                if gender in genders:
+                    gender_idx = genders.index(gender)
+                    
+                    # Try next number in same case/gender
+                    if number == "sg":
+                        next_key = f"{case}_{gender}_pl"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                            return
+                    
+                    # Try next gender in same case
+                    if gender_idx < len(genders) - 1:
+                        next_key = f"{case}_{genders[gender_idx + 1]}_sg"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                            return
+                    
+                    # Try next case, first gender
+                    if case_idx < len(cases) - 1:
+                        next_key = f"{cases[case_idx + 1]}_{genders[0]}_sg"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                            return
         else:
             # Parse: "Case_number" 
             parts = current_key.split('_')
@@ -1005,29 +1138,56 @@ Tips:
         cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
         
         if current_type == "Adjective":
+            # Check if this is 2-termination or 3-termination
+            current_paradigm = self.get_current_paradigm()
+            is_two_termination = current_paradigm and current_paradigm.get("type") == "adjective_2termination"
+            
             # Parse: "Case_gender_number"
             parts = current_key.split('_')
             if len(parts) == 3:
                 case, gender, number = parts
                 case_idx = cases.index(case)
-                genders = ["masculine", "feminine", "neuter"]
-                gender_idx = genders.index(gender)
                 
-                if direction == 'up' and case_idx > 0:
-                    next_key = f"{cases[case_idx - 1]}_{gender}_{number}"
-                    if next_key in self.entries:
-                        self.entries[next_key].focus()
-                elif direction == 'down' and case_idx < len(cases) - 1:
-                    next_key = f"{cases[case_idx + 1]}_{gender}_{number}"
-                    if next_key in self.entries:
-                        self.entries[next_key].focus()
-                elif direction == 'left':
-                    if gender_idx > 0:
+                if is_two_termination:
+                    # 2-termination: only masculine and neuter
+                    genders = ["masculine", "neuter"]  
+                    if gender in genders:
+                        gender_idx = genders.index(gender)
+                        
+                        if direction == 'up' and case_idx > 0:
+                            next_key = f"{cases[case_idx - 1]}_{gender}_{number}"
+                            if next_key in self.entries:
+                                self.entries[next_key].focus()
+                        elif direction == 'down' and case_idx < len(cases) - 1:
+                            next_key = f"{cases[case_idx + 1]}_{gender}_{number}"
+                            if next_key in self.entries:
+                                self.entries[next_key].focus()
+                        elif direction == 'left' and gender_idx > 0:
+                            next_key = f"{case}_{genders[gender_idx - 1]}_{number}"
+                            if next_key in self.entries:
+                                self.entries[next_key].focus()
+                        elif direction == 'right' and gender_idx < len(genders) - 1:
+                            next_key = f"{case}_{genders[gender_idx + 1]}_{number}"
+                            if next_key in self.entries:
+                                self.entries[next_key].focus()
+                else:
+                    # 3-termination: masculine, feminine, neuter
+                    genders = ["masculine", "feminine", "neuter"]
+                    gender_idx = genders.index(gender)
+                    
+                    if direction == 'up' and case_idx > 0:
+                        next_key = f"{cases[case_idx - 1]}_{gender}_{number}"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                    elif direction == 'down' and case_idx < len(cases) - 1:
+                        next_key = f"{cases[case_idx + 1]}_{gender}_{number}"
+                        if next_key in self.entries:
+                            self.entries[next_key].focus()
+                    elif direction == 'left' and gender_idx > 0:
                         next_key = f"{case}_{genders[gender_idx - 1]}_{number}"
                         if next_key in self.entries:
                             self.entries[next_key].focus()
-                elif direction == 'right':
-                    if gender_idx < len(genders) - 1:
+                    elif direction == 'right' and gender_idx < len(genders) - 1:
                         next_key = f"{case}_{genders[gender_idx + 1]}_{number}"
                         if next_key in self.entries:
                             self.entries[next_key].focus()
