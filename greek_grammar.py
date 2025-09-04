@@ -248,8 +248,8 @@ class GreekGrammarApp:
             font=('Arial', 14, 'bold')
         ).grid(row=0, column=2, padx=15, pady=15)
 
-        # Create input fields for each case with better spacing
-        cases = ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]
+        # Create input fields for each case with better spacing (British order)
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
         for i, case in enumerate(cases, 1):
             # Case label with better styling
             ttk.Label(
@@ -275,6 +275,8 @@ class GreekGrammarApp:
             entry_sg.bind('<Return>', lambda e, c=case, s='sg': self.handle_enter(e, f"{c}_{s}"))
             entry_sg.bind('<Up>', lambda e, c=case, s='sg': self.handle_arrow(e, f"{c}_{s}", 'up'))
             entry_sg.bind('<Down>', lambda e, c=case, s='sg': self.handle_arrow(e, f"{c}_{s}", 'down'))
+            entry_sg.bind('<Left>', lambda e, c=case, s='sg': self.handle_arrow(e, f"{c}_{s}", 'left'))
+            entry_sg.bind('<Right>', lambda e, c=case, s='sg': self.handle_arrow(e, f"{c}_{s}", 'right'))
 
             # Error label for singular
             error_label_sg = ttk.Label(
@@ -303,6 +305,8 @@ class GreekGrammarApp:
             entry_pl.bind('<Return>', lambda e, c=case, s='pl': self.handle_enter(e, f"{c}_{s}"))
             entry_pl.bind('<Up>', lambda e, c=case, s='pl': self.handle_arrow(e, f"{c}_{s}", 'up'))
             entry_pl.bind('<Down>', lambda e, c=case, s='pl': self.handle_arrow(e, f"{c}_{s}", 'down'))
+            entry_pl.bind('<Left>', lambda e, c=case, s='pl': self.handle_arrow(e, f"{c}_{s}", 'left'))
+            entry_pl.bind('<Right>', lambda e, c=case, s='pl': self.handle_arrow(e, f"{c}_{s}", 'right'))
 
             # Error label for plural
             error_label_pl = ttk.Label(
@@ -427,6 +431,67 @@ class GreekGrammarApp:
 
     def normalize_greek(self, text):
         return unicodedata.normalize('NFC', text)
+    
+    def remove_accents(self, text):
+        """Remove accents from Greek text while preserving breathing marks and iota subscripts."""
+        if not text:
+            return text
+            
+        # Dictionary to map accented characters to their unaccented equivalents
+        # while preserving breathing marks and iota subscripts
+        accent_map = {
+            # Alpha variations
+            'ά': 'α', 'ὰ': 'α', 'ᾶ': 'α',
+            'ἄ': 'ἀ', 'ἂ': 'ἀ', 'ἆ': 'ἀ',  # smooth breathing variants
+            'ἅ': 'ἁ', 'ἃ': 'ἁ', 'ἇ': 'ἁ',  # rough breathing variants
+            'ᾴ': 'ᾳ', 'ᾲ': 'ᾳ', 'ᾷ': 'ᾳ',  # iota subscript variants
+            'ᾄ': 'ᾀ', 'ᾂ': 'ᾀ', 'ᾆ': 'ᾀ',  # smooth breathing + iota subscript
+            'ᾅ': 'ᾁ', 'ᾃ': 'ᾁ', 'ᾇ': 'ᾁ',  # rough breathing + iota subscript
+            
+            # Epsilon variations
+            'έ': 'ε', 'ὲ': 'ε',
+            'ἔ': 'ἐ', 'ἒ': 'ἐ',  # smooth breathing variants
+            'ἕ': 'ἑ', 'ἓ': 'ἑ',  # rough breathing variants
+            
+            # Eta variations
+            'ή': 'η', 'ὴ': 'η', 'ῆ': 'η',
+            'ἤ': 'ἠ', 'ἢ': 'ἠ', 'ἦ': 'ἠ',  # smooth breathing variants
+            'ἥ': 'ἡ', 'ἣ': 'ἡ', 'ἧ': 'ἡ',  # rough breathing variants
+            'ῄ': 'ῃ', 'ῂ': 'ῃ', 'ῇ': 'ῃ',  # iota subscript variants
+            'ᾔ': 'ᾐ', 'ᾒ': 'ᾐ', 'ᾖ': 'ᾐ',  # smooth breathing + iota subscript
+            'ᾕ': 'ᾑ', 'ᾓ': 'ᾑ', 'ᾗ': 'ᾑ',  # rough breathing + iota subscript
+            
+            # Iota variations
+            'ί': 'ι', 'ὶ': 'ι', 'ῖ': 'ι',
+            'ἴ': 'ἰ', 'ἲ': 'ἰ', 'ἶ': 'ἰ',  # smooth breathing variants
+            'ἵ': 'ἱ', 'ἳ': 'ἱ', 'ἷ': 'ἱ',  # rough breathing variants
+            'ϊ': 'ι', 'ΐ': 'ι', 'ῒ': 'ι', 'ῗ': 'ι',  # diaeresis variants
+            
+            # Omicron variations
+            'ό': 'ο', 'ὸ': 'ο',
+            'ὄ': 'ὀ', 'ὂ': 'ὀ',  # smooth breathing variants
+            'ὅ': 'ὁ', 'ὃ': 'ὁ',  # rough breathing variants
+            
+            # Upsilon variations
+            'ύ': 'υ', 'ὺ': 'υ', 'ῦ': 'υ',
+            'ὔ': 'ὐ', 'ὒ': 'ὐ', 'ὖ': 'ὐ',  # smooth breathing variants
+            'ὕ': 'ὑ', 'ὓ': 'ὑ', 'ὗ': 'ὑ',  # rough breathing variants
+            'ϋ': 'υ', 'ΰ': 'υ', 'ῢ': 'υ', 'ῧ': 'υ',  # diaeresis variants
+            
+            # Omega variations
+            'ώ': 'ω', 'ὼ': 'ω', 'ῶ': 'ω',
+            'ὤ': 'ὠ', 'ὢ': 'ὠ', 'ὦ': 'ὠ',  # smooth breathing variants
+            'ὥ': 'ὡ', 'ὣ': 'ὡ', 'ὧ': 'ὡ',  # rough breathing variants
+            'ῴ': 'ῳ', 'ῲ': 'ῳ', 'ῷ': 'ῳ',  # iota subscript variants
+            'ᾤ': 'ᾠ', 'ᾢ': 'ᾠ', 'ᾦ': 'ᾠ',  # smooth breathing + iota subscript
+            'ᾥ': 'ᾡ', 'ᾣ': 'ᾡ', 'ᾧ': 'ᾡ',  # rough breathing + iota subscript
+        }
+        
+        result = ""
+        for char in text:
+            result += accent_map.get(char, char)
+        
+        return result
 
     def on_mode_change(self, event):
         """Handle mode change in the dropdown."""
@@ -465,7 +530,7 @@ class GreekGrammarApp:
             messagebox.showerror("Error", "No paradigm selected")
             return
 
-        for case in ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]:
+        for case in ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]:
             if "singular" in current_paradigm and case.lower() in current_paradigm["singular"]:
                 self.check_single_answer(f"{case}_sg", current_paradigm["singular"][case.lower()])
             
@@ -477,8 +542,9 @@ class GreekGrammarApp:
         entry = self.entries[entry_key]
         error_label = self.error_labels[entry_key]
         
-        user_answer = self.normalize_greek(entry.get().strip())
-        correct = self.normalize_greek(correct_answer)
+        # Normalize and remove accents from both user input and correct answer
+        user_answer = self.remove_accents(self.normalize_greek(entry.get().strip()))
+        correct = self.remove_accents(self.normalize_greek(correct_answer))
         
         is_correct = user_answer.lower() == correct.lower()
         if is_correct:
@@ -504,7 +570,7 @@ class GreekGrammarApp:
         if not current_paradigm:
             return
 
-        for case in ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]:
+        for case in ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]:
             for number, key in [("singular", "sg"), ("plural", "pl")]:
                 if number in current_paradigm and case.lower() in current_paradigm[number]:
                     entry_key = f"{case}_{key}"
@@ -537,6 +603,7 @@ Instructions:
 Navigation:
 • Enter key: Move to next field (only if correct)
 • Up/Down arrows: Move between cases
+• Left/Right arrows: Move between singular/plural
 • Tab: Move between fields
 
 Special Characters:
@@ -573,7 +640,7 @@ Tips:
 
         if case.lower() in current_paradigm.get(number_key, {}):
             if self.check_single_answer(current_key, current_paradigm[number_key][case.lower()]):
-                cases = ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]
+                cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
                 current_idx = cases.index(case)
                 
                 if current_idx < len(cases) - 1:
@@ -588,7 +655,7 @@ Tips:
 
     def handle_arrow(self, event, current_key, direction):
         """Handle arrow key navigation."""
-        cases = ["Nominative", "Genitive", "Dative", "Accusative", "Vocative"]
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
         case, number = current_key.split('_')
         current_idx = cases.index(case)
         
@@ -598,6 +665,18 @@ Tips:
         elif direction == 'down' and current_idx < len(cases) - 1:
             next_key = f"{cases[current_idx + 1]}_{number}"
             self.entries[next_key].focus()
+        elif direction == 'left':
+            # Move from plural to singular
+            if number == 'pl':
+                next_key = f"{case}_sg"
+                if next_key in self.entries:
+                    self.entries[next_key].focus()
+        elif direction == 'right':
+            # Move from singular to plural
+            if number == 'sg':
+                next_key = f"{case}_pl"
+                if next_key in self.entries:
+                    self.entries[next_key].focus()
         return "break"
 
 def main():
