@@ -9,6 +9,32 @@ SMOOTH_BREATHING = '\u0313'  # ᾿
 ROUGH_BREATHING = '\u0314'   # ῾
 IOTA_SUBSCRIPT = '\u0345'    # ͅ (combines with α, η, ω)
 
+class PracticeConfig:
+    """Configuration class for practice settings and toggles"""
+    def __init__(self):
+        # Core practice toggles
+        self.ignore_breathings = tk.BooleanVar(value=False)
+        self.prefill_stems = tk.BooleanVar(value=False)
+        
+        # Future toggles can be added here
+        # self.ignore_accents = tk.BooleanVar(value=False)
+        # self.show_hints = tk.BooleanVar(value=True)
+        # self.auto_advance = tk.BooleanVar(value=False)
+    
+    def get_setting(self, setting_name):
+        """Get the value of a specific setting"""
+        if hasattr(self, setting_name):
+            setting = getattr(self, setting_name)
+            if isinstance(setting, tk.BooleanVar):
+                return setting.get()
+            return setting
+        return None
+    
+    def reset_to_defaults(self):
+        """Reset all settings to their default values"""
+        self.ignore_breathings.set(False)
+        self.prefill_stems.set(False)
+
 class FontManager:
     """Manage fonts for the application"""
     def __init__(self):
@@ -32,6 +58,9 @@ class GreekGrammarApp:
         self.table_frame = None
         self.entries = {}
         self.error_labels = {}
+        
+        # Initialize practice configuration
+        self.config = PracticeConfig()
         
         # Set up proper Unicode handling for Greek characters
         if sys.platform.startswith('win'):
@@ -67,8 +96,9 @@ class GreekGrammarApp:
         self.main_frame.grid_rowconfigure(0, weight=0)  # Title row
         self.main_frame.grid_rowconfigure(1, weight=0)  # Mode row
         self.main_frame.grid_rowconfigure(2, weight=0)  # Word row
-        self.main_frame.grid_rowconfigure(3, weight=1)  # Table row - expandable
-        self.main_frame.grid_rowconfigure(4, weight=0)  # Button row
+        self.main_frame.grid_rowconfigure(3, weight=0)  # Toggles row
+        self.main_frame.grid_rowconfigure(4, weight=1)  # Table row - expandable
+        self.main_frame.grid_rowconfigure(5, weight=0)  # Button row
         for i in range(3):
             self.main_frame.grid_columnconfigure(i, weight=1)
 
@@ -233,11 +263,50 @@ class GreekGrammarApp:
         )
         self.word_label.grid(row=0, column=1)
 
+        # Practice toggles frame
+        toggles_frame = ttk.Frame(self.main_frame)
+        toggles_frame.grid(row=3, column=0, columnspan=3, pady=(5, 15))
+        
+        # Create a label frame for better organization
+        practice_frame = ttk.LabelFrame(toggles_frame, text="Practice Options", padding=(10, 5))
+        practice_frame.grid(row=0, column=0, padx=20)
+        
+        # Ignore breathings checkbox
+        ignore_breathings_cb = ttk.Checkbutton(
+            practice_frame,
+            text="Ignore breathing marks (᾿ ῾)",
+            variable=self.config.ignore_breathings
+        )
+        ignore_breathings_cb.grid(row=0, column=0, padx=(0, 20), sticky='w')
+        
+        # Prefill stems checkbox
+        prefill_stems_cb = ttk.Checkbutton(
+            practice_frame,
+            text="Prefill stems (practice endings only)",
+            variable=self.config.prefill_stems,
+            command=self.on_prefill_stems_toggle
+        )
+        prefill_stems_cb.grid(row=0, column=1, sticky='w')
+
         # Create declension table
         self.create_declension_table()
         
         # Update word display after creating table
         self.update_word_display()
+
+    def on_prefill_stems_toggle(self):
+        """Handle the prefill stems toggle change"""
+        if self.config.prefill_stems.get():
+            # Prefill stems are now enabled, apply to current table
+            self.apply_prefill_stems_to_all_entries()
+        else:
+            # Prefill stems disabled, clear the prefilled content and restore normal state
+            for entry_key, entry in self.entries.items():
+                if hasattr(entry, '_full_answer'):
+                    # Remove the full answer storage
+                    delattr(entry, '_full_answer')
+                # Clear the field
+                entry.delete(0, tk.END)
 
     def update_word_display(self):
         """Update the word display with the current paradigm."""
@@ -354,7 +423,7 @@ class GreekGrammarApp:
             self.table_frame.destroy()
             
         self.table_frame = ttk.Frame(self.main_frame)
-        self.table_frame.grid(row=3, column=0, columnspan=3, sticky='nsew', pady=(20, 10))
+        self.table_frame.grid(row=4, column=0, columnspan=3, sticky='nsew', pady=(20, 10))
         
         current_paradigm = self.get_current_paradigm()
         if not current_paradigm:
@@ -374,7 +443,7 @@ class GreekGrammarApp:
         
         # Bottom button frame positioned after table
         bottom_button_frame = ttk.Frame(self.main_frame)
-        bottom_button_frame.grid(row=4, column=0, columnspan=3, pady=20)
+        bottom_button_frame.grid(row=5, column=0, columnspan=3, pady=20)
         
         # Style for buttons
         button_style = ttk.Style()
@@ -411,6 +480,9 @@ class GreekGrammarApp:
             width=15
         )
         reset_button.grid(row=0, column=2, padx=20)
+        
+        # Apply stem prefilling if enabled
+        self.apply_prefill_stems_to_all_entries()
 
     def create_noun_table(self, current_paradigm):
         """Create table for noun declensions (2 columns: Singular/Plural)."""
@@ -1663,6 +1735,391 @@ class GreekGrammarApp:
         paradigm_key = paradigm_map.get(mode)
         return self.paradigms.get(paradigm_key) if paradigm_key else None
 
+    def strip_breathing_marks(self, text):
+        """Remove breathing marks from Greek text for comparison when ignore_breathings is enabled"""
+        if not text:
+            return text
+        
+        # Remove smooth and rough breathing marks
+        text = text.replace(SMOOTH_BREATHING, '')
+        text = text.replace(ROUGH_BREATHING, '')
+        
+        # Also remove combined breathing marks that might appear in composed characters
+        import unicodedata
+        normalized = unicodedata.normalize('NFD', text)
+        
+        # Filter out breathing mark characters
+        breathing_marks = {'\u0313', '\u0314'}  # smooth and rough breathing
+        filtered = ''.join(char for char in normalized if char not in breathing_marks)
+        
+        return unicodedata.normalize('NFC', filtered)
+
+    def compare_answers(self, user_input, correct_answer):
+        """Compare user input with correct answer, respecting configuration settings"""
+        if not user_input or not correct_answer:
+            return False
+        
+        # Apply normalization based on settings
+        processed_user = user_input.strip()
+        processed_correct = correct_answer.strip()
+        
+        # Handle prefill stems mode - check if user input combines correctly with prefilled stem
+        if self.config.prefill_stems.get():
+            # In prefill mode, the user input should be the complete word they've built
+            # We compare against the stored full answer
+            pass  # The regular comparison below will handle this correctly
+        
+        # Strip breathing marks if option is enabled
+        if self.config.ignore_breathings.get():
+            processed_user = self.strip_breathing_marks(processed_user)
+            processed_correct = self.strip_breathing_marks(processed_correct)
+        
+        return processed_user == processed_correct
+    
+    def validate_prefilled_answer(self, entry_key, user_input):
+        """Validate user input for prefilled stem entries"""
+        if entry_key not in self.entries:
+            return False
+        
+        entry = self.entries[entry_key]
+        if not hasattr(entry, '_full_answer'):
+            return False
+        
+        expected_full = entry._full_answer
+        
+        # Handle contractions if this is a contract verb
+        current_type = self.type_var.get()
+        if current_type == "Verb" and hasattr(entry, '_stem') and hasattr(entry, '_ending'):
+            # For contract verbs, the user input might need contraction
+            contracted_form = self.handle_contractions(entry._stem, user_input[len(entry._stem):], "verb")
+            return self.compare_answers(contracted_form, expected_full)
+        
+        # For non-contract cases, direct comparison
+        return self.compare_answers(user_input, expected_full)
+    
+    def extract_stem_and_ending(self, word, paradigm_type=None):
+        """Extract the stem and ending from a Greek word using paradigm-aware analysis"""
+        if not word:
+            return "", ""
+        
+        # Get the current paradigm to do smart stem extraction
+        current_paradigm = self.get_current_paradigm()
+        if current_paradigm:
+            return self.smart_stem_extraction(word, current_paradigm, paradigm_type)
+        
+        # Fallback to basic extraction if no paradigm available
+        return self.basic_stem_extraction(word, paradigm_type)
+    
+    def smart_stem_extraction(self, target_word, paradigm, paradigm_type):
+        """Use paradigm data to find the most likely stem for a word"""
+        # Collect all forms from the paradigm to analyze
+        all_forms = []
+        current_type = self.type_var.get()
+        
+        if current_type == "Adjective":
+            # Collect from all genders
+            for gender in ["masculine", "feminine", "neuter"]:
+                if gender in paradigm:
+                    for key, value in paradigm[gender].items():
+                        if value and isinstance(value, str):
+                            all_forms.append(value)
+        elif current_type == "Pronoun":
+            # Handle both simple and gendered pronoun structures
+            for key, value in paradigm.items():
+                if isinstance(value, dict):
+                    # Gendered structure
+                    for subkey, subvalue in value.items():
+                        if subvalue and isinstance(subvalue, str):
+                            all_forms.append(subvalue)
+                elif value and isinstance(value, str):
+                    # Simple structure
+                    all_forms.append(value)
+        else:
+            # Noun, verb - simple structure
+            for key, value in paradigm.items():
+                if value and isinstance(value, str) and key not in ["type", "gender", "lemma"]:
+                    all_forms.append(value)
+        
+        # Find the common stem by analyzing all forms
+        if all_forms and target_word in all_forms:
+            return self.find_stem_from_paradigm_forms(target_word, all_forms, paradigm_type)
+        
+        # If target word not found in paradigm, use basic extraction
+        return self.basic_stem_extraction(target_word, paradigm_type)
+    
+    def find_stem_from_paradigm_forms(self, target_word, all_forms, paradigm_type):
+        """Analyze multiple paradigm forms to determine the correct stem"""
+        # Remove duplicates and empty forms
+        unique_forms = list(set(form for form in all_forms if form and len(form) > 1))
+        
+        if len(unique_forms) < 2:
+            return self.basic_stem_extraction(target_word, paradigm_type)
+        
+        # Find the longest common prefix among all forms (potential stem)
+        def longest_common_prefix(strings):
+            if not strings:
+                return ""
+            min_len = min(len(s) for s in strings)
+            for i in range(min_len):
+                char = strings[0][i]
+                if not all(s[i] == char for s in strings):
+                    return strings[0][:i]
+            return strings[0][:min_len]
+        
+        # Special handling for verbs with augments
+        if paradigm_type == "verb":
+            # Remove potential augments before finding common stem
+            cleaned_forms = []
+            for form in unique_forms:
+                cleaned = self.remove_augment(form)
+                cleaned_forms.append(cleaned)
+            common_stem = longest_common_prefix(cleaned_forms)
+        else:
+            common_stem = longest_common_prefix(unique_forms)
+        
+        # Ensure we don't take too much (leave at least 1-2 characters for ending)
+        if len(common_stem) >= len(target_word) - 1:
+            common_stem = target_word[:-2] if len(target_word) > 2 else target_word[:-1]
+        
+        # For the target word, find where the stem ends
+        if paradigm_type == "verb":
+            cleaned_target = self.remove_augment(target_word)
+            if cleaned_target.startswith(common_stem):
+                stem_in_target = common_stem
+                ending = cleaned_target[len(common_stem):]
+                # Add augment back to stem if it was present
+                if len(target_word) > len(cleaned_target):
+                    augment = target_word[:len(target_word) - len(cleaned_target)]
+                    stem_in_target = augment + stem_in_target
+            else:
+                return self.basic_stem_extraction(target_word, paradigm_type)
+        else:
+            if target_word.startswith(common_stem):
+                stem_in_target = common_stem
+                ending = target_word[len(common_stem):]
+            else:
+                return self.basic_stem_extraction(target_word, paradigm_type)
+        
+        return stem_in_target, ending
+    
+    def remove_augment(self, verb_form):
+        """Remove temporal augments from Greek verb forms"""
+        if not verb_form:
+            return verb_form
+        
+        # Syllabic augment (ἐ-) - most common
+        if verb_form.startswith('ἐ') and len(verb_form) > 1:
+            return verb_form[1:]
+        
+        # Temporal augment for vowel-initial verbs (lengthening)
+        # α → η, ε → η, ο → ω, etc.
+        augment_mappings = {
+            'η': ['α', 'ε'],  # η could be augmented α or ε
+            'ω': ['ο'],       # ω could be augmented ο
+            'ῃ': ['ᾳ'],       # ῃ could be augmented ᾳ
+        }
+        
+        if len(verb_form) > 2:
+            first_char = verb_form[0]
+            if first_char in augment_mappings:
+                # Try replacing with each possible unaugmented form
+                for original in augment_mappings[first_char]:
+                    return original + verb_form[1:]
+        
+        return verb_form
+    
+    def handle_contractions(self, stem, ending, paradigm_type):
+        """Handle Greek vowel contractions between stem and ending"""
+        if not stem or not ending or paradigm_type != "verb":
+            return stem + ending
+        
+        # Contract verb patterns (common contractions)
+        stem_final = stem[-1] if stem else ''
+        ending_initial = ending[0] if ending else ''
+        
+        # α-contract verbs (like τιμάω)
+        if stem_final == 'α':
+            contractions = {
+                'ε': 'α',    # αε → α
+                'ει': 'ᾳ',   # αει → ᾳ  
+                'η': 'α',    # αη → α
+                'ο': 'ω',    # αο → ω
+                'ου': 'ω',   # αου → ω
+                'ω': 'ω',    # αω → ω
+            }
+            if ending in contractions:
+                return stem[:-1] + contractions[ending]
+        
+        # ε-contract verbs (like φιλέω)
+        elif stem_final == 'ε':
+            contractions = {
+                'ε': 'ει',   # εε → ει
+                'ει': 'ει',  # εει → ει
+                'η': 'η',    # εη → η
+                'ο': 'ου',   # εο → ου
+                'ου': 'ου',  # εου → ου
+                'ω': 'ω',    # εω → ω
+            }
+            if ending in contractions:
+                return stem[:-1] + contractions[ending]
+        
+        # ο-contract verbs (like δηλόω)
+        elif stem_final == 'ο':
+            contractions = {
+                'ε': 'ου',   # οε → ου
+                'ει': 'οι',  # οει → οι
+                'η': 'ω',    # οη → ω
+                'ο': 'ου',   # οο → ου
+                'ου': 'ου',  # οου → ου
+                'ω': 'ω',    # οω → ω
+            }
+            if ending in contractions:
+                return stem[:-1] + contractions[ending]
+        
+        # No contraction needed
+        return stem + ending
+    
+    def basic_stem_extraction(self, word, paradigm_type=None):
+        """Fallback basic stem extraction when paradigm analysis fails"""
+        if not word:
+            return "", ""
+        
+        # Enhanced ending patterns based on paradigm type
+        if paradigm_type == "noun":
+            common_endings = ['ους', 'ων', 'οις', 'ας', 'αις', 'ος', 'η', 'ον', 'ου', 'ες', 'α']
+        elif paradigm_type == "verb": 
+            common_endings = ['ουσι', 'ομεν', 'ετε', 'εις', 'ει', 'ω', 'ον', 'ες', 'ε']
+        elif paradigm_type == "adjective":
+            common_endings = ['ους', 'ων', 'οις', 'ας', 'αις', 'ος', 'η', 'ον', 'ου', 'ες', 'α']
+        else:
+            # General patterns
+            common_endings = ['ους', 'ων', 'οις', 'ας', 'αις', 'ουσι', 'ομεν', 'ετε', 
+                            'ος', 'η', 'ον', 'ου', 'ες', 'α', 'εις', 'ει', 'ω']
+        
+        # Try to find the longest matching ending
+        for ending in sorted(common_endings, key=len, reverse=True):
+            if word.endswith(ending) and len(word) > len(ending):
+                stem = word[:-len(ending)]
+                # Don't leave too short a stem
+                if len(stem) >= 2:
+                    return stem, ending
+        
+        # If no good ending found, use intelligent split
+        # For Greek, usually 2-3 characters for ending is reasonable
+        if len(word) <= 3:
+            return word[:-1], word[-1:]
+        elif len(word) <= 5:
+            return word[:-2], word[-2:]
+        else:
+            return word[:-3], word[-3:]
+    
+    def prefill_entry_with_stem(self, entry_key, full_word):
+        """Prefill an entry field with just the stem, leaving ending for user"""
+        if entry_key not in self.entries or not full_word:
+            return
+        
+        entry = self.entries[entry_key]
+        current_type = self.type_var.get()
+        
+        # Determine paradigm type for better stem extraction
+        paradigm_type = "noun"
+        if current_type == "Verb":
+            paradigm_type = "verb"
+        elif current_type in ["Adjective", "Pronoun"]:
+            paradigm_type = "adjective"
+        
+        stem, ending = self.extract_stem_and_ending(full_word, paradigm_type)
+        
+        # For contract verbs, we might need to show the uncontracted stem
+        if paradigm_type == "verb" and current_type == "Verb":
+            # Check if this looks like a contract verb by examining the paradigm
+            current_paradigm = self.get_current_paradigm()
+            if current_paradigm and self.is_contract_verb(current_paradigm):
+                # For contract verbs, show the uncontracted stem
+                stem = self.get_uncontracted_stem(full_word, stem, ending)
+        
+        # Clear the entry and insert just the stem
+        entry.delete(0, tk.END)
+        entry.insert(0, stem)
+        
+        # Store the full answer and stem info for checking purposes
+        entry._full_answer = full_word
+        entry._stem = stem
+        entry._ending = ending
+    
+    def is_contract_verb(self, paradigm):
+        """Check if the current verb paradigm represents a contract verb"""
+        # Look for characteristic contract verb endings in the paradigm
+        sample_forms = []
+        for key, value in paradigm.items():
+            if isinstance(value, str) and key not in ["type", "lemma"]:
+                sample_forms.append(value)
+        
+        # Contract verbs often have ω, ᾷς, ᾷ endings instead of regular ω, εις, ει
+        contract_indicators = ['ᾷς', 'ᾷ', 'εῖς', 'εῖ', 'οῦς', 'οῖ', 'ῶ']
+        return any(any(form.endswith(indicator) for indicator in contract_indicators) 
+                  for form in sample_forms)
+    
+    def get_uncontracted_stem(self, full_word, contracted_stem, ending):
+        """Get the uncontracted stem for contract verbs"""
+        # This is a simplified approach - in practice, this would need
+        # more sophisticated analysis of the contract patterns
+        
+        # Look at the full word to see if we can identify the contract vowel
+        if len(full_word) >= 3:
+            # Check for common contract patterns
+            if 'ω' in full_word[-2:] and not ending.startswith('ω'):
+                # Might be α-contract (αω → ω) or ο-contract (οω → ω)
+                if contracted_stem and contracted_stem[-1] not in ['α', 'ο']:
+                    # Try adding contract vowel
+                    return contracted_stem + 'α'  # Default to α-contract
+            elif 'ει' in full_word[-3:]:
+                # Might be ε-contract (εε → ει)
+                if contracted_stem and contracted_stem[-1] != 'ε':
+                    return contracted_stem + 'ε'
+        
+        return contracted_stem
+    
+    def apply_prefill_stems_to_all_entries(self):
+        """Apply stem prefilling to all current entries if the option is enabled"""
+        if not self.config.prefill_stems.get():
+            return
+        
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            return
+        
+        current_type = self.type_var.get()
+        
+        # Iterate through all entries and prefill them
+        for entry_key, entry in self.entries.items():
+            # Get the correct answer for this entry
+            correct_answer = ""
+            
+            if current_type == "Adjective":
+                # Parse entry_key like "Nominative_masculine_sg"
+                parts = entry_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                        correct_answer = current_paradigm[gender][f"{case}_{number}"]
+            elif current_type == "Pronoun":
+                # Handle pronouns similar to adjectives for gender pronouns
+                parts = entry_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                        correct_answer = current_paradigm[gender][f"{case}_{number}"]
+                else:
+                    # Simple pronoun structure
+                    correct_answer = current_paradigm.get(entry_key, "")
+            else:
+                # Noun, verb, simple structure
+                correct_answer = current_paradigm.get(entry_key, "")
+            
+            if correct_answer:
+                self.prefill_entry_with_stem(entry_key, correct_answer)
+
     def check_answers(self):
         """Check all user inputs against correct answers."""
         # Clear previous error indicators
@@ -1699,11 +2156,7 @@ class GreekGrammarApp:
                             if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
                                 correct_answer = current_paradigm[gender][f"{case}_{number}"]
                                 
-                                # Remove accents for comparison
-                                user_answer_no_accents = self.remove_accents(user_answer)
-                                correct_answer_no_accents = self.remove_accents(correct_answer)
-                                
-                                if user_answer_no_accents != correct_answer_no_accents:
+                                if not self.compare_answers(user_answer, correct_answer):
                                     # Show error indicator
                                     if entry_key in self.error_labels:
                                         self.error_labels[entry_key].grid()
@@ -1723,11 +2176,7 @@ class GreekGrammarApp:
                             user_answer = self.entries[entry_key].get().strip()
                             correct_answer = current_paradigm.get(entry_key, "")
                             
-                            # Remove accents for comparison
-                            user_answer_no_accents = self.remove_accents(user_answer)
-                            correct_answer_no_accents = self.remove_accents(correct_answer)
-                            
-                            if user_answer_no_accents != correct_answer_no_accents:
+                            if not self.compare_answers(user_answer, correct_answer):
                                 # Show error indicator
                                 if entry_key in self.error_labels:
                                     self.error_labels[entry_key].grid()
@@ -1748,11 +2197,7 @@ class GreekGrammarApp:
                                 if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
                                     correct_answer = current_paradigm[gender][f"{case}_{number}"]
                                     
-                                    # Remove accents for comparison
-                                    user_answer_no_accents = self.remove_accents(user_answer)
-                                    correct_answer_no_accents = self.remove_accents(correct_answer)
-                                    
-                                    if user_answer_no_accents != correct_answer_no_accents:
+                                    if not self.compare_answers(user_answer, correct_answer):
                                         # Show error indicator
                                         if entry_key in self.error_labels:
                                             self.error_labels[entry_key].grid()
@@ -1771,11 +2216,7 @@ class GreekGrammarApp:
                         user_answer = self.entries[entry_key].get().strip()
                         correct_answer = current_paradigm.get(entry_key, "")
                         
-                        # Remove accents for comparison
-                        user_answer_no_accents = self.remove_accents(user_answer)
-                        correct_answer_no_accents = self.remove_accents(correct_answer)
-                        
-                        if user_answer_no_accents != correct_answer_no_accents:
+                        if not self.compare_answers(user_answer, correct_answer):
                             # Show error indicator
                             if entry_key in self.error_labels:
                                 self.error_labels[entry_key].grid()
@@ -1791,11 +2232,7 @@ class GreekGrammarApp:
                             user_answer = self.entries[entry_key].get().strip()
                             correct_answer = current_paradigm.get(entry_key, "")
                             
-                            # Remove accents for comparison
-                            user_answer_no_accents = self.remove_accents(user_answer)
-                            correct_answer_no_accents = self.remove_accents(correct_answer)
-                            
-                            if user_answer_no_accents != correct_answer_no_accents:
+                            if not self.compare_answers(user_answer, correct_answer):
                                 # Show error indicator
                                 if entry_key in self.error_labels:
                                     self.error_labels[entry_key].grid()
@@ -1811,11 +2248,7 @@ class GreekGrammarApp:
                         user_answer = self.entries[entry_key].get().strip()
                         correct_answer = current_paradigm.get(entry_key, "")
                         
-                        # Remove accents for comparison
-                        user_answer_no_accents = self.remove_accents(user_answer)
-                        correct_answer_no_accents = self.remove_accents(correct_answer)
-                        
-                        if user_answer_no_accents != correct_answer_no_accents:
+                        if not self.compare_answers(user_answer, correct_answer):
                             # Show error indicator
                             if entry_key in self.error_labels:
                                 self.error_labels[entry_key].grid()
