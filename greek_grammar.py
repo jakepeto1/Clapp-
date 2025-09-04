@@ -159,7 +159,19 @@ class GreekGrammarApp:
         
         self.adjective_modes = [
             "Three-termination Good (ἀγαθός, ἀγαθή, ἀγαθόν)",
-            "Two-termination Wise (σοφός, σοφόν)"
+            "Three-termination Golden (χρύσεος, χρυσέα, χρύσεον)",
+            "Two-termination Unjust (ἄδικος, ἄδικον)",
+            "Three-termination Great (μέγας, μεγάλη, μέγα)",
+            "Three-termination Much (πολύς, πολλή, πολύ)",
+            "Two-termination True (ἀληθής, ἀληθές)",
+            "Three-termination Sweet (ἡδύς, ἡδεῖα, ἡδύ)",
+            "Three-termination Wretched (τάλας, τάλαινα, τάλαν)",
+            "Three-termination Stopping (παύων, παύουσα, παῦον)",
+            "Three-termination All (πᾶς, πᾶσα, πᾶν)",
+            "Three-termination Having stopped (παύσας, παύσασα, παῦσαν)",
+            "Three-termination Graceful (χαρίεις, χαρίεσσα, χαρίεν)",
+            "Three-termination Having been stopped (παυσθείς, παυσθεῖσα, παυσθέν)",
+            "Three-termination Having stopped perfect (πεπαυκώς, πεπαυκυῖα, πεπαυκός)"
         ]
         
         # Start with noun modes
@@ -239,8 +251,32 @@ class GreekGrammarApp:
             word = "ὁ, ἡ, τό"
         elif "ἀγαθός" in mode:
             word = "ἀγαθός, ἀγαθή, ἀγαθόν"
-        elif "σοφός" in mode:
-            word = "σοφός, σοφόν"
+        elif "χρύσεος" in mode:
+            word = "χρύσεος, χρυσέα, χρύσεον"
+        elif "ἄδικος" in mode:
+            word = "ἄδικος, ἄδικον"
+        elif "μέγας" in mode:
+            word = "μέγας, μεγάλη, μέγα"
+        elif "πολύς" in mode:
+            word = "πολύς, πολλή, πολύ"
+        elif "ἀληθής" in mode:
+            word = "ἀληθής, ἀληθές"
+        elif "ἡδύς" in mode:
+            word = "ἡδύς, ἡδεῖα, ἡδύ"
+        elif "τάλας" in mode:
+            word = "τάλας, τάλαινα, τάλαν"
+        elif "παύων" in mode:
+            word = "παύων, παύουσα, παῦον"
+        elif "πᾶς" in mode:
+            word = "πᾶς, πᾶσα, πᾶν"
+        elif "παύσας" in mode:
+            word = "παύσας, παύσασα, παῦσαν"
+        elif "χαρίεις" in mode:
+            word = "χαρίεις, χαρίεσσα, χαρίεν"
+        elif "παυσθείς" in mode:
+            word = "παυσθείς, παυσθεῖσα, παυσθέν"
+        elif "πεπαυκώς" in mode:
+            word = "πεπαυκώς, πεπαυκυῖα, πεπαυκός"
         else:
             word = "—"
         
@@ -814,7 +850,19 @@ class GreekGrammarApp:
             "Third Declension Woman (γυνή)": "gyne",
             "Third Declension City (πόλις)": "polis",
             "Three-termination Good (ἀγαθός, ἀγαθή, ἀγαθόν)": "agathos",
-            "Two-termination Wise (σοφός, σοφόν)": "sophos"
+            "Three-termination Golden (χρύσεος, χρυσέα, χρύσεον)": "chryseos",
+            "Two-termination Unjust (ἄδικος, ἄδικον)": "adikos",
+            "Three-termination Great (μέγας, μεγάλη, μέγα)": "megas",
+            "Three-termination Much (πολύς, πολλή, πολύ)": "polys",
+            "Two-termination True (ἀληθής, ἀληθές)": "alethes",
+            "Three-termination Sweet (ἡδύς, ἡδεῖα, ἡδύ)": "hedys",
+            "Three-termination Wretched (τάλας, τάλαινα, τάλαν)": "talas",
+            "Three-termination Stopping (παύων, παύουσα, παῦον)": "paon",
+            "Three-termination All (πᾶς, πᾶσα, πᾶν)": "pas",
+            "Three-termination Having stopped (παύσας, παύσασα, παῦσαν)": "pausas",
+            "Three-termination Graceful (χαρίεις, χαρίεσσα, χαρίεν)": "charieis",
+            "Three-termination Having been stopped (παυσθείς, παυσθεῖσα, παυσθέν)": "paustheis",
+            "Three-termination Having stopped perfect (πεπαυκώς, πεπαυκυῖα, πεπαυκός)": "pepaukos"
         }
         
         paradigm_key = paradigm_map.get(mode)

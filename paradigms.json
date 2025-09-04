@@ -289,44 +289,524 @@
       "Dative_pl": "ἀγαθοῖς"
     }
   },
-  "sophos": {
-    "type": "adjective_2termination",
-    "lemma": "σοφός, σοφόν",
+  "chryseos": {
+    "type": "adjective_3termination",
+    "lemma": "χρύσεος, χρυσέα, χρύσεον",
     "masculine": {
-      "Nominative_sg": "σοφός",
-      "Vocative_sg": "σοφέ",
-      "Accusative_sg": "σοφόν",
-      "Genitive_sg": "σοφοῦ",
-      "Dative_sg": "σοφῷ",
-      "Nominative_pl": "σοφοί",
-      "Vocative_pl": "σοφοί",
-      "Accusative_pl": "σοφούς",
-      "Genitive_pl": "σοφῶν",
-      "Dative_pl": "σοφοῖς"
+      "Nominative_sg": "χρύσεος",
+      "Vocative_sg": "χρύσεε",
+      "Accusative_sg": "χρύσεον",
+      "Genitive_sg": "χρυσέου",
+      "Dative_sg": "χρυσέῳ",
+      "Nominative_pl": "χρύσεοι",
+      "Vocative_pl": "χρύσεοι",
+      "Accusative_pl": "χρυσέους",
+      "Genitive_pl": "χρυσέων",
+      "Dative_pl": "χρυσέοις"
     },
     "feminine": {
-      "Nominative_sg": "σοφός",
-      "Vocative_sg": "σοφέ",
-      "Accusative_sg": "σοφόν",
-      "Genitive_sg": "σοφοῦ",
-      "Dative_sg": "σοφῷ",
-      "Nominative_pl": "σοφοί",
-      "Vocative_pl": "σοφοί",
-      "Accusative_pl": "σοφούς",
-      "Genitive_pl": "σοφῶν",
-      "Dative_pl": "σοφοῖς"
+      "Nominative_sg": "χρυσέα",
+      "Vocative_sg": "χρυσέα",
+      "Accusative_sg": "χρυσέαν",
+      "Genitive_sg": "χρυσέας",
+      "Dative_sg": "χρυσέᾳ",
+      "Nominative_pl": "χρύσεαι",
+      "Vocative_pl": "χρύσεαι",
+      "Accusative_pl": "χρυσέας",
+      "Genitive_pl": "χρυσέων",
+      "Dative_pl": "χρυσέαις"
     },
     "neuter": {
-      "Nominative_sg": "σοφόν",
-      "Vocative_sg": "σοφόν",
-      "Accusative_sg": "σοφόν",
-      "Genitive_sg": "σοφοῦ",
-      "Dative_sg": "σοφῷ",
-      "Nominative_pl": "σοφά",
-      "Vocative_pl": "σοφά",
-      "Accusative_pl": "σοφά",
-      "Genitive_pl": "σοφῶν",
-      "Dative_pl": "σοφοῖς"
+      "Nominative_sg": "χρύσεον",
+      "Vocative_sg": "χρύσεον",
+      "Accusative_sg": "χρύσεον",
+      "Genitive_sg": "χρυσέου",
+      "Dative_sg": "χρυσέῳ",
+      "Nominative_pl": "χρύσεα",
+      "Vocative_pl": "χρύσεα",
+      "Accusative_pl": "χρύσεα",
+      "Genitive_pl": "χρυσέων",
+      "Dative_pl": "χρυσέοις"
+    }
+  },
+  "adikos": {
+    "type": "adjective_2termination",
+    "lemma": "ἄδικος, ἄδικον",
+    "masculine": {
+      "Nominative_sg": "ἄδικος",
+      "Vocative_sg": "ἄδικε",
+      "Accusative_sg": "ἄδικον",
+      "Genitive_sg": "ἀδίκου",
+      "Dative_sg": "ἀδίκῳ",
+      "Nominative_pl": "ἄδικοι",
+      "Vocative_pl": "ἄδικοι",
+      "Accusative_pl": "ἀδίκους",
+      "Genitive_pl": "ἀδίκων",
+      "Dative_pl": "ἀδίκοις"
+    },
+    "feminine": {
+      "Nominative_sg": "ἄδικος",
+      "Vocative_sg": "ἄδικε",
+      "Accusative_sg": "ἄδικον",
+      "Genitive_sg": "ἀδίκου",
+      "Dative_sg": "ἀδίκῳ",
+      "Nominative_pl": "ἄδικοι",
+      "Vocative_pl": "ἄδικοι",
+      "Accusative_pl": "ἀδίκους",
+      "Genitive_pl": "ἀδίκων",
+      "Dative_pl": "ἀδίκοις"
+    },
+    "neuter": {
+      "Nominative_sg": "ἄδικον",
+      "Vocative_sg": "ἄδικον",
+      "Accusative_sg": "ἄδικον",
+      "Genitive_sg": "ἀδίκου",
+      "Dative_sg": "ἀδίκῳ",
+      "Nominative_pl": "ἄδικα",
+      "Vocative_pl": "ἄδικα",
+      "Accusative_pl": "ἄδικα",
+      "Genitive_pl": "ἀδίκων",
+      "Dative_pl": "ἀδίκοις"
+    }
+  },
+  "megas": {
+    "type": "adjective_3termination",
+    "lemma": "μέγας, μεγάλη, μέγα",
+    "masculine": {
+      "Nominative_sg": "μέγας",
+      "Vocative_sg": "μέγα",
+      "Accusative_sg": "μέγαν",
+      "Genitive_sg": "μεγάλου",
+      "Dative_sg": "μεγάλῳ",
+      "Nominative_pl": "μεγάλοι",
+      "Vocative_pl": "μεγάλοι",
+      "Accusative_pl": "μεγάλους",
+      "Genitive_pl": "μεγάλων",
+      "Dative_pl": "μεγάλοις"
+    },
+    "feminine": {
+      "Nominative_sg": "μεγάλη",
+      "Vocative_sg": "μεγάλη",
+      "Accusative_sg": "μεγάλην",
+      "Genitive_sg": "μεγάλης",
+      "Dative_sg": "μεγάλῃ",
+      "Nominative_pl": "μεγάλαι",
+      "Vocative_pl": "μεγάλαι",
+      "Accusative_pl": "μεγάλας",
+      "Genitive_pl": "μεγάλων",
+      "Dative_pl": "μεγάλαις"
+    },
+    "neuter": {
+      "Nominative_sg": "μέγα",
+      "Vocative_sg": "μέγα",
+      "Accusative_sg": "μέγα",
+      "Genitive_sg": "μεγάλου",
+      "Dative_sg": "μεγάλῳ",
+      "Nominative_pl": "μεγάλα",
+      "Vocative_pl": "μεγάλα",
+      "Accusative_pl": "μεγάλα",
+      "Genitive_pl": "μεγάλων",
+      "Dative_pl": "μεγάλοις"
+    }
+  },
+  "polys": {
+    "type": "adjective_3termination",
+    "lemma": "πολύς, πολλή, πολύ",
+    "masculine": {
+      "Nominative_sg": "πολύς",
+      "Vocative_sg": "πολύ",
+      "Accusative_sg": "πολύν",
+      "Genitive_sg": "πολλοῦ",
+      "Dative_sg": "πολλῷ",
+      "Nominative_pl": "πολλοί",
+      "Vocative_pl": "πολλοί",
+      "Accusative_pl": "πολλούς",
+      "Genitive_pl": "πολλῶν",
+      "Dative_pl": "πολλοῖς"
+    },
+    "feminine": {
+      "Nominative_sg": "πολλή",
+      "Vocative_sg": "πολλή",
+      "Accusative_sg": "πολλήν",
+      "Genitive_sg": "πολλῆς",
+      "Dative_sg": "πολλῇ",
+      "Nominative_pl": "πολλαί",
+      "Vocative_pl": "πολλαί",
+      "Accusative_pl": "πολλάς",
+      "Genitive_pl": "πολλῶν",
+      "Dative_pl": "πολλαῖς"
+    },
+    "neuter": {
+      "Nominative_sg": "πολύ",
+      "Vocative_sg": "πολύ",
+      "Accusative_sg": "πολύ",
+      "Genitive_sg": "πολλοῦ",
+      "Dative_sg": "πολλῷ",
+      "Nominative_pl": "πολλά",
+      "Vocative_pl": "πολλά",
+      "Accusative_pl": "πολλά",
+      "Genitive_pl": "πολλῶν",
+      "Dative_pl": "πολλοῖς"
+    }
+  },
+  "alethes": {
+    "type": "adjective_2termination",
+    "lemma": "ἀληθής, ἀληθές",
+    "masculine": {
+      "Nominative_sg": "ἀληθής",
+      "Vocative_sg": "ἀληθές",
+      "Accusative_sg": "ἀληθῆ",
+      "Genitive_sg": "ἀληθοῦς",
+      "Dative_sg": "ἀληθεῖ",
+      "Nominative_pl": "ἀληθεῖς",
+      "Vocative_pl": "ἀληθεῖς",
+      "Accusative_pl": "ἀληθεῖς",
+      "Genitive_pl": "ἀληθῶν",
+      "Dative_pl": "ἀληθέσι"
+    },
+    "feminine": {
+      "Nominative_sg": "ἀληθής",
+      "Vocative_sg": "ἀληθές",
+      "Accusative_sg": "ἀληθῆ",
+      "Genitive_sg": "ἀληθοῦς",
+      "Dative_sg": "ἀληθεῖ",
+      "Nominative_pl": "ἀληθεῖς",
+      "Vocative_pl": "ἀληθεῖς",
+      "Accusative_pl": "ἀληθεῖς",
+      "Genitive_pl": "ἀληθῶν",
+      "Dative_pl": "ἀληθέσι"
+    },
+    "neuter": {
+      "Nominative_sg": "ἀληθές",
+      "Vocative_sg": "ἀληθές",
+      "Accusative_sg": "ἀληθές",
+      "Genitive_sg": "ἀληθοῦς",
+      "Dative_sg": "ἀληθεῖ",
+      "Nominative_pl": "ἀληθῆ",
+      "Vocative_pl": "ἀληθῆ",
+      "Accusative_pl": "ἀληθῆ",
+      "Genitive_pl": "ἀληθῶν",
+      "Dative_pl": "ἀληθέσι"
+    }
+  },
+  "hedys": {
+    "type": "adjective_3termination",
+    "lemma": "ἡδύς, ἡδεῖα, ἡδύ",
+    "masculine": {
+      "Nominative_sg": "ἡδύς",
+      "Vocative_sg": "ἡδύ",
+      "Accusative_sg": "ἡδύν",
+      "Genitive_sg": "ἡδέος",
+      "Dative_sg": "ἡδεῖ",
+      "Nominative_pl": "ἡδεῖς",
+      "Vocative_pl": "ἡδεῖς",
+      "Accusative_pl": "ἡδεῖς",
+      "Genitive_pl": "ἡδέων",
+      "Dative_pl": "ἡδέσι"
+    },
+    "feminine": {
+      "Nominative_sg": "ἡδεῖα",
+      "Vocative_sg": "ἡδεῖα",
+      "Accusative_sg": "ἡδεῖαν",
+      "Genitive_sg": "ἡδείας",
+      "Dative_sg": "ἡδείᾳ",
+      "Nominative_pl": "ἡδεῖαι",
+      "Vocative_pl": "ἡδεῖαι",
+      "Accusative_pl": "ἡδείας",
+      "Genitive_pl": "ἡδειῶν",
+      "Dative_pl": "ἡδείαις"
+    },
+    "neuter": {
+      "Nominative_sg": "ἡδύ",
+      "Vocative_sg": "ἡδύ",
+      "Accusative_sg": "ἡδύ",
+      "Genitive_sg": "ἡδέος",
+      "Dative_sg": "ἡδεῖ",
+      "Nominative_pl": "ἡδέα",
+      "Vocative_pl": "ἡδέα",
+      "Accusative_pl": "ἡδέα",
+      "Genitive_pl": "ἡδέων",
+      "Dative_pl": "ἡδέσι"
+    }
+  },
+  "talas": {
+    "type": "adjective_3termination",
+    "lemma": "τάλας, τάλαινα, τάλαν",
+    "masculine": {
+      "Nominative_sg": "τάλας",
+      "Vocative_sg": "τάλαν",
+      "Accusative_sg": "τάλανα",
+      "Genitive_sg": "τάλανος",
+      "Dative_sg": "τάλανι",
+      "Nominative_pl": "τάλανες",
+      "Vocative_pl": "τάλανες",
+      "Accusative_pl": "τάλανας",
+      "Genitive_pl": "ταλάνων",
+      "Dative_pl": "τάλασι"
+    },
+    "feminine": {
+      "Nominative_sg": "τάλαινα",
+      "Vocative_sg": "τάλαινα",
+      "Accusative_sg": "τάλαιναν",
+      "Genitive_sg": "ταλαίνης",
+      "Dative_sg": "ταλαίνῃ",
+      "Nominative_pl": "τάλαιναι",
+      "Vocative_pl": "τάλαιναι",
+      "Accusative_pl": "ταλαίνας",
+      "Genitive_pl": "ταλαινῶν",
+      "Dative_pl": "ταλαίναις"
+    },
+    "neuter": {
+      "Nominative_sg": "τάλαν",
+      "Vocative_sg": "τάλαν",
+      "Accusative_sg": "τάλαν",
+      "Genitive_sg": "τάλανος",
+      "Dative_sg": "τάλανι",
+      "Nominative_pl": "τάλανα",
+      "Vocative_pl": "τάλανα",
+      "Accusative_pl": "τάλανα",
+      "Genitive_pl": "ταλάνων",
+      "Dative_pl": "τάλασι"
+    }
+  },
+  "paon": {
+    "type": "adjective_3termination",
+    "lemma": "παύων, παύουσα, παῦον",
+    "masculine": {
+      "Nominative_sg": "παύων",
+      "Vocative_sg": "παύων",
+      "Accusative_sg": "παύοντα",
+      "Genitive_sg": "παύοντος",
+      "Dative_sg": "παύοντι",
+      "Nominative_pl": "παύοντες",
+      "Vocative_pl": "παύοντες",
+      "Accusative_pl": "παύοντας",
+      "Genitive_pl": "παυόντων",
+      "Dative_pl": "παύουσι"
+    },
+    "feminine": {
+      "Nominative_sg": "παύουσα",
+      "Vocative_sg": "παύουσα",
+      "Accusative_sg": "παύουσαν",
+      "Genitive_sg": "παυούσης",
+      "Dative_sg": "παυούσῃ",
+      "Nominative_pl": "παύουσαι",
+      "Vocative_pl": "παύουσαι",
+      "Accusative_pl": "παυούσας",
+      "Genitive_pl": "παυουσῶν",
+      "Dative_pl": "παυούσαις"
+    },
+    "neuter": {
+      "Nominative_sg": "παῦον",
+      "Vocative_sg": "παῦον",
+      "Accusative_sg": "παῦον",
+      "Genitive_sg": "παύοντος",
+      "Dative_sg": "παύοντι",
+      "Nominative_pl": "παύοντα",
+      "Vocative_pl": "παύοντα",
+      "Accusative_pl": "παύοντα",
+      "Genitive_pl": "παυόντων",
+      "Dative_pl": "παύουσι"
+    }
+  },
+  "pas": {
+    "type": "adjective_3termination",
+    "lemma": "πᾶς, πᾶσα, πᾶν",
+    "masculine": {
+      "Nominative_sg": "πᾶς",
+      "Vocative_sg": "πᾶς",
+      "Accusative_sg": "πάντα",
+      "Genitive_sg": "παντός",
+      "Dative_sg": "παντί",
+      "Nominative_pl": "πάντες",
+      "Vocative_pl": "πάντες",
+      "Accusative_pl": "πάντας",
+      "Genitive_pl": "πάντων",
+      "Dative_pl": "πᾶσι"
+    },
+    "feminine": {
+      "Nominative_sg": "πᾶσα",
+      "Vocative_sg": "πᾶσα",
+      "Accusative_sg": "πᾶσαν",
+      "Genitive_sg": "πάσης",
+      "Dative_sg": "πάσῃ",
+      "Nominative_pl": "πᾶσαι",
+      "Vocative_pl": "πᾶσαι",
+      "Accusative_pl": "πάσας",
+      "Genitive_pl": "πασῶν",
+      "Dative_pl": "πάσαις"
+    },
+    "neuter": {
+      "Nominative_sg": "πᾶν",
+      "Vocative_sg": "πᾶν",
+      "Accusative_sg": "πᾶν",
+      "Genitive_sg": "παντός",
+      "Dative_sg": "παντί",
+      "Nominative_pl": "πάντα",
+      "Vocative_pl": "πάντα",
+      "Accusative_pl": "πάντα",
+      "Genitive_pl": "πάντων",
+      "Dative_pl": "πᾶσι"
+    }
+  },
+  "pausas": {
+    "type": "adjective_3termination",
+    "lemma": "παύσας, παύσασα, παῦσαν",
+    "masculine": {
+      "Nominative_sg": "παύσας",
+      "Vocative_sg": "παύσας",
+      "Accusative_sg": "παύσαντα",
+      "Genitive_sg": "παύσαντος",
+      "Dative_sg": "παύσαντι",
+      "Nominative_pl": "παύσαντες",
+      "Vocative_pl": "παύσαντες",
+      "Accusative_pl": "παύσαντας",
+      "Genitive_pl": "παυσάντων",
+      "Dative_pl": "παύσασι"
+    },
+    "feminine": {
+      "Nominative_sg": "παύσασα",
+      "Vocative_sg": "παύσασα",
+      "Accusative_sg": "παύσασαν",
+      "Genitive_sg": "παυσάσης",
+      "Dative_sg": "παυσάσῃ",
+      "Nominative_pl": "παύσασαι",
+      "Vocative_pl": "παύσασαι",
+      "Accusative_pl": "παυσάσας",
+      "Genitive_pl": "παυσασῶν",
+      "Dative_pl": "παυσάσαις"
+    },
+    "neuter": {
+      "Nominative_sg": "παῦσαν",
+      "Vocative_sg": "παῦσαν",
+      "Accusative_sg": "παῦσαν",
+      "Genitive_sg": "παύσαντος",
+      "Dative_sg": "παύσαντι",
+      "Nominative_pl": "παύσαντα",
+      "Vocative_pl": "παύσαντα",
+      "Accusative_pl": "παύσαντα",
+      "Genitive_pl": "παυσάντων",
+      "Dative_pl": "παύσασι"
+    }
+  },
+  "charieis": {
+    "type": "adjective_3termination",
+    "lemma": "χαρίεις, χαρίεσσα, χαρίεν",
+    "masculine": {
+      "Nominative_sg": "χαρίεις",
+      "Vocative_sg": "χαρίεν",
+      "Accusative_sg": "χαρίεντα",
+      "Genitive_sg": "χαρίεντος",
+      "Dative_sg": "χαρίεντι",
+      "Nominative_pl": "χαρίεντες",
+      "Vocative_pl": "χαρίεντες",
+      "Accusative_pl": "χαρίεντας",
+      "Genitive_pl": "χαριέντων",
+      "Dative_pl": "χαρίεσι"
+    },
+    "feminine": {
+      "Nominative_sg": "χαρίεσσα",
+      "Vocative_sg": "χαρίεσσα",
+      "Accusative_sg": "χαρίεσσαν",
+      "Genitive_sg": "χαριέσσης",
+      "Dative_sg": "χαριέσσῃ",
+      "Nominative_pl": "χαρίεσσαι",
+      "Vocative_pl": "χαρίεσσαι",
+      "Accusative_pl": "χαριέσσας",
+      "Genitive_pl": "χαριεσσῶν",
+      "Dative_pl": "χαριέσσαις"
+    },
+    "neuter": {
+      "Nominative_sg": "χαρίεν",
+      "Vocative_sg": "χαρίεν",
+      "Accusative_sg": "χαρίεν",
+      "Genitive_sg": "χαρίεντος",
+      "Dative_sg": "χαρίεντι",
+      "Nominative_pl": "χαρίεντα",
+      "Vocative_pl": "χαρίεντα",
+      "Accusative_pl": "χαρίεντα",
+      "Genitive_pl": "χαριέντων",
+      "Dative_pl": "χαρίεσι"
+    }
+  },
+  "paustheis": {
+    "type": "adjective_3termination",
+    "lemma": "παυσθείς, παυσθεῖσα, παυσθέν",
+    "masculine": {
+      "Nominative_sg": "παυσθείς",
+      "Vocative_sg": "παυσθείς",
+      "Accusative_sg": "παυσθέντα",
+      "Genitive_sg": "παυσθέντος",
+      "Dative_sg": "παυσθέντι",
+      "Nominative_pl": "παυσθέντες",
+      "Vocative_pl": "παυσθέντες",
+      "Accusative_pl": "παυσθέντας",
+      "Genitive_pl": "παυσθέντων",
+      "Dative_pl": "παυσθεῖσι"
+    },
+    "feminine": {
+      "Nominative_sg": "παυσθεῖσα",
+      "Vocative_sg": "παυσθεῖσα",
+      "Accusative_sg": "παυσθεῖσαν",
+      "Genitive_sg": "παυσθείσης",
+      "Dative_sg": "παυσθείσῃ",
+      "Nominative_pl": "παυσθεῖσαι",
+      "Vocative_pl": "παυσθεῖσαι",
+      "Accusative_pl": "παυσθείσας",
+      "Genitive_pl": "παυσθεισῶν",
+      "Dative_pl": "παυσθείσαις"
+    },
+    "neuter": {
+      "Nominative_sg": "παυσθέν",
+      "Vocative_sg": "παυσθέν",
+      "Accusative_sg": "παυσθέν",
+      "Genitive_sg": "παυσθέντος",
+      "Dative_sg": "παυσθέντι",
+      "Nominative_pl": "παυσθέντα",
+      "Vocative_pl": "παυσθέντα",
+      "Accusative_pl": "παυσθέντα",
+      "Genitive_pl": "παυσθέντων",
+      "Dative_pl": "παυσθεῖσι"
+    }
+  },
+  "pepaukos": {
+    "type": "adjective_3termination",
+    "lemma": "πεπαυκώς, πεπαυκυῖα, πεπαυκός",
+    "masculine": {
+      "Nominative_sg": "πεπαυκώς",
+      "Vocative_sg": "πεπαυκώς",
+      "Accusative_sg": "πεπαυκότα",
+      "Genitive_sg": "πεπαυκότος",
+      "Dative_sg": "πεπαυκότι",
+      "Nominative_pl": "πεπαυκότες",
+      "Vocative_pl": "πεπαυκότες",
+      "Accusative_pl": "πεπαυκότας",
+      "Genitive_pl": "πεπαυκότων",
+      "Dative_pl": "πεπαυκόσι"
+    },
+    "feminine": {
+      "Nominative_sg": "πεπαυκυῖα",
+      "Vocative_sg": "πεπαυκυῖα",
+      "Accusative_sg": "πεπαυκυῖαν",
+      "Genitive_sg": "πεπαυκυίας",
+      "Dative_sg": "πεπαυκυίᾳ",
+      "Nominative_pl": "πεπαυκυῖαι",
+      "Vocative_pl": "πεπαυκυῖαι",
+      "Accusative_pl": "πεπαυκυίας",
+      "Genitive_pl": "πεπαυκυιῶν",
+      "Dative_pl": "πεπαυκυίαις"
+    },
+    "neuter": {
+      "Nominative_sg": "πεπαυκός",
+      "Vocative_sg": "πεπαυκός",
+      "Accusative_sg": "πεπαυκός",
+      "Genitive_sg": "πεπαυκότος",
+      "Dative_sg": "πεπαυκότι",
+      "Nominative_pl": "πεπαυκότα",
+      "Vocative_pl": "πεπαυκότα",
+      "Accusative_pl": "πεπαυκότα",
+      "Genitive_pl": "πεπαυκότων",
+      "Dative_pl": "πεπαυκόσι"
     }
   }
 }
