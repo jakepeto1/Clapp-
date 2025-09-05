@@ -15,6 +15,7 @@ class PracticeConfig:
         # Core practice toggles
         self.ignore_breathings = tk.BooleanVar(value=False)
         self.prefill_stems = tk.BooleanVar(value=False)
+        self.randomize_next = tk.BooleanVar(value=False)
         
         # Future toggles can be added here
         # self.ignore_accents = tk.BooleanVar(value=False)
@@ -34,6 +35,7 @@ class PracticeConfig:
         """Reset all settings to their default values"""
         self.ignore_breathings.set(False)
         self.prefill_stems.set(False)
+        self.randomize_next.set(False)
 
 class FontManager:
     """Manage fonts for the application"""
@@ -129,6 +131,14 @@ class GreekGrammarApp:
         )
         prefill_stems_cb.grid(row=0, column=0, sticky='e')
         
+        # Randomize next checkbox
+        randomize_next_cb = ttk.Checkbutton(
+            practice_options_frame,
+            text="Randomize next",
+            variable=self.config.randomize_next
+        )
+        randomize_next_cb.grid(row=0, column=1, sticky='e', padx=(10, 0))
+        
         # Help button in top right corner
         help_button = ttk.Button(
             title_frame,
@@ -188,7 +198,6 @@ class GreekGrammarApp:
         
         # Define noun and adjective modes
         self.noun_modes = [
-            "Article (ὁ, ἡ, το)",
             "First Declension (μουσα)",
             "First Declension -η (τιμη)",
             "First Declension Long α (χωρα)",
@@ -224,6 +233,7 @@ class GreekGrammarApp:
         ]
         
         self.pronoun_modes = [
+            "Article (ὁ, ἡ, τό)",
             "Personal I (ἐγώ)",
             "Personal You (σύ)", 
             "Personal Third Person (αὐτός, αὐτή, αὐτό)",
@@ -327,6 +337,11 @@ class GreekGrammarApp:
 
     def next_answer(self):
         """Navigate to the next item in the current dropdown list."""
+        # Check if randomize next is enabled
+        if self.config.randomize_next.get():
+            self.random_next()
+            return
+            
         current_type = self.type_var.get()
         current_mode = self.mode_var.get()
         
@@ -353,6 +368,52 @@ class GreekGrammarApp:
                 pass
         
         # Clear all entries and apply prefill stems if enabled for the new combination
+        self.clear_all_entries()
+        self.apply_prefill_stems_to_all_entries()
+
+    def random_next(self):
+        """Navigate to a completely random table (type, mode, and for verbs: voice/tense/mood)."""
+        import random
+        
+        # Randomly select a type
+        available_types = ["Noun", "Adjective", "Pronoun", "Verb"]
+        random_type = random.choice(available_types)
+        
+        # Set the type
+        self.type_var.set(random_type)
+        self.on_type_change(None)  # Update the available modes
+        
+        # Randomly select a mode from the available modes for this type
+        available_modes = self.modes
+        if available_modes:
+            random_mode = random.choice(available_modes)
+            self.mode_var.set(random_mode)
+            self.on_mode_change(None)
+        
+        # If it's a verb, also randomize voice, tense, and mood
+        if random_type == "Verb":
+            # Get available combinations for this verb
+            current_mode = self.mode_var.get()
+            lemma = None
+            if "(" in current_mode and ")" in current_mode:
+                lemma = current_mode.split("(")[1].split(")")[0]
+            
+            if lemma:
+                available_combinations = self.get_available_combinations_for_verb(lemma)
+                if available_combinations:
+                    # Randomly select a combination
+                    random_combo = random.choice(available_combinations)
+                    tense, mood, voice = random_combo
+                    
+                    # Set the random combination
+                    self.tense_var.set(tense)
+                    self.mood_var.set(mood)
+                    self.voice_var.set(voice)
+                    self.update_tense_mood_constraints()
+                    # Recreate the table to handle infinitive vs finite verb layouts
+                    self.reset_table()
+        
+        # Clear all entries and apply prefill stems if enabled
         self.clear_all_entries()
         self.apply_prefill_stems_to_all_entries()
 
@@ -2094,7 +2155,6 @@ class GreekGrammarApp:
         
         # For non-verbs, use the existing paradigm map
         paradigm_map = {
-            "Article (ὁ, ἡ, το)": "article",
             "First Declension (μουσα)": "mousa",
             "First Declension -η (τιμη)": "time",
             "First Declension Long α (χωρα)": "chora",
@@ -2124,6 +2184,7 @@ class GreekGrammarApp:
             "Three-termination Graceful (χαρίεις, χαρίεσσα, χαρίεν)": "charieis",
             "Three-termination Having been stopped (παυσθείς, παυσθεῖσα, παυσθέν)": "paustheis",
             "Three-termination Having stopped perfect (πεπαυκώς, πεπαυκυῖα, πεπαυκός)": "pepaukos",
+            "Article (ὁ, ἡ, τό)": "article",
             "Personal I (ἐγώ)": "ego",
             "Personal You (σύ)": "sy", 
             "Personal Third Person (αὐτός, αὐτή, αὐτό)": "autos",
@@ -2917,15 +2978,12 @@ class GreekGrammarApp:
         elif current_type in ["Adjective", "Pronoun"]:
             paradigm_type = "adjective"
         
-        stem, ending = self.extract_stem_and_ending(full_word, paradigm_type)
+        # Get the appropriate stem based on the specific form
+        stem = self.get_context_appropriate_stem(entry_key, full_word, paradigm_type)
         
-        # For contract verbs, we might need to show the uncontracted stem
-        if paradigm_type == "verb" and current_type == "Verb":
-            # Check if this looks like a contract verb by examining the paradigm
-            current_paradigm = self.get_current_paradigm()
-            if current_paradigm and self.is_contract_verb(current_paradigm):
-                # For contract verbs, show the uncontracted stem
-                stem = self.get_uncontracted_stem(full_word, stem, ending)
+        if not stem:
+            # Fallback to regular extraction
+            stem, ending = self.extract_stem_and_ending(full_word, paradigm_type)
         
         # Clear the entry and insert just the stem
         entry.delete(0, tk.END)
@@ -2934,7 +2992,136 @@ class GreekGrammarApp:
         # Store the full answer and stem info for checking purposes
         entry._full_answer = full_word
         entry._stem = stem
-        entry._ending = ending
+
+    def get_context_appropriate_stem(self, entry_key, full_word, paradigm_type):
+        """Get the appropriate stem based on the specific grammatical context"""
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            return None
+            
+        current_mode = self.mode_var.get()
+        current_type = self.type_var.get()
+        
+        if current_type == "Verb":
+            return self.get_verb_context_stem(entry_key, full_word, current_paradigm, current_mode)
+        else:
+            # For nouns, adjectives, pronouns - use regular extraction for now
+            stem, ending = self.extract_stem_and_ending(full_word, paradigm_type)
+            return stem
+    
+    def get_verb_context_stem(self, entry_key, full_word, paradigm, current_mode):
+        """Get context-appropriate stem for verbs, handling irregular verbs and mi verbs"""
+        # Extract lemma from current mode
+        lemma = None
+        if "(" in current_mode and ")" in current_mode:
+            lemma = current_mode.split("(")[1].split(")")[0]
+        
+        tense = paradigm.get("tense", "present")
+        mood = paradigm.get("mood", "indicative")
+        voice = paradigm.get("voice", "active")
+        
+        # Determine if this is singular or plural
+        is_plural = entry_key.endswith("_pl")
+        
+        # Special handling for irregular and mi verbs
+        if lemma:
+            special_stem = self.get_special_verb_stem(lemma, entry_key, tense, mood, voice, is_plural)
+            if special_stem:
+                return special_stem
+        
+        # Handle contract verbs
+        if self.is_contract_verb(paradigm):
+            stem, ending = self.extract_stem_and_ending(full_word, "verb")
+            return self.get_uncontracted_stem(full_word, stem, ending)
+        
+        # Fallback to regular stem extraction
+        stem, ending = self.extract_stem_and_ending(full_word, "verb")
+        return stem
+    
+    def get_special_verb_stem(self, lemma, entry_key, tense, mood, voice, is_plural):
+        """Get special stems for irregular verbs and mi verbs"""
+        
+        # Define special stem patterns for irregular and mi verbs
+        special_stems = {
+            "οἶδα": {
+                "present": {
+                    "singular": "οἰ",
+                    "plural": "ἰσ"
+                },
+                # Add other tenses as needed
+            },
+            "ἵημι": {
+                "present": {
+                    "all": "ἱ"  # Shorter stem for all forms
+                },
+                "aorist": {
+                    "all": "ἡ"  # Different stem for aorist
+                }
+            },
+            "φημί": {
+                "present": {
+                    "singular": "φη",  # φη- for singular present forms
+                    "plural": "φα"     # φα- for plural present forms
+                },
+                "imperfect": {
+                    "singular": "φη",  # φη- for singular imperfect forms  
+                    "plural": "φα"     # φα- for plural imperfect forms
+                },
+                "future": {
+                    "all": "φη"       # φη- for future forms
+                }
+            },
+            "δίδωμι": {
+                "present": {
+                    "singular": "διδο",  # διδο- for singular present forms
+                    "plural": "διδο"     # διδο- for plural present forms  
+                },
+                "aorist": {
+                    "singular": "δω",    # δω- for singular aorist (ἔδωκα)
+                    "plural": "δο"       # δο- for plural aorist (ἔδομεν)
+                }
+            },
+            "τίθημι": {
+                "present": {
+                    "singular": "τιθε",  # τιθε- for singular present forms
+                    "plural": "τιθε"     # τιθε- for plural present forms
+                },
+                "aorist": {
+                    "singular": "θη",    # θη- for singular aorist (ἔθηκα)
+                    "plural": "θε"       # θε- for plural aorist (ἔθεμεν)
+                }
+            },
+            "ἵστημι": {
+                "present": {
+                    "singular": "ἱστα",  # ἱστα- for singular present forms
+                    "plural": "ἱστα"     # ἱστα- for plural present forms
+                },
+                "aorist": {
+                    "singular": "στησ",  # στησ- for singular aorist (ἔστησα)
+                    "plural": "στη"      # στη- for plural aorist (ἔστημεν)
+                }
+            }
+        }
+        
+        if lemma not in special_stems:
+            return None
+            
+        verb_stems = special_stems[lemma]
+        
+        # Get tense-specific stems
+        if tense in verb_stems:
+            tense_stems = verb_stems[tense]
+            
+            # Check for all-forms stem first
+            if "all" in tense_stems:
+                return tense_stems["all"]
+            
+            # Check for singular/plural specific stems
+            number_key = "plural" if is_plural else "singular"
+            if number_key in tense_stems:
+                return tense_stems[number_key]
+                
+        return None
     
     def is_contract_verb_by_lemma(self, lemma):
         """Check if a verb is a contract verb based on its lemma"""
