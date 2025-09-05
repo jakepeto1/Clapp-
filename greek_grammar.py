@@ -1789,7 +1789,6 @@ class GreekGrammarApp:
         text = text.replace(ROUGH_BREATHING, '')
         
         # Also remove combined breathing marks that might appear in composed characters
-        import unicodedata
         normalized = unicodedata.normalize('NFD', text)
         
         # Filter out breathing mark characters
@@ -1925,7 +1924,7 @@ class GreekGrammarApp:
         
         # Remove accents for analysis
         def remove_accents_for_stem_analysis(word):
-            import unicodedata
+
             nfd = unicodedata.normalize('NFD', word)
             accent_marks = {'\u0301', '\u0300', '\u0342', '\u0308'}
             filtered = ''.join(char for char in nfd if char not in accent_marks)
@@ -1983,7 +1982,7 @@ class GreekGrammarApp:
         
         # Remove accents for comparison
         def remove_accents_for_stem_analysis(word):
-            import unicodedata
+
             nfd = unicodedata.normalize('NFD', word)
             accent_marks = {'\u0301', '\u0300', '\u0342', '\u0308'}
             filtered = ''.join(char for char in nfd if char not in accent_marks)
@@ -2009,7 +2008,7 @@ class GreekGrammarApp:
         
         # Remove accents for analysis
         def remove_accents_for_stem_analysis(word):
-            import unicodedata
+
             nfd = unicodedata.normalize('NFD', word)
             accent_marks = {'\u0301', '\u0300', '\u0342', '\u0308'}
             filtered = ''.join(char for char in nfd if char not in accent_marks)
@@ -2329,7 +2328,7 @@ class GreekGrammarApp:
         # because Greek accents shift but the stem remains the same
         def remove_accents_for_stem_analysis(word):
             """Remove accents for stem analysis while preserving base characters"""
-            import unicodedata
+
             # Normalize to decomposed form
             nfd = unicodedata.normalize('NFD', word)
             # Remove accent marks but keep breathing marks for now
