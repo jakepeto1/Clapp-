@@ -82,23 +82,23 @@ class GreekGrammarApp:
         style = ttk.Style()
         style.configure('Title.TLabel', font=('Arial', 24, 'bold'), padding=(0, 10))
         
-        # Configure root window
+        # Configure root window with better sizing and resizing behavior
         self.root.configure(padx=20, pady=20)
-        self.root.geometry("1000x800")  # Increased window size to ensure all cases are visible
+        self.root.geometry("1200x900")  # Increased size to ensure all content is visible
+        self.root.minsize(1000, 700)  # Set minimum size to prevent content from being cut off
         
-        # Main container 
+        # Main container with scrollable frame capability
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.grid(row=0, column=0, sticky='nsew')
         
-        # Configure grid weights
+        # Configure grid weights for proper expansion
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
-        self.main_frame.grid_rowconfigure(0, weight=0)  # Title row
-        self.main_frame.grid_rowconfigure(1, weight=0)  # Mode row
-        self.main_frame.grid_rowconfigure(2, weight=0)  # Word row
-        self.main_frame.grid_rowconfigure(3, weight=0)  # Toggles row
-        self.main_frame.grid_rowconfigure(4, weight=1)  # Table row - expandable
-        self.main_frame.grid_rowconfigure(5, weight=0)  # Button row
+        self.main_frame.grid_rowconfigure(0, weight=0)  # Title row - fixed
+        self.main_frame.grid_rowconfigure(1, weight=0)  # Mode row - fixed
+        self.main_frame.grid_rowconfigure(2, weight=0)  # Word row - fixed
+        self.main_frame.grid_rowconfigure(3, weight=1)  # Table row - expandable (moved up)
+        self.main_frame.grid_rowconfigure(4, weight=0)  # Button row - fixed
         for i in range(3):
             self.main_frame.grid_columnconfigure(i, weight=1)
 
@@ -106,23 +106,37 @@ class GreekGrammarApp:
         title_frame = ttk.Frame(self.main_frame)
         title_frame.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky='ew')
         title_frame.grid_columnconfigure(0, weight=1)  # Allow title to expand
-        title_frame.grid_columnconfigure(3, weight=0)  # Keep help button fixed
+        title_frame.grid_columnconfigure(1, weight=0)  # Practice options column
+        title_frame.grid_columnconfigure(2, weight=0)  # Help button column
         
         title_label = ttk.Label(
             title_frame, 
             text="Ancient Greek Grammar Study",
             style='Title.TLabel'
         )
-        title_label.grid(row=0, column=0, columnspan=3)
+        title_label.grid(row=0, column=0, sticky='w')
+        
+        # Practice options in top corner (simplified)
+        practice_options_frame = ttk.Frame(title_frame)
+        practice_options_frame.grid(row=0, column=1, sticky='ne', padx=(10, 10))
+        
+        # Prefill stems checkbox (simplified, no breathing option)
+        prefill_stems_cb = ttk.Checkbutton(
+            practice_options_frame,
+            text="Prefill stems",
+            variable=self.config.prefill_stems,
+            command=self.on_prefill_stems_toggle
+        )
+        prefill_stems_cb.grid(row=0, column=0, sticky='e')
         
         # Help button in top right corner
         help_button = ttk.Button(
             title_frame,
             text="Help",
             command=self.show_help,
-            width=10
+            width=8
         )
-        help_button.grid(row=0, column=3, sticky='ne', padx=(20, 0))
+        help_button.grid(row=0, column=2, sticky='ne')
 
         # Load paradigms
         try:
@@ -264,31 +278,6 @@ class GreekGrammarApp:
         )
         self.word_label.grid(row=0, column=1)
 
-        # Practice toggles frame
-        toggles_frame = ttk.Frame(self.main_frame)
-        toggles_frame.grid(row=3, column=0, columnspan=3, pady=(5, 15))
-        
-        # Create a label frame for better organization
-        practice_frame = ttk.LabelFrame(toggles_frame, text="Practice Options", padding=(10, 5))
-        practice_frame.grid(row=0, column=0, padx=20)
-        
-        # Ignore breathings checkbox
-        ignore_breathings_cb = ttk.Checkbutton(
-            practice_frame,
-            text="Ignore breathing marks (᾿ ῾)",
-            variable=self.config.ignore_breathings
-        )
-        ignore_breathings_cb.grid(row=0, column=0, padx=(0, 20), sticky='w')
-        
-        # Prefill stems checkbox
-        prefill_stems_cb = ttk.Checkbutton(
-            practice_frame,
-            text="Prefill stems (practice endings only)",
-            variable=self.config.prefill_stems,
-            command=self.on_prefill_stems_toggle
-        )
-        prefill_stems_cb.grid(row=0, column=1, sticky='w')
-
         # Create declension table
         self.create_declension_table()
         
@@ -425,8 +414,14 @@ class GreekGrammarApp:
         if self.table_frame:
             self.table_frame.destroy()
             
+        # Create a simple frame for the table at row 3
         self.table_frame = ttk.Frame(self.main_frame)
-        self.table_frame.grid(row=4, column=0, columnspan=3, sticky='nsew', pady=(20, 10))
+        self.table_frame.grid(row=3, column=0, columnspan=3, sticky='nsew', pady=(20, 10))
+        
+        # Configure grid weights
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(1, weight=1) 
+        self.main_frame.grid_columnconfigure(2, weight=1)
         
         current_paradigm = self.get_current_paradigm()
         if not current_paradigm:
@@ -446,7 +441,7 @@ class GreekGrammarApp:
         
         # Bottom button frame positioned after table
         bottom_button_frame = ttk.Frame(self.main_frame)
-        bottom_button_frame.grid(row=5, column=0, columnspan=3, pady=20)
+        bottom_button_frame.grid(row=4, column=0, columnspan=3, pady=20)
         
         # Style for buttons
         button_style = ttk.Style()
@@ -493,12 +488,16 @@ class GreekGrammarApp:
         for widget in self.table_frame.winfo_children():
             widget.destroy()
         
-        # Configure grid weights for better expansion
-        self.table_frame.grid_columnconfigure(0, weight=1)
-        self.table_frame.grid_columnconfigure(1, weight=2)
-        self.table_frame.grid_columnconfigure(2, weight=2)
+        # Configure grid weights for proper expansion and ensure all rows are visible
+        self.table_frame.grid_columnconfigure(0, weight=0, minsize=120)  # Case labels column
+        self.table_frame.grid_columnconfigure(1, weight=1, minsize=200)  # Singular column
+        self.table_frame.grid_columnconfigure(2, weight=1, minsize=200)  # Plural column
+        
+        # Configure row weights to ensure all cases remain visible
+        for i in range(7):  # 0-6 rows (header + 5 cases + padding)
+            self.table_frame.grid_rowconfigure(i, weight=0, minsize=50)
 
-        # Headers with better styling
+        # Headers with consistent styling
         ttk.Label(
             self.table_frame,
             text="",
@@ -515,17 +514,18 @@ class GreekGrammarApp:
             font=('Arial', 14, 'bold')
         ).grid(row=0, column=2, padx=15, pady=15)
 
-        # Create input fields for each case with better spacing (British order)
+        # Create input fields for each case with guaranteed visibility (British order)
         cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
         for i, case in enumerate(cases, 1):
-            # Case label with better styling
-            ttk.Label(
+            # Case label with consistent styling and better positioning
+            case_label = ttk.Label(
                 self.table_frame,
                 text=case,
                 font=('Arial', 12, 'bold')
-            ).grid(row=i, column=0, padx=15, pady=10, sticky=tk.E)
+            )
+            case_label.grid(row=i, column=0, padx=15, pady=8, sticky='e')
 
-            # Singular entry - larger and better styled
+            # Singular entry with consistent sizing
             entry_sg = tk.Entry(
                 self.table_frame,
                 width=25,
@@ -533,7 +533,7 @@ class GreekGrammarApp:
                 relief='solid',
                 borderwidth=1
             )
-            entry_sg.grid(row=i, column=1, padx=15, pady=10, sticky='ew')
+            entry_sg.grid(row=i, column=1, padx=15, pady=8, sticky='ew')
             self.entries[f"{case}_sg"] = entry_sg
             entry_sg.bind('<Key>', self.handle_key_press)
             
@@ -555,7 +555,7 @@ class GreekGrammarApp:
             self.error_labels[f"{case}_sg"] = error_label_sg
             error_label_sg.grid_remove()
 
-            # Plural entry - larger and better styled
+            # Plural entry with consistent sizing
             entry_pl = tk.Entry(
                 self.table_frame,
                 width=25,
@@ -563,7 +563,7 @@ class GreekGrammarApp:
                 relief='solid',
                 borderwidth=1
             )
-            entry_pl.grid(row=i, column=2, padx=15, pady=10, sticky='ew')
+            entry_pl.grid(row=i, column=2, padx=15, pady=8, sticky='ew')
             self.entries[f"{case}_pl"] = entry_pl
             entry_pl.bind('<Key>', self.handle_key_press)
             
@@ -1026,6 +1026,73 @@ class GreekGrammarApp:
                         )
                         entry.grid(row=i, column=col, padx=5, pady=8, sticky='ew')
 
+    def get_available_voices_for_verb(self, lemma):
+        """Determine which voices are available for a given verb based on paradigms data."""
+        available_voices = set()
+        
+        # Search through all paradigms to find entries for this lemma
+        for paradigm_key, paradigm_data in self.paradigms.items():
+            if (paradigm_data.get('type') == 'verb' and 
+                paradigm_data.get('lemma') == lemma and
+                'voice' in paradigm_data):
+                voice = paradigm_data['voice']
+                if voice == 'active':
+                    available_voices.add('Active')
+                elif voice == 'middle':
+                    available_voices.add('Middle')
+                elif voice == 'passive':
+                    available_voices.add('Passive')
+        
+        # If no voices found or only active found, default to active only
+        if not available_voices or available_voices == {'Active'}:
+            return ['Active']
+        
+        # Return voices in standard order
+        ordered_voices = []
+        if 'Active' in available_voices:
+            ordered_voices.append('Active')
+        if 'Middle' in available_voices:
+            ordered_voices.append('Middle')
+        if 'Passive' in available_voices:
+            ordered_voices.append('Passive')
+            
+        return ordered_voices
+
+    def get_available_combinations_for_verb(self, lemma):
+        """Get all available tense/mood/voice combinations for a given verb based on paradigms data."""
+        combinations = set()
+        
+        # Search through all paradigms to find entries for this lemma
+        for paradigm_key, paradigm_data in self.paradigms.items():
+            if (paradigm_data.get('type') == 'verb' and 
+                paradigm_data.get('lemma') == lemma):
+                
+                tense = paradigm_data.get('tense', '')
+                mood = paradigm_data.get('mood', '')
+                voice = paradigm_data.get('voice', '')
+                
+                # Convert to display format
+                tense_display = tense.title() if tense else ''
+                mood_display = mood.title() if mood else ''
+                voice_display = voice.title() if voice else ''
+                
+                # Handle special cases
+                if tense == 'pluperfect':
+                    tense_display = 'Pluperfect'
+                
+                if all([tense_display, mood_display, voice_display]):
+                    combinations.add((tense_display, mood_display, voice_display))
+        
+        return list(combinations)
+
+    def debug_voice_availability(self):
+        """Debug method to check voice availability for different verbs."""
+        test_verbs = ["λύω", "εἰμί", "οἶδα", "φημί", "εἶμι", "φιλέω", "τιμάω"]
+        print("Voice availability check:")
+        for verb in test_verbs:
+            voices = self.get_available_voices_for_verb(verb)
+            print(f"  {verb}: {voices}")
+
     def create_verb_table(self, current_paradigm):
         """Create the verb conjugation table with input fields for each person/number."""
         
@@ -1099,13 +1166,24 @@ class GreekGrammarApp:
             voice_value = "Active"
         
         # Determine available voices based on current verb
-        if "εἰμί" in mode or "εἶμι" in mode or "βαίνω" in mode:
-            available_voices = ["Active"]
-            # If user had Middle/Passive selected but switched to a restricted verb, default to Active
-            if voice_value in ["Middle", "Passive"]:
-                voice_value = "Active"
+        # Extract the lemma from the mode string (it's in parentheses)
+        mode = self.mode_var.get()
+        lemma = None
+        if "(" in mode and ")" in mode:
+            lemma = mode.split("(")[1].split(")")[0]
+        
+        # Get available voices based on what's actually in the paradigms
+        if lemma:
+            available_voices = self.get_available_voices_for_verb(lemma)
         else:
-            available_voices = ["Active", "Middle", "Passive"]
+            # Fallback to old logic if lemma extraction fails
+            active_only_verbs = ["εἰμί", "εἶμι", "βαίνω", "οἶδα", "φημί", "ἵημι"]
+            is_active_only = any(verb in mode for verb in active_only_verbs)
+            available_voices = ["Active"] if is_active_only else ["Active", "Middle", "Passive"]
+        
+        # If user had Middle/Passive selected but switched to a verb without those forms, default to Active
+        if voice_value in ["Middle", "Passive"] and voice_value not in available_voices:
+            voice_value = "Active"
         
         self.voice_var = tk.StringVar(value=voice_value)
         
@@ -1564,6 +1642,61 @@ class GreekGrammarApp:
         """Update available tense and mood options based on current selections."""
         current_tense = self.tense_var.get()
         current_mood = self.mood_var.get()
+        current_voice = self.voice_var.get()
+        
+        # Get available combinations from paradigms
+        mode = self.mode_var.get()
+        lemma = None
+        if "(" in mode and ")" in mode:
+            lemma = mode.split("(")[1].split(")")[0]
+        
+        if lemma:
+            available_combinations = self.get_available_combinations_for_verb(lemma)
+            
+            # Extract available tenses
+            available_tenses = list(set([combo[0] for combo in available_combinations]))
+            
+            # If current tense is not available for this verb, reset to first available
+            if current_tense not in available_tenses:
+                if available_tenses:
+                    self.tense_var.set(available_tenses[0])
+                    current_tense = available_tenses[0]
+            
+            # Update tense dropdown
+            self.tense_dropdown['values'] = available_tenses
+            
+            # Extract available moods for current tense
+            available_moods = list(set([combo[1] for combo in available_combinations if combo[0] == current_tense]))
+            
+            # If current mood is not available for this tense, reset to first available
+            if current_mood not in available_moods:
+                if available_moods:
+                    self.mood_var.set(available_moods[0])
+                    current_mood = available_moods[0]
+            
+            # Update mood dropdown
+            self.mood_dropdown['values'] = available_moods
+            
+            # Extract available voices for current tense and mood
+            available_voices = list(set([combo[2] for combo in available_combinations 
+                                       if combo[0] == current_tense and combo[1] == current_mood]))
+            
+            # Update voice dropdown if it exists
+            if hasattr(self, 'voice_dropdown'):
+                self.voice_dropdown['values'] = available_voices
+                
+                # Reset voice if current selection is not available
+                if current_voice not in available_voices:
+                    if available_voices:
+                        self.voice_var.set(available_voices[0])
+        else:
+            # Fallback to original logic if no lemma found
+            self.update_tense_mood_constraints_fallback()
+
+    def update_tense_mood_constraints_fallback(self):
+        """Fallback logic for when lemma cannot be extracted."""
+        current_tense = self.tense_var.get()
+        current_mood = self.mood_var.get()
         
         # Determine available tenses based on current mood
         if current_mood == "Infinitive":
@@ -1609,6 +1742,29 @@ class GreekGrammarApp:
         
         # Update mood dropdown
         self.mood_dropdown['values'] = available_moods
+        
+        # Update available voices based on current verb
+        mode = self.mode_var.get()
+        lemma = None
+        if "(" in mode and ")" in mode:
+            lemma = mode.split("(")[1].split(")")[0]
+        
+        if lemma:
+            available_voices = self.get_available_voices_for_verb(lemma)
+        else:
+            # Fallback logic
+            active_only_verbs = ["εἰμί", "εἶμι", "βαίνω", "οἶδα", "φημί", "ἵημι"]
+            is_active_only = any(verb in mode for verb in active_only_verbs)
+            available_voices = ["Active"] if is_active_only else ["Active", "Middle", "Passive"]
+        
+        # Update voice dropdown if it exists
+        if hasattr(self, 'voice_dropdown'):
+            current_voice = self.voice_var.get()
+            self.voice_dropdown['values'] = available_voices
+            
+            # Reset voice if current selection is not available
+            if current_voice not in available_voices:
+                self.voice_var.set("Active")
     
     def get_base_available_tenses(self):
         """Get the base available tenses for the current verb (before mood constraints)."""
