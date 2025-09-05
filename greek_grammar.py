@@ -84,7 +84,7 @@ class GreekGrammarApp:
         
         # Configure root window
         self.root.configure(padx=20, pady=20)
-        self.root.geometry("900x700")  # Set appropriate window size
+        self.root.geometry("1000x800")  # Increased window size to ensure all cases are visible
         
         # Main container 
         self.main_frame = ttk.Frame(self.root)
@@ -1065,9 +1065,9 @@ class GreekGrammarApp:
             try:
                 mood_value = current_mood.get()
                 if mood_value == "Infinitive":
-                    # Infinitives only exist for Present, Aorist, Future (no Imperfect)
-                    available_tenses = [t for t in available_tenses if t != "Imperfect"]
-                    if tense_value == "Imperfect":
+                    # Infinitives only exist for Present, Aorist, Future, Perfect (no Imperfect, no Pluperfect)
+                    available_tenses = [t for t in available_tenses if t not in ["Imperfect", "Pluperfect"]]
+                    if tense_value in ["Imperfect", "Pluperfect"]:
                         tense_value = "Present"
             except:
                 pass  # Ignore errors if mood_var not properly set yet
@@ -1137,6 +1137,10 @@ class GreekGrammarApp:
             available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative", "Infinitive"]
         elif tense_value == "Future":
             available_moods = ["Indicative", "Optative", "Infinitive"]  # No subjunctive for future
+        elif tense_value == "Perfect":
+            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative", "Infinitive"]
+        elif tense_value == "Pluperfect":
+            available_moods = ["Indicative", "Optative"]  # No infinitive for pluperfect
         else:
             available_moods = ["Indicative"]
         
@@ -1549,14 +1553,19 @@ class GreekGrammarApp:
         
         # Determine available tenses based on current mood
         if current_mood == "Infinitive":
-            # Infinitives only exist for Present, Aorist, Future (no Imperfect)
+            # Infinitives only exist for Present, Aorist, Future, Perfect (no Imperfect, no Pluperfect)
             base_tenses = self.get_base_available_tenses()
-            available_tenses = [t for t in base_tenses if t != "Imperfect"]
-            if current_tense == "Imperfect":
+            available_tenses = [t for t in base_tenses if t not in ["Imperfect", "Pluperfect"]]
+            if current_tense in ["Imperfect", "Pluperfect"]:
                 self.tense_var.set("Present")
                 current_tense = "Present"
         else:
             available_tenses = self.get_base_available_tenses()
+        
+        # If current tense is not available for this verb, reset to Present
+        if current_tense not in available_tenses:
+            self.tense_var.set("Present")
+            current_tense = "Present"
         
         # Update tense dropdown
         self.tense_dropdown['values'] = available_tenses
@@ -1574,6 +1583,12 @@ class GreekGrammarApp:
             available_moods = ["Indicative", "Optative", "Infinitive"]  # No subjunctive for future
             if current_mood == "Subjunctive":
                 self.mood_var.set("Indicative")
+        elif current_tense == "Perfect":
+            available_moods = ["Indicative", "Subjunctive", "Optative", "Imperative", "Infinitive"]
+        elif current_tense == "Pluperfect":
+            available_moods = ["Indicative", "Optative"]  # No infinitive for pluperfect
+            if current_mood == "Infinitive":
+                self.mood_var.set("Indicative")
         else:
             available_moods = ["Indicative"]
         
@@ -1590,6 +1605,9 @@ class GreekGrammarApp:
             return ["Present", "Imperfect"]
         elif "εἶμι" in mode:
             return ["Present", "Imperfect", "Future"]
+        elif "λύω" in mode or "Release" in mode:
+            # Only λύω has Perfect and Pluperfect paradigms for now
+            return ["Present", "Imperfect", "Aorist", "Future", "Perfect", "Pluperfect"]
         else:
             return ["Present", "Imperfect", "Aorist", "Future"]
 
@@ -1645,7 +1663,9 @@ class GreekGrammarApp:
                     "present": "pres",
                     "imperfect": "impf",
                     "aorist": "aor",
-                    "future": "fut"
+                    "future": "fut",
+                    "perfect": "perf",
+                    "pluperfect": "plpf"
                 }
                 tense_key = tense_map.get(tense_val, tense_val)
                 
@@ -1816,7 +1836,10 @@ class GreekGrammarApp:
         all_forms = []
         current_type = self.type_var.get()
         
-        if current_type == "Adjective":
+        if current_type == "Verb":
+            # For verbs, use specialized verb stem extraction
+            return self.extract_verb_stem(target_word, paradigm)
+        elif current_type == "Adjective":
             # Collect from all genders
             for gender in ["masculine", "feminine", "neuter"]:
                 if gender in paradigm:
@@ -1835,7 +1858,7 @@ class GreekGrammarApp:
                     # Simple structure
                     all_forms.append(value)
         else:
-            # Noun, verb - simple structure
+            # Noun - simple structure
             for key, value in paradigm.items():
                 if value and isinstance(value, str) and key not in ["type", "gender", "lemma"]:
                     all_forms.append(value)
@@ -1847,6 +1870,407 @@ class GreekGrammarApp:
         # If target word not found in paradigm, use basic extraction
         return self.basic_stem_extraction(target_word, paradigm_type)
     
+    def extract_verb_stem(self, target_word, paradigm):
+        """Extract verb stem using tense/mood/voice-specific analysis"""
+        if not paradigm or "type" not in paradigm or paradigm["type"] != "verb":
+            return self.basic_stem_extraction(target_word, "verb")
+        
+        # Get tense, mood, voice information
+        tense = paradigm.get("tense", "present")
+        mood = paradigm.get("mood", "indicative") 
+        voice = paradigm.get("voice", "active")
+        lemma = paradigm.get("lemma", "")
+        
+        # Collect all verb forms from this specific tense/mood/voice
+        verb_forms = []
+        for key, value in paradigm.items():
+            if key not in ["type", "tense", "mood", "voice", "lemma"] and value and isinstance(value, str):
+                verb_forms.append(value)
+        
+        if not verb_forms:
+            return self.basic_stem_extraction(target_word, "verb")
+        
+        # Find the consistent stem for this entire tense paradigm
+        consistent_stem = self.get_consistent_verb_stem(verb_forms, tense, mood, voice, lemma)
+        
+        # Apply this consistent stem to the target word
+        return self.apply_consistent_stem(target_word, consistent_stem)
+    
+    def get_consistent_verb_stem(self, verb_forms, tense, mood, voice, lemma):
+        """Get the consistent stem for all forms in this tense paradigm"""
+        
+        # Remove accents for analysis
+        def remove_accents_for_stem_analysis(word):
+            import unicodedata
+            nfd = unicodedata.normalize('NFD', word)
+            accent_marks = {'\u0301', '\u0300', '\u0342', '\u0308'}
+            filtered = ''.join(char for char in nfd if char not in accent_marks)
+            return unicodedata.normalize('NFC', filtered)
+        
+        accent_free_forms = [remove_accents_for_stem_analysis(form) for form in verb_forms]
+        
+        # Special handling for infinitives - they have only one form
+        if mood == "infinitive":
+            return self.extract_infinitive_stem_from_paradigm(accent_free_forms, tense, voice, lemma)
+        
+        # Handle different tense systems to find the consistent stem
+        if tense == "present":
+            return self.extract_present_stem_from_paradigm(accent_free_forms, lemma)
+            
+        elif tense == "imperfect":
+            # Imperfect uses present stem + augment
+            # Remove augments to find the underlying present stem
+            unaugmented_forms = [self.remove_augment(form) for form in accent_free_forms]
+            present_stem = self.extract_present_stem_from_paradigm(unaugmented_forms, lemma)
+            # For imperfect, stem includes the augment when it appears
+            return f"ἐ{present_stem}" if present_stem else present_stem
+            
+        elif tense == "aorist":
+            # Aorist stem includes augment + aorist marker
+            return self.extract_aorist_stem_from_paradigm(accent_free_forms, lemma)
+            
+        elif tense == "future":
+            # Future stem usually has σ marker
+            return self.extract_future_stem_from_paradigm(accent_free_forms, lemma)
+            
+        elif tense == "perfect":
+            # Perfect stem has reduplication + perfect marker
+            return self.extract_perfect_stem_from_paradigm(accent_free_forms, lemma)
+            
+        elif tense == "pluperfect":
+            # Pluperfect uses perfect stem + augment (like imperfect uses present stem + augment)
+            # Remove augments to find the underlying perfect stem
+            unaugmented_forms = [self.remove_augment(form) for form in accent_free_forms]
+            perfect_stem = self.extract_perfect_stem_from_paradigm(unaugmented_forms, lemma)
+            # For pluperfect, stem includes the augment when it appears
+            return f"ἐ{perfect_stem}" if perfect_stem else perfect_stem
+            
+        else:
+            # Fallback to basic common prefix for other tenses
+            return self.find_common_verb_stem(accent_free_forms)
+    
+    def apply_consistent_stem(self, target_word, consistent_stem):
+        """Apply the consistent stem to extract stem and ending from target word"""
+        if not consistent_stem:
+            return self.basic_stem_extraction(target_word, "verb")
+        
+        # Remove accents for comparison
+        def remove_accents_for_stem_analysis(word):
+            import unicodedata
+            nfd = unicodedata.normalize('NFD', word)
+            accent_marks = {'\u0301', '\u0300', '\u0342', '\u0308'}
+            filtered = ''.join(char for char in nfd if char not in accent_marks)
+            return unicodedata.normalize('NFC', filtered)
+        
+        accent_free_target = remove_accents_for_stem_analysis(target_word)
+        accent_free_stem = remove_accents_for_stem_analysis(consistent_stem)
+        
+        # Find where the stem ends in the target word
+        if accent_free_target.startswith(accent_free_stem):
+            stem_length = len(accent_free_stem)
+            # Map back to original word with accents
+            original_stem = target_word[:stem_length]
+            original_ending = target_word[stem_length:]
+            return original_stem, original_ending
+        else:
+            # If stem doesn't match exactly, try to find the best match
+            # This handles cases where augments or other modifications occur
+            return self.basic_stem_extraction(target_word, "verb")
+    
+    def get_verb_stem_by_tense(self, target_word, verb_forms, tense, mood, voice, lemma):
+        """Get verb stem based on tense/mood/voice system"""
+        
+        # Remove accents for analysis
+        def remove_accents_for_stem_analysis(word):
+            import unicodedata
+            nfd = unicodedata.normalize('NFD', word)
+            accent_marks = {'\u0301', '\u0300', '\u0342', '\u0308'}
+            filtered = ''.join(char for char in nfd if char not in accent_marks)
+            return unicodedata.normalize('NFC', filtered)
+        
+        accent_free_forms = [remove_accents_for_stem_analysis(form) for form in verb_forms]
+        accent_free_target = remove_accents_for_stem_analysis(target_word)
+        
+        # Handle different tense systems
+        if tense == "present":
+            # Present stem system - find common stem without endings
+            stem = self.extract_present_stem(accent_free_forms, accent_free_target)
+            
+        elif tense == "imperfect":
+            # Imperfect uses present stem + augment - remove augment first
+            unaugmented_forms = [self.remove_augment(form) for form in accent_free_forms]
+            stem = self.extract_present_stem(unaugmented_forms, self.remove_augment(accent_free_target))
+            
+        elif tense == "future":
+            # Future stem system - usually present stem + σ (or contracted)
+            stem = self.extract_future_stem(accent_free_forms, accent_free_target, lemma)
+            
+        elif tense == "aorist":
+            # Aorist stem system - may be sigmatic (σ) or strong aorist
+            stem = self.extract_aorist_stem(accent_free_forms, accent_free_target, lemma)
+            
+        elif tense == "perfect":
+            # Perfect stem system - reduplication + stem + perfect marker
+            stem = self.extract_perfect_stem(accent_free_forms, accent_free_target, lemma)
+            
+        else:
+            # Fallback to basic common prefix
+            stem = self.find_common_verb_stem(accent_free_forms)
+        
+        # Map back to original word with accents
+        if accent_free_target.startswith(stem):
+            stem_length = len(stem)
+            original_stem = target_word[:stem_length]
+            original_ending = target_word[stem_length:]
+            return original_stem, original_ending
+        else:
+            return self.basic_stem_extraction(target_word, "verb")
+    
+    def extract_infinitive_stem_from_paradigm(self, accent_free_forms, tense, voice, lemma):
+        """Extract infinitive stem based on known infinitive endings"""
+        if not accent_free_forms:
+            return ""
+        
+        infinitive_form = accent_free_forms[0]  # Only one form for infinitives
+        
+        # Greek infinitive endings by tense and voice:
+        # Present Active: -ειν (λύειν)
+        # Present Middle/Passive: -εσθαι (λύεσθαι)
+        # Aorist Active: -σαι (λύσαι)
+        # Aorist Middle: -σασθαι (λύσασθαι)
+        # Aorist Passive: -θηναι (λυθῆναι)
+        # Perfect Active: -εναι (λελυκέναι)
+        # Perfect Middle/Passive: -σθαι (λελύσθαι)
+        
+        if tense == "present":
+            if voice == "active":
+                # Present active infinitive: λύειν → λυ
+                if infinitive_form.endswith('ειν'):
+                    return infinitive_form[:-3]
+                elif infinitive_form.endswith('ναι'):  # εἶναι type
+                    return infinitive_form[:-3]
+            elif voice in ["middle", "passive"]:
+                # Present middle/passive infinitive: λύεσθαι → λυ
+                if infinitive_form.endswith('εσθαι'):
+                    return infinitive_form[:-5]  # Remove εσθαι to get λυ
+                elif infinitive_form.endswith('σθαι'):  # shorter ending
+                    return infinitive_form[:-4]
+                    
+        elif tense == "aorist":
+            if voice == "active":
+                # Aorist active infinitive: λῦσαι → λυ (remove σαι)
+                if infinitive_form.endswith('σαι'):
+                    return infinitive_form[:-3]  # Remove σαι to get λυ
+                elif infinitive_form.endswith('αι'):  # strong aorist
+                    return infinitive_form[:-2]
+            elif voice == "middle":
+                # Aorist middle infinitive: λύσασθαι → λυ
+                if infinitive_form.endswith('σασθαι'):
+                    return infinitive_form[:-6]  # Remove σασθαι to get λυ
+                elif infinitive_form.endswith('ασθαι'):  # strong aorist
+                    return infinitive_form[:-5]
+            elif voice == "passive":
+                # Aorist passive infinitive: λυθῆναι → λυθ
+                if infinitive_form.endswith('θηναι'):
+                    return infinitive_form[:-5]
+                elif infinitive_form.endswith('ηναι'):
+                    return infinitive_form[:-4]
+                    
+        elif tense == "future":
+            if voice == "active":
+                # Future active infinitive: λύσειν → λυσ
+                if infinitive_form.endswith('σειν'):
+                    return infinitive_form[:-3]  # Remove ειν to get λυσ
+                elif infinitive_form.endswith('ειν'):
+                    return infinitive_form[:-3]
+            elif voice in ["middle", "passive"]:
+                # Future middle/passive infinitive: λύσεσθαι → λυσ
+                if infinitive_form.endswith('σεσθαι'):
+                    return infinitive_form[:-5]  # Remove εσθαι to get λυσ
+                elif infinitive_form.endswith('εσθαι'):
+                    return infinitive_form[:-5]
+                    
+        elif tense == "perfect":
+            if voice == "active":
+                # Perfect active infinitive: λελυκέναι → λελυκ
+                if infinitive_form.endswith('εναι'):
+                    return infinitive_form[:-4]
+                elif infinitive_form.endswith('ναι'):
+                    return infinitive_form[:-3]
+            elif voice in ["middle", "passive"]:
+                # Perfect middle/passive infinitive: λελύσθαι → λελυ
+                if infinitive_form.endswith('σθαι'):
+                    return infinitive_form[:-4]
+                elif infinitive_form.endswith('θαι'):
+                    return infinitive_form[:-3]
+        
+        # Fallback: return most of the form
+        return infinitive_form[:-2] if len(infinitive_form) > 2 else infinitive_form
+
+    def extract_present_stem_from_paradigm(self, accent_free_forms, lemma):
+        """Extract present stem from all forms in present paradigm"""
+        # Handle contract verbs specially
+        if self.is_contract_verb_by_lemma(lemma):
+            return self.extract_contract_verb_stem(lemma, accent_free_forms)
+        
+        # For regular verbs, find the common stem across all forms
+        common_stem = self.find_common_verb_stem(accent_free_forms)
+        
+        # For thematic verbs, remove theme vowel if present
+        if self.is_thematic_verb_pattern(accent_free_forms):
+            if len(common_stem) > 1 and common_stem[-1] in ['ο', 'ε']:
+                common_stem = common_stem[:-1]
+        
+        return common_stem
+    
+    def extract_aorist_stem_from_paradigm(self, accent_free_forms, lemma):
+        """Extract aorist stem from all forms in aorist paradigm"""
+        # For aorist λύω: ἔλυσα, ἔλυσας, ἔλυσε, ἐλύσαμεν, ἐλύσατε, ἔλυσαν
+        # The consistent stem is ἐλυσ (including augment + σ marker)
+        
+        # Find the common prefix across all aorist forms
+        common_stem = self.find_common_verb_stem(accent_free_forms)
+        
+        # For sigmatic aorist, the stem includes the σ
+        # For strong aorist, it's the modified root
+        
+        # Check if this looks like a sigmatic aorist (has σ in common stem)
+        if 'σ' in common_stem:
+            # Find where the σ is and include it in the stem
+            sigma_pos = common_stem.find('σ')
+            if sigma_pos >= 0:
+                return common_stem[:sigma_pos + 1]  # Include the σ
+        
+        return common_stem
+    
+    def extract_future_stem_from_paradigm(self, accent_free_forms, lemma):
+        """Extract future stem from all forms in future paradigm"""
+        common_stem = self.find_common_verb_stem(accent_free_forms)
+        
+        # Future usually has σ marker
+        if 'σ' in common_stem:
+            sigma_pos = common_stem.find('σ')
+            if sigma_pos >= 0:
+                return common_stem[:sigma_pos + 1]  # Include the σ
+        
+        return common_stem
+    
+    def extract_perfect_stem_from_paradigm(self, accent_free_forms, lemma):
+        """Extract perfect stem from all forms in perfect paradigm"""
+        common_stem = self.find_common_verb_stem(accent_free_forms)
+        
+        # Perfect has reduplication + κ marker (active)
+        # For now, return the common stem as-is
+        return common_stem
+        """Extract present stem from present tense forms"""
+        # Check if this is a contract verb by examining the lemma context
+        # Contract verbs show contraction in their paradigm forms
+        current_paradigm = self.get_current_paradigm()
+        lemma = current_paradigm.get("lemma", "") if current_paradigm else ""
+        
+        # Handle contract verbs specially
+        if self.is_contract_verb_by_lemma(lemma):
+            return self.extract_contract_verb_stem(lemma, accent_free_forms)
+        
+        # Regular thematic/athematic verbs
+        common_stem = self.find_common_verb_stem(accent_free_forms)
+        
+        # For thematic verbs, stem usually ends before the theme vowel
+        # Check if this looks like a thematic verb pattern
+        if self.is_thematic_verb_pattern(accent_free_forms):
+            # Remove theme vowel from stem (ο/ε alternation)
+            if len(common_stem) > 1 and common_stem[-1] in ['ο', 'ε']:
+                common_stem = common_stem[:-1]
+        
+        return common_stem
+    
+    def extract_future_stem(self, accent_free_forms, target_form, lemma):
+        """Extract future stem - usually present stem + σ"""
+        # Future often has σ marker: λυσω, λυσεις, λυσει, etc.
+        common_stem = self.find_common_verb_stem(accent_free_forms)
+        
+        # If stem ends in σ, that's probably the future marker
+        if common_stem.endswith('σ'):
+            # The true stem is before the σ
+            return common_stem[:-1]
+        
+        # For contract verbs, the σ may have caused contraction
+        # φιλεω → φιληστε becomes φιλησ- stem
+        return common_stem
+    
+    def extract_aorist_stem(self, accent_free_forms, target_form, lemma):
+        """Extract aorist stem - sigmatic or strong aorist"""
+        # Remove augments first for aorist forms
+        unaugmented_forms = [self.remove_augment(form) for form in accent_free_forms]
+        common_stem = self.find_common_verb_stem(unaugmented_forms)
+        
+        # Sigmatic aorist: λυσα, λυσας, λυσε → λυσ- stem
+        if common_stem.endswith('σ'):
+            return common_stem
+        
+        # Strong aorist: εβαλον, εβαλες, εβαλε → βαλ- stem  
+        return common_stem
+    
+    def extract_perfect_stem(self, accent_free_forms, target_form, lemma):
+        """Extract perfect stem - has reduplication + stem + κ marker"""
+        common_stem = self.find_common_verb_stem(accent_free_forms)
+        
+        # Perfect active usually has -κ- marker: λελυκα, λελυκας, etc.
+        if 'κ' in common_stem:
+            # Include the κ in the stem for perfect
+            return common_stem
+        
+        # For perfect passive, no κ marker
+        return common_stem
+    
+    def find_common_verb_stem(self, accent_free_forms):
+        """Find the longest common prefix among verb forms"""
+        if not accent_free_forms:
+            return ""
+        
+        if len(accent_free_forms) == 1:
+            # Single form - take most of it as stem, leave short ending
+            form = accent_free_forms[0]
+            if len(form) > 3:
+                return form[:-2]  # Leave 2 chars for ending
+            else:
+                return form[:-1] if len(form) > 1 else form
+        
+        # Multiple forms - find longest common prefix
+        min_length = min(len(form) for form in accent_free_forms)
+        common_prefix = ""
+        
+        for i in range(min_length):
+            char = accent_free_forms[0][i]
+            if all(form[i] == char for form in accent_free_forms):
+                common_prefix += char
+            else:
+                break
+        
+        # Ensure reasonable minimum stem length
+        if len(common_prefix) < 2:
+            # Take at least 2 characters from the shortest form
+            if accent_free_forms:
+                shortest = min(accent_free_forms, key=len)
+                return shortest[:max(2, len(shortest) - 2)]
+        
+        return common_prefix
+    
+    def is_thematic_verb_pattern(self, accent_free_forms):
+        """Check if this looks like a thematic verb (ο/ε theme vowel pattern)"""
+        # Look for alternating ο/ε pattern typical of thematic verbs
+        # λυω, λυεις, λυει → shows ο/ε alternation
+        theme_vowels = set()
+        for form in accent_free_forms:
+            if len(form) >= 3:
+                # Look at the vowel before the ending
+                potential_theme = form[-3:-2] if len(form) > 3 else form[-2:-1]
+                if potential_theme in ['ο', 'ε']:
+                    theme_vowels.add(potential_theme)
+        
+        # If we see both ο and ε, it's likely thematic
+        return 'ο' in theme_vowels and 'ε' in theme_vowels
+    
     def find_stem_from_paradigm_forms(self, target_word, all_forms, paradigm_type):
         """Analyze multiple paradigm forms to determine the correct stem"""
         # Remove duplicates and empty forms
@@ -1855,52 +2279,112 @@ class GreekGrammarApp:
         if len(unique_forms) < 2:
             return self.basic_stem_extraction(target_word, paradigm_type)
         
-        # Find the longest common prefix among all forms (potential stem)
+        # For consistent stem finding, we need to remove accents first
+        # because Greek accents shift but the stem remains the same
+        def remove_accents_for_stem_analysis(word):
+            """Remove accents for stem analysis while preserving base characters"""
+            import unicodedata
+            # Normalize to decomposed form
+            nfd = unicodedata.normalize('NFD', word)
+            # Remove accent marks but keep breathing marks for now
+            accent_marks = {'\u0301', '\u0300', '\u0342', '\u0308'}  # acute, grave, circumflex, diaeresis
+            filtered = ''.join(char for char in nfd if char not in accent_marks)
+            return unicodedata.normalize('NFC', filtered)
+        
+        # Remove accents from all forms for analysis
+        accent_free_forms = [remove_accents_for_stem_analysis(form) for form in unique_forms]
+        accent_free_target = remove_accents_for_stem_analysis(target_word)
+        
+        # Find the longest common prefix among accent-free forms
         def longest_common_prefix(strings):
             if not strings:
                 return ""
+            # Don't go shorter than 2 characters for stem
             min_len = min(len(s) for s in strings)
             for i in range(min_len):
                 char = strings[0][i]
                 if not all(s[i] == char for s in strings):
-                    return strings[0][:i]
+                    return strings[0][:max(2, i)]  # Ensure minimum 2 chars
             return strings[0][:min_len]
         
         # Special handling for verbs with augments
         if paradigm_type == "verb":
             # Remove potential augments before finding common stem
             cleaned_forms = []
-            for form in unique_forms:
+            for form in accent_free_forms:
                 cleaned = self.remove_augment(form)
                 cleaned_forms.append(cleaned)
             common_stem = longest_common_prefix(cleaned_forms)
         else:
-            common_stem = longest_common_prefix(unique_forms)
+            # For nouns/adjectives, work with accent-free forms directly
+            common_stem = longest_common_prefix(accent_free_forms)
         
-        # Ensure we don't take too much (leave at least 1-2 characters for ending)
-        if len(common_stem) >= len(target_word) - 1:
-            common_stem = target_word[:-2] if len(target_word) > 2 else target_word[:-1]
+        # Apply declension-specific stem finding
+        if paradigm_type in ["noun", "adjective"]:
+            common_stem = self.refine_stem_by_declension(common_stem, accent_free_forms, paradigm_type)
         
-        # For the target word, find where the stem ends
-        if paradigm_type == "verb":
-            cleaned_target = self.remove_augment(target_word)
-            if cleaned_target.startswith(common_stem):
-                stem_in_target = common_stem
-                ending = cleaned_target[len(common_stem):]
-                # Add augment back to stem if it was present
-                if len(target_word) > len(cleaned_target):
-                    augment = target_word[:len(target_word) - len(cleaned_target)]
-                    stem_in_target = augment + stem_in_target
-            else:
-                return self.basic_stem_extraction(target_word, paradigm_type)
+        # Ensure minimum stem length (Greek stems are rarely shorter than 3 characters)
+        if len(common_stem) < 3 and len(accent_free_target) > 4:
+            # For longer words, stem should be at least 3 characters
+            common_stem = accent_free_target[:3]
+        elif len(common_stem) < 2:
+            # Absolute minimum of 2 characters
+            common_stem = accent_free_target[:2]
+        
+        # Now find this stem in the original target word (with accents)
+        # We need to map back from accent-free to accented
+        if accent_free_target.startswith(common_stem):
+            # Find where the stem ends in the original word
+            stem_end_pos = len(common_stem)
+            
+            # The stem in the original word is the first stem_end_pos characters
+            original_stem = target_word[:stem_end_pos]
+            original_ending = target_word[stem_end_pos:]
+            
+            return original_stem, original_ending
         else:
-            if target_word.startswith(common_stem):
-                stem_in_target = common_stem
-                ending = target_word[len(common_stem):]
-            else:
-                return self.basic_stem_extraction(target_word, paradigm_type)
+            # Fallback if mapping failed
+            return self.basic_stem_extraction(target_word, paradigm_type)
+    
+    def refine_stem_by_declension(self, preliminary_stem, accent_free_forms, paradigm_type):
+        """Refine stem based on declension patterns"""
+        if not preliminary_stem or len(preliminary_stem) < 2:
+            return preliminary_stem
         
-        return stem_in_target, ending
+        # Analyze the endings to determine declension type
+        endings = []
+        for form in accent_free_forms:
+            if form.startswith(preliminary_stem):
+                ending = form[len(preliminary_stem):]
+                endings.append(ending)
+        
+        # Look for characteristic declension patterns
+        endings_set = set(endings)
+        
+        # First declension (like μουσα): endings include α, αν, ης, η, αι, ας, ων, αις
+        first_decl_endings = {'α', 'αν', 'ης', 'η', 'αι', 'ας', 'ων', 'αις'}
+        
+        # Second declension (like λογος): endings include ος, ον, ου, ω, οι, ους, ων, οις
+        second_decl_endings = {'ος', 'ον', 'ου', 'ω', 'οι', 'ους', 'ων', 'οις'}
+        
+        # Check if endings match declension patterns
+        if endings_set.intersection(first_decl_endings) and len(preliminary_stem) >= 3:
+            # First declension - usually consistent stem
+            return preliminary_stem
+        elif endings_set.intersection(second_decl_endings) and len(preliminary_stem) >= 3:
+            # Second declension - usually consistent stem  
+            return preliminary_stem
+        else:
+            # Third declension or other - may have stem changes
+            # For now, keep the preliminary stem but ensure it's reasonable length
+            if len(preliminary_stem) >= 3:
+                return preliminary_stem
+            else:
+                # Try to extend the stem by one character if possible
+                if accent_free_forms and len(accent_free_forms[0]) > len(preliminary_stem):
+                    return accent_free_forms[0][:len(preliminary_stem) + 1]
+        
+        return preliminary_stem
     
     def remove_augment(self, verb_form):
         """Remove temporal augments from Greek verb forms"""
@@ -2047,6 +2531,30 @@ class GreekGrammarApp:
         entry._stem = stem
         entry._ending = ending
     
+    def is_contract_verb_by_lemma(self, lemma):
+        """Check if a verb is a contract verb based on its lemma"""
+        if not lemma:
+            return False
+        return lemma.endswith('άω') or lemma.endswith('έω') or lemma.endswith('όω')
+    
+    def extract_contract_verb_stem(self, lemma, contracted_forms):
+        """Extract the practical stem for contract verbs (what remains after contraction)"""
+        if not lemma:
+            # Fallback: analyze contracted forms to find practical stem
+            common_stem = self.find_common_verb_stem(contracted_forms)
+            return common_stem
+        
+        # For contract verbs, the practical stem is what students see after contraction
+        if lemma.endswith('άω'):
+            return lemma[:-2]  # τιμάω → τιμ (practical stem after contraction)
+        elif lemma.endswith('έω'):
+            return lemma[:-2]  # φιλέω → φιλ (practical stem after contraction)
+        elif lemma.endswith('όω'):
+            return lemma[:-2]  # δηλόω → δηλ (practical stem after contraction)
+        
+        # Fallback for other patterns
+        return lemma[:-1] if lemma.endswith('ω') else lemma
+
     def is_contract_verb(self, paradigm):
         """Check if the current verb paradigm represents a contract verb"""
         # Look for characteristic contract verb endings in the paradigm
@@ -2531,13 +3039,13 @@ Tips:
         
         return False
 
-    def find_next_empty_entry(self, candidates):
-        """Find the next empty entry from a list of candidate keys."""
+    def find_next_incomplete_entry(self, candidates):
+        """Find the next entry that needs completion from a list of candidate keys."""
         for key in candidates:
             if key in self.entries:
                 entry = self.entries[key]
-                # Check if entry is empty and not readonly (not already correct)
-                if not entry.get().strip() and str(entry.cget('state')) != 'readonly':
+                # Check if entry needs completion (not readonly, meaning not already correct)
+                if str(entry.cget('state')) != 'readonly':
                     return key
         return None
 
@@ -2568,7 +3076,7 @@ Tips:
                     # Try next case in same gender/number column first (downward movement)
                     if case_idx < len(cases) - 1:
                         candidates = [f"{cases[i]}_{gender}_{number}" for i in range(case_idx + 1, len(cases))]
-                        next_key = self.find_next_empty_entry(candidates)
+                        next_key = self.find_next_incomplete_entry(candidates)
                         if next_key:
                             self.entries[next_key].focus()
                             return
@@ -2576,7 +3084,7 @@ Tips:
                     # If we've finished all cases in sg column, move to pl column of same gender
                     if number == "sg":
                         candidates = [f"{cases[i]}_{gender}_pl" for i in range(len(cases))]
-                        next_key = self.find_next_empty_entry(candidates)
+                        next_key = self.find_next_incomplete_entry(candidates)
                         if next_key:
                             self.entries[next_key].focus()
                             return
@@ -2587,7 +3095,7 @@ Tips:
                             # Try sg first, then pl for next gender
                             candidates = [f"{cases[i]}_{next_gender}_sg" for i in range(len(cases))]
                             candidates.extend([f"{cases[i]}_{next_gender}_pl" for i in range(len(cases))])
-                            next_key = self.find_next_empty_entry(candidates)
+                            next_key = self.find_next_incomplete_entry(candidates)
                             if next_key:
                                 self.entries[next_key].focus()
                                 return
@@ -2608,7 +3116,7 @@ Tips:
                     # Try next case in same number column first (downward movement)
                     if case_idx < len(pronoun_cases) - 1:
                         candidates = [f"{pronoun_cases[i]}_{number}" for i in range(case_idx + 1, len(pronoun_cases))]
-                        next_key = self.find_next_empty_entry(candidates)
+                        next_key = self.find_next_incomplete_entry(candidates)
                         if next_key:
                             self.entries[next_key].focus()
                             return
@@ -2616,7 +3124,7 @@ Tips:
                     # If we've finished all cases in sg column, move to pl column
                     if number == "sg":
                         candidates = [f"{pronoun_cases[i]}_pl" for i in range(len(pronoun_cases))]
-                        next_key = self.find_next_empty_entry(candidates)
+                        next_key = self.find_next_incomplete_entry(candidates)
                         if next_key:
                             self.entries[next_key].focus()
                             return
@@ -2634,7 +3142,7 @@ Tips:
                         # Try next case in same gender/number column first (downward movement)
                         if case_idx < len(pronoun_cases) - 1:
                             candidates = [f"{pronoun_cases[i]}_{gender}_{number}" for i in range(case_idx + 1, len(pronoun_cases))]
-                            next_key = self.find_next_empty_entry(candidates)
+                            next_key = self.find_next_incomplete_entry(candidates)
                             if next_key:
                                 self.entries[next_key].focus()
                                 return
@@ -2642,7 +3150,7 @@ Tips:
                         # If we've finished all cases in sg column, move to pl column of same gender
                         if number == "sg":
                             candidates = [f"{pronoun_cases[i]}_{gender}_pl" for i in range(len(pronoun_cases))]
-                            next_key = self.find_next_empty_entry(candidates)
+                            next_key = self.find_next_incomplete_entry(candidates)
                             if next_key:
                                 self.entries[next_key].focus()
                                 return
@@ -2652,7 +3160,7 @@ Tips:
                             for next_gender in genders[gender_idx + 1:]:
                                 candidates = [f"{pronoun_cases[i]}_{next_gender}_sg" for i in range(len(pronoun_cases))]
                                 candidates.extend([f"{pronoun_cases[i]}_{next_gender}_pl" for i in range(len(pronoun_cases))])
-                                next_key = self.find_next_empty_entry(candidates)
+                                next_key = self.find_next_incomplete_entry(candidates)
                                 if next_key:
                                     self.entries[next_key].focus()
                                     return
@@ -2671,7 +3179,7 @@ Tips:
                         # Try next voice (downward movement through the list)
                         if voice_idx < len(voices) - 1:
                             candidates = [f"inf_{voices[i]}" for i in range(voice_idx + 1, len(voices))]
-                            next_key = self.find_next_empty_entry(candidates)
+                            next_key = self.find_next_incomplete_entry(candidates)
                             if next_key:
                                 self.entries[next_key].focus()
                                 return
@@ -2686,7 +3194,7 @@ Tips:
                     # Try next person in same number column first (downward movement)
                     if person_idx < len(persons) - 1:
                         candidates = [f"{persons[i]}_{number}" for i in range(person_idx + 1, len(persons))]
-                        next_key = self.find_next_empty_entry(candidates)
+                        next_key = self.find_next_incomplete_entry(candidates)
                         if next_key:
                             self.entries[next_key].focus()
                             return
@@ -2694,7 +3202,7 @@ Tips:
                     # If we've finished all persons in sg column, move to pl column
                     if number == "sg":
                         candidates = [f"{persons[i]}_pl" for i in range(len(persons))]
-                        next_key = self.find_next_empty_entry(candidates)
+                        next_key = self.find_next_incomplete_entry(candidates)
                         if next_key:
                             self.entries[next_key].focus()
                             return
@@ -2708,7 +3216,7 @@ Tips:
                 # Try next case in same number column first (downward movement)
                 if case_idx < len(cases) - 1:
                     candidates = [f"{cases[i]}_{number}" for i in range(case_idx + 1, len(cases))]
-                    next_key = self.find_next_empty_entry(candidates)
+                    next_key = self.find_next_incomplete_entry(candidates)
                     if next_key:
                         self.entries[next_key].focus()
                         return
@@ -2716,7 +3224,7 @@ Tips:
                 # If we've finished all cases in sg column, move to pl column
                 if number == "sg":
                     candidates = [f"{cases[i]}_pl" for i in range(len(cases))]
-                    next_key = self.find_next_empty_entry(candidates)
+                    next_key = self.find_next_incomplete_entry(candidates)
                     if next_key:
                         self.entries[next_key].focus()
                         return

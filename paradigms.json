@@ -3661,5 +3661,39 @@
     "1st_pl": "σταθησοίμεθα",
     "2nd_pl": "σταθήσοισθε",
     "3rd_pl": "σταθήσοιντο"
+  },
+  "luo_perf_ind_act": {
+    "type": "verb",
+    "tense": "perfect",
+    "mood": "indicative",
+    "voice": "active",
+    "lemma": "λύω",
+    "1st_sg": "λέλυκα",
+    "2nd_sg": "λέλυκας",
+    "3rd_sg": "λέλυκε",
+    "1st_pl": "λελύκαμεν",
+    "2nd_pl": "λελύκατε",
+    "3rd_pl": "λελύκασι"
+  },
+  "luo_plpf_ind_act": {
+    "type": "verb",
+    "tense": "pluperfect",
+    "mood": "indicative",
+    "voice": "active",
+    "lemma": "λύω",
+    "1st_sg": "ἐλελύκη",
+    "2nd_sg": "ἐλελύκης",
+    "3rd_sg": "ἐλελύκει",
+    "1st_pl": "ἐλελύκεμεν",
+    "2nd_pl": "ἐλελύκετε",
+    "3rd_pl": "ἐλελύκεσαν"
+  },
+  "luo_perf_inf_act": {
+    "type": "verb",
+    "tense": "perfect",
+    "mood": "infinitive",
+    "voice": "active",
+    "lemma": "λύω",
+    "inf_active": "λελυκέναι"
   }
 }
