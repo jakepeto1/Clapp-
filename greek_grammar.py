@@ -221,6 +221,7 @@ class GreekGrammarApp:
             "Present Indicative Active - Honor (τιμάω)",
             "Present Indicative Active - Make Clear (δηλόω)",
             "Present Indicative Active - Throw (βάλλω)",
+            "Present Indicative Active - Step (βαίνω)",
             "Present Indicative Active - Give (δίδωμι)",
             "Present Indicative Active - Place (τίθημι)",
             "Present Indicative Active - Stand (ἵστημι)",
@@ -398,6 +399,8 @@ class GreekGrammarApp:
             word = "δηλόω"
         elif "βάλλω" in mode:
             word = "βάλλω"
+        elif "βαίνω" in mode:
+            word = "βαίνω"
         elif "δίδωμι" in mode:
             word = "δίδωμι"
         elif "τίθημι" in mode:
@@ -1096,9 +1099,9 @@ class GreekGrammarApp:
             voice_value = "Active"
         
         # Determine available voices based on current verb
-        if "εἰμί" in mode or "εἶμι" in mode:
+        if "εἰμί" in mode or "εἶμι" in mode or "βαίνω" in mode:
             available_voices = ["Active"]
-            # If user had Middle/Passive selected but switched to εἰμί/εἶμι, default to Active
+            # If user had Middle/Passive selected but switched to a restricted verb, default to Active
             if voice_value in ["Middle", "Passive"]:
                 voice_value = "Active"
         else:
@@ -1525,13 +1528,24 @@ class GreekGrammarApp:
 
     def on_mode_change(self, event):
         """Handle mode change in the dropdown."""
-        # For verbs, reset tense/voice/mood to defaults when switching between different verbs
+        # For verbs, reset tense/voice/mood to appropriate defaults when switching between different verbs
         if self.type_var.get() == "Verb":
-            # Reset verb form selectors to defaults
+            # Get available options for the new verb
+            mode = self.mode_var.get()
+            
+            # Set tense to first available option
             if hasattr(self, 'tense_var'):
-                self.tense_var.set("Present")
+                available_tenses = self.get_base_available_tenses()
+                if available_tenses:
+                    self.tense_var.set(available_tenses[0])
+                else:
+                    self.tense_var.set("Present")
+            
+            # Set voice to Active (all verbs have Active)
             if hasattr(self, 'voice_var'):
                 self.voice_var.set("Active")
+            
+            # Set mood to Indicative (all verbs have Indicative)
             if hasattr(self, 'mood_var'):
                 self.mood_var.set("Indicative")
         
@@ -1562,10 +1576,11 @@ class GreekGrammarApp:
         else:
             available_tenses = self.get_base_available_tenses()
         
-        # If current tense is not available for this verb, reset to Present
+        # If current tense is not available for this verb, reset to first available
         if current_tense not in available_tenses:
-            self.tense_var.set("Present")
-            current_tense = "Present"
+            if available_tenses:
+                self.tense_var.set(available_tenses[0])
+                current_tense = available_tenses[0]
         
         # Update tense dropdown
         self.tense_dropdown['values'] = available_tenses
@@ -1605,6 +1620,12 @@ class GreekGrammarApp:
             return ["Present", "Imperfect"]
         elif "εἶμι" in mode:
             return ["Present", "Imperfect", "Future"]
+        elif "βαίνω" in mode:
+            # βαίνω only has root aorist paradigms
+            return ["Aorist"]
+        elif "βάλλω" in mode:
+            # βάλλω only has second aorist paradigms for educational focus
+            return ["Aorist"]
         elif "λύω" in mode or "Release" in mode:
             # Only λύω has Perfect and Pluperfect paradigms for now
             return ["Present", "Imperfect", "Aorist", "Future", "Perfect", "Pluperfect"]
@@ -1631,6 +1652,8 @@ class GreekGrammarApp:
                 verb_base = "deloo"
             elif "βάλλω" in mode:
                 verb_base = "ballo"
+            elif "βαίνω" in mode:
+                verb_base = "baino"
             elif "δίδωμι" in mode:
                 verb_base = "didomi"
             elif "τίθημι" in mode:
@@ -1749,7 +1772,8 @@ class GreekGrammarApp:
             "Interrogative Who/What (τίς, τί)": "tis_interrog",
             "Indefinite Someone/Something (τις, τι)": "tis_indef",
             "Present Indicative Active - Release (λύω)": "luo_pres_ind_act",
-            "Present Indicative Active - To Be (εἰμί)": "eimi_pres_ind_act"
+            "Present Indicative Active - To Be (εἰμί)": "eimi_pres_ind_act",
+            "Present Indicative Active - Step (βαίνω)": "baino_pres_ind_act"
         }
         
         paradigm_key = paradigm_map.get(mode)
@@ -1911,7 +1935,8 @@ class GreekGrammarApp:
         
         # Special handling for infinitives - they have only one form
         if mood == "infinitive":
-            return self.extract_infinitive_stem_from_paradigm(accent_free_forms, tense, voice, lemma)
+            current_paradigm = self.get_current_paradigm()
+            return self.extract_infinitive_stem_from_paradigm(accent_free_forms, tense, voice, lemma, current_paradigm)
         
         # Handle different tense systems to find the consistent stem
         if tense == "present":
@@ -1927,7 +1952,9 @@ class GreekGrammarApp:
             
         elif tense == "aorist":
             # Aorist stem includes augment + aorist marker
-            return self.extract_aorist_stem_from_paradigm(accent_free_forms, lemma)
+            # Check for root aorist information in current paradigm
+            current_paradigm = self.get_current_paradigm()
+            return self.extract_aorist_stem_from_paradigm(accent_free_forms, lemma, current_paradigm)
             
         elif tense == "future":
             # Future stem usually has σ marker
@@ -2026,7 +2053,7 @@ class GreekGrammarApp:
         else:
             return self.basic_stem_extraction(target_word, "verb")
     
-    def extract_infinitive_stem_from_paradigm(self, accent_free_forms, tense, voice, lemma):
+    def extract_infinitive_stem_from_paradigm(self, accent_free_forms, tense, voice, lemma, paradigm=None):
         """Extract infinitive stem based on known infinitive endings"""
         if not accent_free_forms:
             return ""
@@ -2039,6 +2066,7 @@ class GreekGrammarApp:
         # Aorist Active: -σαι (λύσαι)
         # Aorist Middle: -σασθαι (λύσασθαι)
         # Aorist Passive: -θηναι (λυθῆναι)
+        # Root Aorist Active: -ναι (βῆναι)
         # Perfect Active: -εναι (λελυκέναι)
         # Perfect Middle/Passive: -σθαι (λελύσθαι)
         
@@ -2057,6 +2085,17 @@ class GreekGrammarApp:
                     return infinitive_form[:-4]
                     
         elif tense == "aorist":
+            # Check for root aorist first
+            if paradigm and paradigm.get("aorist_type") == "root":
+                aorist_root = paradigm.get("aorist_root", "")
+                if aorist_root and voice == "active":
+                    # Root aorist infinitive: βῆναι → βη
+                    if infinitive_form.endswith('ναι'):
+                        return aorist_root  # Direct root without augment for infinitive
+                    elif infinitive_form.endswith('αι'):
+                        return aorist_root
+            
+            # Regular aorist patterns
             if voice == "active":
                 # Aorist active infinitive: λῦσαι → λυ (remove σαι)
                 if infinitive_form.endswith('σαι'):
@@ -2123,9 +2162,16 @@ class GreekGrammarApp:
         
         return common_stem
     
-    def extract_aorist_stem_from_paradigm(self, accent_free_forms, lemma):
+    def extract_aorist_stem_from_paradigm(self, accent_free_forms, lemma, paradigm=None):
         """Extract aorist stem from all forms in aorist paradigm"""
-        # For aorist λύω: ἔλυσα, ἔλυσας, ἔλυσε, ἐλύσαμεν, ἐλύσατε, ἔλυσαν
+        # Check for root aorist first
+        if paradigm and paradigm.get("aorist_type") == "root":
+            aorist_root = paradigm.get("aorist_root", "")
+            if aorist_root:
+                # For root aorists like βαίνω → ἔβην, stem is augment + root
+                return f"ἐ{aorist_root}" if aorist_root else aorist_root
+        
+        # For regular aorists: λύω → ἔλυσα, ἔλυσας, ἔλυσε, ἐλύσαμεν, ἐλύσατε, ἔλυσαν
         # The consistent stem is ἐλυσ (including augment + σ marker)
         
         # Find the common prefix across all aorist forms
