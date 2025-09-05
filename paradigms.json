@@ -1006,7 +1006,7 @@
   "luo_pres_ind_act": {
     "type": "verb",
     "tense": "present",
-    "mood": "indicative", 
+    "mood": "indicative",
     "voice": "active",
     "lemma": "λύω",
     "1st_sg": "λύω",
@@ -1020,7 +1020,7 @@
     "type": "verb",
     "tense": "present",
     "mood": "indicative",
-    "voice": "active", 
+    "voice": "active",
     "lemma": "εἰμί",
     "1st_sg": "εἰμί",
     "2nd_sg": "εἶ",
@@ -3057,9 +3057,9 @@
     "1st_sg": "ἔδωκα",
     "2nd_sg": "ἔδωκας",
     "3rd_sg": "ἔδωκε",
-    "1st_pl": "ἐδώκαμεν",
-    "2nd_pl": "ἐδώκατε",
-    "3rd_pl": "ἔδωκαν"
+    "1st_pl": "ἐδομεν",
+    "2nd_pl": "ἐδοτε",
+    "3rd_pl": "ἔδοσαν"
   },
   "didomi_aor_ind_mid": {
     "type": "verb",
@@ -3122,9 +3122,9 @@
     "1st_sg": "ἔθηκα",
     "2nd_sg": "ἔθηκας",
     "3rd_sg": "ἔθηκε",
-    "1st_pl": "ἐθήκαμεν",
-    "2nd_pl": "ἐθήκατε",
-    "3rd_pl": "ἔθηκαν"
+    "1st_pl": "ἔθεμεν",
+    "2nd_pl": "ἔθετε",
+    "3rd_pl": "ἔθεσαν"
   },
   "histemi_pres_ind_act": {
     "type": "verb",
@@ -3161,8 +3161,8 @@
     "1st_sg": "ἔστησα",
     "2nd_sg": "ἔστησας",
     "3rd_sg": "ἔστησε",
-    "1st_pl": "ἐστήσαμεν",
-    "2nd_pl": "ἐστήσατε",
+    "1st_pl": "ἔστημεν",
+    "2nd_pl": "ἔστητε",
     "3rd_pl": "ἔστησαν"
   },
   "didomi_pres_subj_act": {
@@ -3499,9 +3499,9 @@
     "1st_sg": "ἧκα",
     "2nd_sg": "ἧκας",
     "3rd_sg": "ἧκε",
-    "1st_pl": "εἵκαμεν",
-    "2nd_pl": "εἵκατε",
-    "3rd_pl": "ἧκαν"
+    "1st_pl": "εἷμεν",
+    "2nd_pl": "εἷτε",
+    "3rd_pl": "εἷσαν"
   },
   "oida_pres_subj_act": {
     "type": "verb",

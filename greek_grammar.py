@@ -351,6 +351,10 @@ class GreekGrammarApp:
                 # Current mode not found in list, stay at current mode
                 print(f"Debug: Current mode '{current_mode}' not found in modes list")
                 pass
+        
+        # Clear all entries and apply prefill stems if enabled for the new combination
+        self.clear_all_entries()
+        self.apply_prefill_stems_to_all_entries()
 
     def next_word_in_list(self):
         """Move to the next word in the current paradigm's word list."""
@@ -388,6 +392,9 @@ class GreekGrammarApp:
                     next_tense = available_tenses_current[current_tense_index + 1]
                     self.tense_var.set(next_tense)
                     self.update_tense_mood_constraints()
+                    # Clear entries and apply prefill stems for the new combination
+                    self.clear_all_entries()
+                    self.apply_prefill_stems_to_all_entries()
                     return
             
             # Tense wrapped around in infinitive, advance to next mood
@@ -418,6 +425,9 @@ class GreekGrammarApp:
                             self.tense_var.set(next_tense)
                             self.voice_var.set(available_voices_next_mood[0])
                             self.update_tense_mood_constraints()
+                            # Clear entries and apply prefill stems for the new combination
+                            self.clear_all_entries()
+                            self.apply_prefill_stems_to_all_entries()
                             return
             
             # All wrapped around, move to next verb
@@ -459,6 +469,9 @@ class GreekGrammarApp:
                 next_voice = available_voices_current[current_voice_index + 1]
                 self.voice_var.set(next_voice)
                 self.update_tense_mood_constraints()
+                # Clear entries and apply prefill stems for the new combination
+                self.clear_all_entries()
+                self.apply_prefill_stems_to_all_entries()
                 return
         
         # Step 2: Voice wrapped around, try to advance Tense within current mood
@@ -480,6 +493,9 @@ class GreekGrammarApp:
                     self.voice_var.set(available_voices_next[0])
                     self.tense_var.set(next_tense)
                     self.update_tense_mood_constraints()
+                    # Clear entries and apply prefill stems for the new combination
+                    self.clear_all_entries()
+                    self.apply_prefill_stems_to_all_entries()
                     return
         
         # Step 3: Tense wrapped around, try to advance Mood
@@ -510,6 +526,9 @@ class GreekGrammarApp:
                         self.tense_var.set(next_tense)
                         self.voice_var.set(available_voices_next_mood[0])
                         self.update_tense_mood_constraints()
+                        # Clear entries and apply prefill stems for the new combination
+                        self.clear_all_entries()
+                        self.apply_prefill_stems_to_all_entries()
                         return
         
         # Step 4: All wrapped around, move to next verb
@@ -536,6 +555,9 @@ class GreekGrammarApp:
                 self.tense_var.set(first_combo[0])
                 self.voice_var.set(first_combo[2])
                 self.update_tense_mood_constraints()
+                # Clear entries and apply prefill stems for the new combination
+                self.clear_all_entries()
+                self.apply_prefill_stems_to_all_entries()
 
     def next_verb_in_list(self):
         """Move to the next verb in the verb dropdown list."""
@@ -3272,6 +3294,26 @@ class GreekGrammarApp:
                         entry.delete(0, tk.END)
                         entry.insert(0, current_paradigm[entry_key])
                         entry.configure(state='readonly', bg='lightgray')
+
+    def clear_all_entries(self):
+        """Clear all entries without recreating the table."""
+        # Reset visual state of existing entries before clearing
+        for entry in self.entries.values():
+            try:
+                entry.configure(state='normal')
+                entry.configure(bg='white')
+                entry.delete(0, tk.END)
+            except tk.TclError:
+                # Widget may have been destroyed already
+                pass
+        
+        # Hide all error indicators
+        for error_label in self.error_labels.values():
+            try:
+                error_label.grid_remove()
+            except tk.TclError:
+                # Widget may have been destroyed already
+                pass
 
     def reset_table(self):
         """Clear all entries and error indicators."""
