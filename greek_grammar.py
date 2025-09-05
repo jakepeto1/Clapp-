@@ -151,6 +151,11 @@ class GreekGrammarApp:
             root.destroy()
             return
 
+        # Initialize verb navigation state for complex verb navigation
+        self.verb_voice_order = ["Active", "Middle", "Passive"]
+        self.verb_tense_order = ["Present", "Imperfect", "Future", "Aorist", "Perfect", "Pluperfect"] 
+        self.verb_mood_order = ["Indicative", "Subjunctive", "Optative", "Imperative"]
+
         # Create the mode selection frame
         mode_frame = ttk.Frame(self.main_frame)
         mode_frame.grid(row=1, column=0, columnspan=3, pady=(0, 20), sticky='ew')
@@ -299,115 +304,258 @@ class GreekGrammarApp:
                 entry.delete(0, tk.END)
 
     def update_word_display(self):
-        """Update the word display with the current paradigm."""
+        """Update the word display by extracting the word from the mode name."""
         mode = self.mode_var.get()
-        # Extract the word from the mode description
-        if "μουσα" in mode:
-            word = "μούσα"
-        elif "τιμη" in mode:
-            word = "τιμή"
-        elif "χωρα" in mode:
-            word = "χώρα"
-        elif "ναύτης" in mode:
-            word = "ναύτης"
-        elif "λογος" in mode:
-            word = "λόγος"
-        elif "δωρον" in mode:
-            word = "δῶρον"
-        elif "φύλαξ" in mode:
-            word = "φύλαξ"
-        elif "σῶμα" in mode:
-            word = "σῶμα"
-        elif "γέρων" in mode:
-            word = "γέρων"
-        elif "ἀνήρ" in mode:
-            word = "ἀνήρ"
-        elif "πατήρ" in mode:
-            word = "πατήρ"
-        elif "ἐλπίς" in mode:
-            word = "ἐλπίς"
-        elif "ῥήτωρ" in mode:
-            word = "ῥήτωρ"
-        elif "γυνή" in mode:
-            word = "γυνή"
-        elif "πόλις" in mode:
-            word = "πόλις"
-        elif "ὁ, ἡ, το" in mode:
-            word = "ὁ, ἡ, τό"
-        elif "ἀγαθός" in mode:
-            word = "ἀγαθός, ἀγαθή, ἀγαθόν"
-        elif "χρύσεος" in mode:
-            word = "χρύσεος, χρυσέα, χρύσεον"
-        elif "ἄδικος" in mode:
-            word = "ἄδικος, ἄδικον"
-        elif "μέγας" in mode:
-            word = "μέγας, μεγάλη, μέγα"
-        elif "πολύς" in mode:
-            word = "πολύς, πολλή, πολύ"
-        elif "ἀληθής" in mode:
-            word = "ἀληθής, ἀληθές"
-        elif "ἡδύς" in mode:
-            word = "ἡδύς, ἡδεῖα, ἡδύ"
-        elif "τάλας" in mode:
-            word = "τάλας, τάλαινα, τάλαν"
-        elif "παύων" in mode:
-            word = "παύων, παύουσα, παῦον"
-        elif "πᾶς" in mode:
-            word = "πᾶς, πᾶσα, πᾶν"
-        elif "παύσας" in mode:
-            word = "παύσας, παύσασα, παῦσαν"
-        elif "χαρίεις" in mode:
-            word = "χαρίεις, χαρίεσσα, χαρίεν"
-        elif "παυσθείς" in mode:
-            word = "παυσθείς, παυσθεῖσα, παυσθέν"
-        elif "πεπαυκώς" in mode:
-            word = "πεπαυκώς, πεπαυκυῖα, πεπαυκός"
-        elif "ἐγώ" in mode:
-            word = "ἐγώ"
-        elif "σύ" in mode:
-            word = "σύ"
-        elif "αὐτός" in mode:
-            word = "αὐτός, αὐτή, αὐτό"
-        elif "οὗτος" in mode:
-            word = "οὗτος, αὕτη, τοῦτο"
-        elif "ὅς, ἥ, ὅ" in mode:
-            word = "ὅς, ἥ, ὅ"
-        elif "τίς, τί" in mode:
-            word = "τίς, τί"
-        elif "τις, τι" in mode:
-            word = "τις, τι"
-        elif "λύω" in mode:
-            word = "λύω"
-        elif "εἰμί" in mode:
-            word = "εἰμί"
-        elif "φιλέω" in mode:
-            word = "φιλέω"
-        elif "τιμάω" in mode:
-            word = "τιμάω"
-        elif "δηλόω" in mode:
-            word = "δηλόω"
-        elif "βάλλω" in mode:
-            word = "βάλλω"
-        elif "βαίνω" in mode:
-            word = "βαίνω"
-        elif "δίδωμι" in mode:
-            word = "δίδωμι"
-        elif "τίθημι" in mode:
-            word = "τίθημι"
-        elif "ἵστημι" in mode:
-            word = "ἵστημι"
-        elif "οἶδα" in mode:
-            word = "οἶδα"
-        elif "εἶμι" in mode:
-            word = "εἶμι"
-        elif "φημί" in mode:
-            word = "φημί"
-        elif "ἵημι" in mode:
-            word = "ἵημι"
+        current_type = self.type_var.get()
+        
+        # Extract the word from the mode name (usually in parentheses)
+        if "(" in mode and ")" in mode:
+            # Extract text within parentheses - handle multiple words
+            parentheses_content = mode.split("(")[1].split(")")[0]
+            
+            # For modes with multiple words like "ὁ, ἡ, το", take the first part
+            if ", " in parentheses_content:
+                word = parentheses_content.split(", ")[0]
+            else:
+                word = parentheses_content
         else:
+            # Fallback for modes without parentheses
             word = "—"
         
+        # Update the word label
         self.word_label.config(text=word)
+
+    def next_answer(self):
+        """Navigate to the next item in the current dropdown list."""
+        current_type = self.type_var.get()
+        current_mode = self.mode_var.get()
+        
+        if current_type == "Verb":
+            # For verbs, use the complex voice/tense/mood navigation
+            self.next_verb_combination()
+        else:
+            # For nouns, adjectives, pronouns - navigate through dropdown options
+            current_modes = self.modes  # This is the current dropdown list
+            
+            try:
+                current_index = current_modes.index(current_mode)
+                # Move to next mode, wrap around if at the end
+                next_index = (current_index + 1) % len(current_modes)
+                next_mode = current_modes[next_index]
+                
+                # Update the mode selection
+                self.mode_var.set(next_mode)
+                self.on_mode_change(None)  # Trigger the mode change event with None event
+                
+            except ValueError:
+                # Current mode not found in list, stay at current mode
+                print(f"Debug: Current mode '{current_mode}' not found in modes list")
+                pass
+
+    def next_word_in_list(self):
+        """Move to the next word in the current paradigm's word list."""
+        # This method is no longer used - navigation goes through dropdown modes instead
+        pass
+                
+    def next_verb_combination(self):
+        """Navigate to the next verb combination following the hierarchy: Voice → Tense → Mood → Verb."""
+        current_voice = self.voice_var.get()
+        current_tense = self.tense_var.get()
+        current_mood = self.mood_var.get()
+        current_mode = self.mode_var.get()
+        
+        # Get available combinations for current verb
+        lemma = None
+        if "(" in current_mode and ")" in current_mode:
+            lemma = current_mode.split("(")[1].split(")")[0]
+        
+        if not lemma:
+            return
+            
+        available_combinations = self.get_available_combinations_for_verb(lemma)
+        
+        # Special handling for infinitives - skip voice navigation since all voices are shown at once
+        if current_mood == "Infinitive":
+            # For infinitives, go directly to next tense (skip voice navigation)
+            current_mood_combinations = [combo for combo in available_combinations if combo[1] == current_mood]
+            available_tenses_current = sorted(list(set([combo[0] for combo in current_mood_combinations])),
+                                            key=lambda x: self.verb_tense_order.index(x) if x in self.verb_tense_order else 999)
+            
+            if current_tense in available_tenses_current:
+                current_tense_index = available_tenses_current.index(current_tense)
+                if current_tense_index < len(available_tenses_current) - 1:
+                    # Move to next tense within infinitive mood
+                    next_tense = available_tenses_current[current_tense_index + 1]
+                    self.tense_var.set(next_tense)
+                    self.update_tense_mood_constraints()
+                    return
+            
+            # Tense wrapped around in infinitive, advance to next mood
+            all_moods_available = sorted(list(set([combo[1] for combo in available_combinations])),
+                                       key=lambda x: self.verb_mood_order.index(x) if x in self.verb_mood_order else 999)
+            
+            if current_mood in all_moods_available:
+                current_mood_index = all_moods_available.index(current_mood)
+                if current_mood_index < len(all_moods_available) - 1:
+                    # Move to next mood, reset to first tense and first voice
+                    next_mood = all_moods_available[current_mood_index + 1]
+                    
+                    # Get first available tense for this mood
+                    next_mood_combinations = [combo for combo in available_combinations if combo[1] == next_mood]
+                    available_tenses_next_mood = sorted(list(set([combo[0] for combo in next_mood_combinations])),
+                                                      key=lambda x: self.verb_tense_order.index(x) if x in self.verb_tense_order else 999)
+                    
+                    if available_tenses_next_mood:
+                        next_tense = available_tenses_next_mood[0]
+                        # Get first available voice for this mood/tense combination
+                        next_mood_tense_combinations = [combo for combo in available_combinations 
+                                                      if combo[1] == next_mood and combo[0] == next_tense]
+                        available_voices_next_mood = sorted(list(set([combo[2] for combo in next_mood_tense_combinations])), 
+                                                          key=lambda x: self.verb_voice_order.index(x) if x in self.verb_voice_order else 999)
+                        
+                        if available_voices_next_mood:
+                            self.mood_var.set(next_mood)
+                            self.tense_var.set(next_tense)
+                            self.voice_var.set(available_voices_next_mood[0])
+                            self.update_tense_mood_constraints()
+                            return
+            
+            # All wrapped around, move to next verb
+            self.next_verb_in_list()
+            
+            # Reset to first available combination for new verb
+            lemma = None
+            current_mode = self.mode_var.get()  # Get updated mode
+            if "(" in current_mode and ")" in current_mode:
+                lemma = current_mode.split("(")[1].split(")")[0]
+            
+            if lemma:
+                available_combinations = self.get_available_combinations_for_verb(lemma)
+                if available_combinations:
+                    # Sort combinations to get Present Active Indicative first
+                    available_combinations.sort(key=lambda x: (
+                        self.verb_mood_order.index(x[1]) if x[1] in self.verb_mood_order else 999,
+                        self.verb_tense_order.index(x[0]) if x[0] in self.verb_tense_order else 999,
+                        self.verb_voice_order.index(x[2]) if x[2] in self.verb_voice_order else 999
+                    ))
+                    first_combo = available_combinations[0]
+                    self.mood_var.set(first_combo[1])
+                    self.tense_var.set(first_combo[0])
+                    self.voice_var.set(first_combo[2])
+                    self.update_tense_mood_constraints()
+            return
+        
+        # Normal handling for non-infinitive moods
+        # Step 1: Try to advance Voice within current tense/mood
+        current_mood_tense_combinations = [combo for combo in available_combinations 
+                                         if combo[0] == current_tense and combo[1] == current_mood]
+        available_voices_current = sorted(list(set([combo[2] for combo in current_mood_tense_combinations])), 
+                                        key=lambda x: self.verb_voice_order.index(x) if x in self.verb_voice_order else 999)
+        
+        if current_voice in available_voices_current:
+            current_voice_index = available_voices_current.index(current_voice)
+            if current_voice_index < len(available_voices_current) - 1:
+                # Move to next voice, keep same tense and mood
+                next_voice = available_voices_current[current_voice_index + 1]
+                self.voice_var.set(next_voice)
+                self.update_tense_mood_constraints()
+                return
+        
+        # Step 2: Voice wrapped around, try to advance Tense within current mood
+        current_mood_combinations = [combo for combo in available_combinations if combo[1] == current_mood]
+        available_tenses_current = sorted(list(set([combo[0] for combo in current_mood_combinations])),
+                                        key=lambda x: self.verb_tense_order.index(x) if x in self.verb_tense_order else 999)
+        
+        if current_tense in available_tenses_current:
+            current_tense_index = available_tenses_current.index(current_tense)
+            if current_tense_index < len(available_tenses_current) - 1:
+                # Move to next tense, reset to first voice
+                next_tense = available_tenses_current[current_tense_index + 1]
+                # Get first available voice for this tense/mood combination
+                next_tense_combinations = [combo for combo in available_combinations 
+                                         if combo[0] == next_tense and combo[1] == current_mood]
+                available_voices_next = sorted(list(set([combo[2] for combo in next_tense_combinations])), 
+                                             key=lambda x: self.verb_voice_order.index(x) if x in self.verb_voice_order else 999)
+                if available_voices_next:
+                    self.voice_var.set(available_voices_next[0])
+                    self.tense_var.set(next_tense)
+                    self.update_tense_mood_constraints()
+                    return
+        
+        # Step 3: Tense wrapped around, try to advance Mood
+        all_moods_available = sorted(list(set([combo[1] for combo in available_combinations])),
+                                   key=lambda x: self.verb_mood_order.index(x) if x in self.verb_mood_order else 999)
+        
+        if current_mood in all_moods_available:
+            current_mood_index = all_moods_available.index(current_mood)
+            if current_mood_index < len(all_moods_available) - 1:
+                # Move to next mood, reset to first tense and first voice
+                next_mood = all_moods_available[current_mood_index + 1]
+                
+                # Get first available tense for this mood
+                next_mood_combinations = [combo for combo in available_combinations if combo[1] == next_mood]
+                available_tenses_next_mood = sorted(list(set([combo[0] for combo in next_mood_combinations])),
+                                                  key=lambda x: self.verb_tense_order.index(x) if x in self.verb_tense_order else 999)
+                
+                if available_tenses_next_mood:
+                    next_tense = available_tenses_next_mood[0]
+                    # Get first available voice for this mood/tense combination
+                    next_mood_tense_combinations = [combo for combo in available_combinations 
+                                                  if combo[1] == next_mood and combo[0] == next_tense]
+                    available_voices_next_mood = sorted(list(set([combo[2] for combo in next_mood_tense_combinations])), 
+                                                      key=lambda x: self.verb_voice_order.index(x) if x in self.verb_voice_order else 999)
+                    
+                    if available_voices_next_mood:
+                        self.mood_var.set(next_mood)
+                        self.tense_var.set(next_tense)
+                        self.voice_var.set(available_voices_next_mood[0])
+                        self.update_tense_mood_constraints()
+                        return
+        
+        # Step 4: All wrapped around, move to next verb
+        self.next_verb_in_list()
+        
+        # Reset to first available combination for new verb (Present Active Indicative)
+        lemma = None
+        current_mode = self.mode_var.get()  # Get updated mode
+        if "(" in current_mode and ")" in current_mode:
+            lemma = current_mode.split("(")[1].split(")")[0]
+        
+        if lemma:
+            available_combinations = self.get_available_combinations_for_verb(lemma)
+            if available_combinations:
+                # Sort combinations to get Present Active Indicative first
+                # Priority: Mood (Indicative first) → Tense (Present first) → Voice (Active first)
+                available_combinations.sort(key=lambda x: (
+                    self.verb_mood_order.index(x[1]) if x[1] in self.verb_mood_order else 999,
+                    self.verb_tense_order.index(x[0]) if x[0] in self.verb_tense_order else 999,
+                    self.verb_voice_order.index(x[2]) if x[2] in self.verb_voice_order else 999
+                ))
+                first_combo = available_combinations[0]
+                self.mood_var.set(first_combo[1])
+                self.tense_var.set(first_combo[0])
+                self.voice_var.set(first_combo[2])
+                self.update_tense_mood_constraints()
+
+    def next_verb_in_list(self):
+        """Move to the next verb in the verb dropdown list."""
+        current_mode = self.mode_var.get()
+        current_verb_modes = self.verb_modes  # The actual dropdown list
+        
+        try:
+            current_index = current_verb_modes.index(current_mode)
+            # Move to next verb, wrap around if at the end
+            next_index = (current_index + 1) % len(current_verb_modes)
+            next_mode = current_verb_modes[next_index]
+            
+            # Update the mode selection
+            self.mode_var.set(next_mode)
+            self.on_mode_change(None)  # Trigger the mode change event
+            
+        except ValueError:
+            # Current mode not found in list, stay at current mode
+            print(f"Debug: Current verb mode '{current_mode}' not found in verb modes list")
+            pass
 
     def create_declension_table(self):
         """Create the declension table with input fields for each case."""
@@ -449,15 +597,15 @@ class GreekGrammarApp:
                              font=('Arial', 12),
                              padding=(15, 8))
         
-        # Check answers button
-        check_button = ttk.Button(
+        # Next button with navigation functionality
+        next_button = ttk.Button(
             bottom_button_frame,
-            text="Check Answers",
-            command=self.check_answers,
+            text="Next",
+            command=self.next_answer,
             style='Large.TButton',
             width=15
         )
-        check_button.grid(row=0, column=0, padx=20)
+        next_button.grid(row=0, column=2, padx=20)
         
         # Reveal answers button
         reveal_button = ttk.Button(
@@ -477,7 +625,7 @@ class GreekGrammarApp:
             style='Large.TButton',
             width=15
         )
-        reset_button.grid(row=0, column=2, padx=20)
+        reset_button.grid(row=0, column=0, padx=20)
         
         # Apply stem prefilling if enabled
         self.apply_prefill_stems_to_all_entries()
@@ -1584,6 +1732,9 @@ class GreekGrammarApp:
         """Handle type change between Noun, Adjective, Pronoun, and Verb."""
         current_type = self.type_var.get()
         
+        # Reset word index when changing types
+        self.current_word_index = 0
+        
         if current_type == "Noun":
             self.modes = self.noun_modes.copy()
             self.mode_var.set("First Declension (μουσα)")
@@ -1606,6 +1757,9 @@ class GreekGrammarApp:
 
     def on_mode_change(self, event):
         """Handle mode change in the dropdown."""
+        # Reset word index when changing modes
+        self.current_word_index = 0
+        
         # For verbs, reset tense/voice/mood to appropriate defaults when switching between different verbs
         if self.type_var.get() == "Verb":
             # Get available options for the new verb
@@ -1653,8 +1807,9 @@ class GreekGrammarApp:
         if lemma:
             available_combinations = self.get_available_combinations_for_verb(lemma)
             
-            # Extract available tenses
+            # Extract available tenses and sort them according to hierarchy
             available_tenses = list(set([combo[0] for combo in available_combinations]))
+            available_tenses.sort(key=lambda x: self.verb_tense_order.index(x) if x in self.verb_tense_order else 999)
             
             # If current tense is not available for this verb, reset to first available
             if current_tense not in available_tenses:
@@ -1665,8 +1820,9 @@ class GreekGrammarApp:
             # Update tense dropdown
             self.tense_dropdown['values'] = available_tenses
             
-            # Extract available moods for current tense
+            # Extract available moods for current tense and sort them according to hierarchy
             available_moods = list(set([combo[1] for combo in available_combinations if combo[0] == current_tense]))
+            available_moods.sort(key=lambda x: self.verb_mood_order.index(x) if x in self.verb_mood_order else 999)
             
             # If current mood is not available for this tense, reset to first available
             if current_mood not in available_moods:
@@ -1677,18 +1833,32 @@ class GreekGrammarApp:
             # Update mood dropdown
             self.mood_dropdown['values'] = available_moods
             
-            # Extract available voices for current tense and mood
-            available_voices = list(set([combo[2] for combo in available_combinations 
-                                       if combo[0] == current_tense and combo[1] == current_mood]))
-            
-            # Update voice dropdown if it exists
-            if hasattr(self, 'voice_dropdown'):
-                self.voice_dropdown['values'] = available_voices
-                
-                # Reset voice if current selection is not available
-                if current_voice not in available_voices:
-                    if available_voices:
+            # Handle voice dropdown based on mood
+            if current_mood == "Infinitive":
+                # For infinitives, all voices are shown in the table, so voice selection is not needed
+                # Set voice dropdown to show "All" or just the first available voice
+                available_voices = list(set([combo[2] for combo in available_combinations 
+                                           if combo[0] == current_tense and combo[1] == "Infinitive"]))
+                if available_voices:
+                    available_voices.sort(key=lambda x: self.verb_voice_order.index(x) if x in self.verb_voice_order else 999)
+                    # For infinitives, just set to the first voice (but table shows all)
+                    if hasattr(self, 'voice_dropdown'):
+                        self.voice_dropdown['values'] = [available_voices[0]]  # Only show one option
                         self.voice_var.set(available_voices[0])
+            else:
+                # Extract available voices for current tense and mood and sort them according to hierarchy
+                available_voices = list(set([combo[2] for combo in available_combinations 
+                                           if combo[0] == current_tense and combo[1] == current_mood]))
+                available_voices.sort(key=lambda x: self.verb_voice_order.index(x) if x in self.verb_voice_order else 999)
+                
+                # Update voice dropdown if it exists
+                if hasattr(self, 'voice_dropdown'):
+                    self.voice_dropdown['values'] = available_voices
+                    
+                    # Reset voice if current selection is not available
+                    if current_voice not in available_voices:
+                        if available_voices:
+                            self.voice_var.set(available_voices[0])
         else:
             # Fallback to original logic if no lemma found
             self.update_tense_mood_constraints_fallback()
@@ -1757,14 +1927,26 @@ class GreekGrammarApp:
             is_active_only = any(verb in mode for verb in active_only_verbs)
             available_voices = ["Active"] if is_active_only else ["Active", "Middle", "Passive"]
         
+        # Sort voices according to hierarchy
+        available_voices.sort(key=lambda x: self.verb_voice_order.index(x) if x in self.verb_voice_order else 999)
+        
         # Update voice dropdown if it exists
         if hasattr(self, 'voice_dropdown'):
             current_voice = self.voice_var.get()
-            self.voice_dropdown['values'] = available_voices
+            current_mood = self.mood_var.get()
             
-            # Reset voice if current selection is not available
-            if current_voice not in available_voices:
-                self.voice_var.set("Active")
+            # Handle infinitive mood specially
+            if current_mood == "Infinitive":
+                # For infinitives, only show one voice option since all are displayed in table
+                if available_voices:
+                    self.voice_dropdown['values'] = [available_voices[0]]
+                    self.voice_var.set(available_voices[0])
+            else:
+                self.voice_dropdown['values'] = available_voices
+                
+                # Reset voice if current selection is not available
+                if current_voice not in available_voices:
+                    self.voice_var.set("Active")
     
     def get_base_available_tenses(self):
         """Get the base available tenses for the current verb (before mood constraints)."""
