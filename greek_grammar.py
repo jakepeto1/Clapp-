@@ -40,17 +40,6 @@ class PracticeConfig:
         self.prefill_stems.set(False)
         self.randomize_next.set(False)
 
-class FontManager:
-    """Manage fonts for the application"""
-    def __init__(self):
-        self.default_font = ('Times New Roman', 12)
-
-    def get_default_font(self):
-        return self.default_font
-
-    def set_default_font(self, font_tuple):
-        self.default_font = font_tuple
-
 class GreekGrammarApp:
     """Provides an interactive interface for practicing Greek declensions."""
     
@@ -59,7 +48,6 @@ class GreekGrammarApp:
         self.root.title("Ancient Greek Grammar Study")
         
         # Initialize state variables
-        self.pending_diacritic = None
         self.table_frame = None
         self.entries = {}
         self.error_labels = {}
@@ -348,8 +336,10 @@ class GreekGrammarApp:
             word_frame,
             text="☆",
             font=('Arial', 16),
-            foreground="gray",
+            foreground="black",
             background="white",
+            activeforeground="black",
+            activebackground="#f0f0f0",
             relief="flat",
             borderwidth=0,
             command=self.toggle_star,
@@ -669,6 +659,8 @@ class GreekGrammarApp:
                     # Clear entries and apply prefill stems for the new combination
                     self.clear_all_entries()
                     self.apply_prefill_stems_to_all_entries()
+                    # Update star button state after infinitive tense change
+                    self.update_star_button()
                     return
             
             # Tense wrapped around in infinitive, advance to next mood
@@ -708,6 +700,8 @@ class GreekGrammarApp:
                             # Clear entries and apply prefill stems for the new combination
                             self.clear_all_entries()
                             self.apply_prefill_stems_to_all_entries()
+                            # Update star button state after mood change (infinitive section)
+                            self.update_star_button()
                             return
             
             # All wrapped around, move to next verb
@@ -758,6 +752,8 @@ class GreekGrammarApp:
                 # Clear entries and apply prefill stems for the new combination
                 self.clear_all_entries()
                 self.apply_prefill_stems_to_all_entries()
+                # Update star button state after voice change
+                self.update_star_button()
                 return
         
         # Step 2: Voice wrapped around, try to advance Tense within current mood
@@ -782,6 +778,8 @@ class GreekGrammarApp:
                     # Clear entries and apply prefill stems for the new combination
                     self.clear_all_entries()
                     self.apply_prefill_stems_to_all_entries()
+                    # Update star button state after tense change
+                    self.update_star_button()
                     return
         
         # Step 3: Tense wrapped around, try to advance Mood
@@ -821,6 +819,8 @@ class GreekGrammarApp:
                         # Clear entries and apply prefill stems for the new combination
                         self.clear_all_entries()
                         self.apply_prefill_stems_to_all_entries()
+                        # Update star button state after mood change
+                        self.update_star_button()
                         return
         
         # Step 4: All wrapped around, move to next verb
@@ -856,6 +856,8 @@ class GreekGrammarApp:
                 # Clear entries and apply prefill stems for the new combination
                 self.clear_all_entries()
                 self.apply_prefill_stems_to_all_entries()
+                # Update star button state after verb change
+                self.update_star_button()
 
     def next_verb_in_list(self):
         """Move to the next verb in the verb dropdown list."""
@@ -1589,14 +1591,6 @@ class GreekGrammarApp:
                     combinations.add((tense_display, mood_display, voice_display))
         
         return list(combinations)
-
-    def debug_voice_availability(self):
-        """Debug method to check voice availability for different verbs."""
-        test_verbs = ["λύω", "εἰμί", "οἶδα", "φημί", "εἶμι", "φιλέω", "τιμάω"]
-        print("Voice availability check:")
-        for verb in test_verbs:
-            voices = self.get_available_voices_for_verb(verb)
-            print(f"  {verb}: {voices}")
 
     def create_verb_table(self, current_paradigm):
         """Create the verb conjugation table with input fields for each person/number."""
@@ -2332,9 +2326,6 @@ class GreekGrammarApp:
             
         current_type = self.type_var.get()
         
-        # Reset word index when changing types
-        self.current_word_index = 0
-        
         if current_type == "Starred":
             # Handle starred items
             self.modes = self.get_starred_display_items()
@@ -2369,9 +2360,6 @@ class GreekGrammarApp:
         if event is not None:
             self.save_current_state()
             
-        # Reset word index when changing modes
-        self.current_word_index = 0
-        
         # Handle starred items specially
         if self.type_var.get() == "Starred":
             selected_display = self.mode_var.get()
@@ -2413,7 +2401,6 @@ class GreekGrammarApp:
                 
                 # Temporarily switch to the original type to load the paradigm
                 # But keep type_var as "Starred" so navigation works correctly
-                self._loading_starred_item = True
                 
                 if original_type == "Verb" and len(parts) >= 5:
                     # For verbs, also set voice, tense, mood
@@ -2431,18 +2418,6 @@ class GreekGrammarApp:
                 
                 # Set the mode to the original mode for table loading
                 self.mode_var.set(original_mode)
-                
-                # Load the appropriate modes list for paradigm lookup
-                if original_type == "Noun":
-                    self._temp_modes = self.noun_modes.copy()
-                elif original_type == "Adjective":
-                    self._temp_modes = self.adjective_modes.copy()
-                elif original_type == "Pronoun":
-                    self._temp_modes = self.pronoun_modes.copy()
-                elif original_type == "Verb":
-                    self._temp_modes = self.verb_modes.copy()
-                
-                self._loading_starred_item = False
                 
                 # Reset the mode display back to the starred display format
                 self.mode_var.set(selected_display)
@@ -5189,13 +5164,13 @@ Tips:
             
             if current_type == "Starred":
                 # In starred mode, always show filled star (can only unstar)
-                self.star_button.config(text="★", foreground="gold")
+                self.star_button.config(text="★", foreground="black")
             elif is_starred:
-                # In normal mode but item is starred
-                self.star_button.config(text="★", foreground="gold")
+                # In normal mode but item is starred - filled star
+                self.star_button.config(text="★", foreground="black")
             else:
-                # In normal mode and item is not starred
-                self.star_button.config(text="☆", foreground="gray")
+                # In normal mode and item is not starred - outline star
+                self.star_button.config(text="☆", foreground="black")
 
     def get_starred_display_items(self):
         """Get list of starred items formatted for dropdown display."""
