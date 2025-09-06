@@ -61,6 +61,10 @@ class GreekGrammarApp:
         self.entries = {}
         self.error_labels = {}
         
+        # Track reveal/retry state
+        self.has_revealed = False
+        self.incorrect_entries = set()  # Track which entries were incorrect
+        
         # Initialize practice configuration
         self.config = PracticeConfig()
         
@@ -86,18 +90,32 @@ class GreekGrammarApp:
         
         # Configure root window with better sizing and resizing behavior
         self.root.configure(padx=20, pady=20)
-        self.root.geometry("1200x900")  # Increased size to ensure all content is visible
+        self.root.state('zoomed')  # Start maximized
         self.root.minsize(1000, 700)  # Set minimum size to prevent content from being cut off
         
-        # Main container with scrollable frame capability
+        # Main container that will expand to fill the window
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.grid(row=0, column=0, sticky='nsew')
         
         # Configure grid weights for proper expansion
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
+        
+        # Configure main_frame rows to expand properly
+        self.main_frame.grid_rowconfigure(0, weight=0)  # Title - fixed
+        self.main_frame.grid_rowconfigure(1, weight=0)  # Type selector - fixed
+        self.main_frame.grid_rowconfigure(2, weight=0)  # Mode selector - fixed
+        self.main_frame.grid_rowconfigure(3, weight=1)  # Table area - expands
+        self.main_frame.grid_rowconfigure(4, weight=0)  # Buttons - fixed
+        self.main_frame.grid_columnconfigure(0, weight=1)  # Center everything horizontally
+        
+        # Configure main_frame grid weights for responsive layout
         self.main_frame.grid_rowconfigure(0, weight=0)  # Title row - fixed
         self.main_frame.grid_rowconfigure(1, weight=0)  # Mode row - fixed
+        self.main_frame.grid_rowconfigure(2, weight=0)  # Selector row - fixed
+        self.main_frame.grid_rowconfigure(3, weight=1)  # Table row - expandable
+        self.main_frame.grid_rowconfigure(4, weight=0)  # Button row - fixed
+        self.main_frame.grid_columnconfigure(0, weight=1)  # Center everything horizontally
         self.main_frame.grid_rowconfigure(2, weight=0)  # Word row - fixed
         self.main_frame.grid_rowconfigure(3, weight=1)  # Table row - expandable (moved up)
         self.main_frame.grid_rowconfigure(4, weight=0)  # Button row - fixed
@@ -298,6 +316,13 @@ class GreekGrammarApp:
         
         # Update word display after creating table
         self.update_word_display()
+        
+        # Initialize navigation history with initial state
+        self.table_history = []
+        self.current_history_index = -1  # Start at -1 since we're about to add first state
+        print("Initializing navigation history")
+        # Initial state will be saved by save_current_state
+        self.save_current_state()
 
     def on_prefill_stems_toggle(self):
         """Handle the prefill stems toggle change"""
@@ -335,12 +360,61 @@ class GreekGrammarApp:
         # Update the word label
         self.word_label.config(text=word)
 
+    def save_current_state(self, force=False):
+        """Save the current table state to history."""
+        current_type = self.type_var.get()
+        current_mode = self.mode_var.get()
+        verb_state = None
+        
+        # For verbs, also save voice/mood/tense state
+        if current_type == "Verb":
+            verb_state = (
+                self.voice_var.get() if hasattr(self, 'voice_var') else None,
+                self.mood_var.get() if hasattr(self, 'mood_var') else None,
+                self.tense_var.get() if hasattr(self, 'tense_var') else None
+            )
+        
+        current_state = (current_type, current_mode, verb_state)
+        
+        # Initialize history if needed
+        if not hasattr(self, 'table_history'):
+            self.table_history = []
+            self.current_history_index = -1
+        
+        # If we're at the initial state and no history exists, or force is True
+        if len(self.table_history) == 0 or force:
+            self.table_history.append(current_state)
+            self.current_history_index = len(self.table_history) - 1
+            print(f"State saved (initial/forced). Total states: {len(self.table_history)}, Current index: {self.current_history_index}")
+            return
+
+        # If this state is different from the current one
+        if current_state != self.table_history[self.current_history_index]:
+            # If we're not at the end of the history, truncate the forward history
+            if self.current_history_index < len(self.table_history) - 1:
+                self.table_history = self.table_history[:self.current_history_index + 1]
+            
+            # Add the new state
+            self.table_history.append(current_state)
+            self.current_history_index = len(self.table_history) - 1
+            print(f"New state saved. Total states: {len(self.table_history)}, Current index: {self.current_history_index}")
+        else:
+            print(f"State unchanged. Total states: {len(self.table_history)}, Current index: {self.current_history_index}")
+
     def next_answer(self):
         """Navigate to the next item in the current dropdown list."""
+        print("Next button pressed")
+        
         # Check if randomize next is enabled
         if self.config.randomize_next.get():
             self.random_next()
             return
+        
+        # Save current state before navigation with force=True to ensure it's saved
+        self.save_current_state(force=True)
+            
+        current_type = self.type_var.get()
+        current_mode = self.mode_var.get()
             
         current_type = self.type_var.get()
         current_mode = self.mode_var.get()
@@ -374,6 +448,9 @@ class GreekGrammarApp:
     def random_next(self):
         """Navigate to a completely random table (type, mode, and for verbs: voice/tense/mood)."""
         import random
+        
+        # Save current state before random navigation
+        self.save_current_state()
         
         # Randomly select a type
         available_types = ["Noun", "Adjective", "Pronoun", "Verb"]
@@ -645,14 +722,20 @@ class GreekGrammarApp:
         if self.table_frame:
             self.table_frame.destroy()
             
-        # Create a simple frame for the table at row 3
-        self.table_frame = ttk.Frame(self.main_frame)
-        self.table_frame.grid(row=3, column=0, columnspan=3, sticky='nsew', pady=(20, 10))
+        # Create a container frame that can expand to fill available space
+        table_container = ttk.Frame(self.main_frame)
+        table_container.grid(row=3, column=0, columnspan=3, sticky='nsew')
+        table_container.grid_columnconfigure(0, weight=1)  # Center the table horizontally
+        table_container.grid_rowconfigure(0, weight=1)     # Center the table vertically
         
-        # Configure grid weights
-        self.main_frame.grid_columnconfigure(0, weight=1)
-        self.main_frame.grid_columnconfigure(1, weight=1) 
-        self.main_frame.grid_columnconfigure(2, weight=1)
+        # Create the table frame inside the container with minimal padding for spacing
+        self.table_frame = ttk.Frame(table_container)
+        self.table_frame.grid(row=0, column=0, sticky='nsew', padx=20, pady=20)  # Reduced horizontal padding for smaller table
+        
+        # Configure grid weights for the table frame
+        self.table_frame.grid_columnconfigure(0, weight=1)
+        self.table_frame.grid_columnconfigure(1, weight=1)
+        self.table_frame.grid_columnconfigure(2, weight=1)
         
         current_paradigm = self.get_current_paradigm()
         if not current_paradigm:
@@ -670,45 +753,63 @@ class GreekGrammarApp:
         else:
             self.create_noun_table(current_paradigm)
         
-        # Bottom button frame positioned after table
+        # Bottom button frame positioned after table, stays at bottom when window resizes
         bottom_button_frame = ttk.Frame(self.main_frame)
-        bottom_button_frame.grid(row=4, column=0, columnspan=3, pady=20)
+        bottom_button_frame.grid(row=4, column=0, sticky='ew', pady=(20, 20))
         
-        # Style for buttons
+        # Container frame for buttons to allow centering
+        button_container = ttk.Frame(bottom_button_frame)
+        button_container.grid(row=0, column=1, pady=10)
+        
+        # Configure the bottom frame for centering
+        bottom_button_frame.grid_columnconfigure(0, weight=1)  # Left padding space
+        bottom_button_frame.grid_columnconfigure(1, weight=0)  # Button container (centered)
+        bottom_button_frame.grid_columnconfigure(2, weight=1)  # Right padding space
+        
+        # Configure button container columns with equal weight for center alignment
+        button_container.grid_columnconfigure(0, weight=1)  # Space before first button
+        button_container.grid_columnconfigure(1, weight=0)  # Reveal button
+        button_container.grid_columnconfigure(2, weight=0)  # Reset/Retry button
+        button_container.grid_columnconfigure(3, weight=0)  # Next button
+        button_container.grid_columnconfigure(4, weight=1)  # Space after last button
+        
+        # Style for buttons - now all buttons use the same large style
         button_style = ttk.Style()
         button_style.configure('Large.TButton',
-                             font=('Arial', 12),
-                             padding=(15, 8))
+                             font=('Arial', 11),
+                             padding=(10, 6))
         
-        # Next button with navigation functionality
+        # Create all buttons with consistent styling and size
+        reveal_button = ttk.Button(
+            button_container,
+            text="Reveal",
+            command=self.reveal_answers,
+            style='Large.TButton',
+            width=12
+        )
+        reveal_button.grid(row=0, column=1, padx=15)
+        
+        # Combined Reset/Retry button in the center
+        reset_retry_button = ttk.Button(
+            button_container,
+            text="Reset",
+            command=self.smart_reset_retry,
+            style='Large.TButton',
+            width=12
+        )
+        reset_retry_button.grid(row=0, column=2, padx=20)  # Extra padding to emphasize center position
+        
+        # Store reference to reset/retry button for state management
+        self.reset_retry_button = reset_retry_button
+        
         next_button = ttk.Button(
-            bottom_button_frame,
+            button_container,
             text="Next",
             command=self.next_answer,
             style='Large.TButton',
-            width=15
+            width=12
         )
-        next_button.grid(row=0, column=2, padx=20)
-        
-        # Reveal answers button
-        reveal_button = ttk.Button(
-            bottom_button_frame,
-            text="Reveal Answers",
-            command=self.reveal_answers,
-            style='Large.TButton',
-            width=15
-        )
-        reveal_button.grid(row=0, column=1, padx=20)
-        
-        # Reset button
-        reset_button = ttk.Button(
-            bottom_button_frame,
-            text="Reset",
-            command=self.reset_table,
-            style='Large.TButton',
-            width=15
-        )
-        reset_button.grid(row=0, column=0, padx=20)
+        next_button.grid(row=0, column=3, padx=15)
         
         # Apply stem prefilling if enabled
         self.apply_prefill_stems_to_all_entries()
@@ -719,31 +820,31 @@ class GreekGrammarApp:
         for widget in self.table_frame.winfo_children():
             widget.destroy()
         
-        # Configure grid weights for proper expansion and ensure all rows are visible
-        self.table_frame.grid_columnconfigure(0, weight=0, minsize=120)  # Case labels column
-        self.table_frame.grid_columnconfigure(1, weight=1, minsize=200)  # Singular column
-        self.table_frame.grid_columnconfigure(2, weight=1, minsize=200)  # Plural column
+        # Configure grid weights for maximum space utilization
+        self.table_frame.grid_columnconfigure(0, weight=0, minsize=100)  # Case labels column
+        self.table_frame.grid_columnconfigure(1, weight=1, minsize=120)  # Singular column - reduced by 50%
+        self.table_frame.grid_columnconfigure(2, weight=1, minsize=120)  # Plural column - reduced by 50%
         
-        # Configure row weights to ensure all cases remain visible
+        # Configure row heights with reduced spacing
         for i in range(7):  # 0-6 rows (header + 5 cases + padding)
-            self.table_frame.grid_rowconfigure(i, weight=0, minsize=50)
+            self.table_frame.grid_rowconfigure(i, weight=0)  # Remove minimum height constraint
 
-        # Headers with consistent styling
+        # Headers with consistent styling and reduced padding
         ttk.Label(
             self.table_frame,
             text="",
             font=('Arial', 14, 'bold')
-        ).grid(row=0, column=0, padx=15, pady=15, sticky='e')
+        ).grid(row=0, column=0, padx=10, pady=(5,10), sticky='e')
         ttk.Label(
             self.table_frame,
             text="Singular",
             font=('Arial', 14, 'bold')
-        ).grid(row=0, column=1, padx=15, pady=15)
+        ).grid(row=0, column=1, padx=10, pady=(5,10))
         ttk.Label(
             self.table_frame,
             text="Plural",
             font=('Arial', 14, 'bold')
-        ).grid(row=0, column=2, padx=15, pady=15)
+        ).grid(row=0, column=2, padx=10, pady=(5,10))
 
         # Create input fields for each case with guaranteed visibility (British order)
         cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
@@ -754,17 +855,17 @@ class GreekGrammarApp:
                 text=case,
                 font=('Arial', 12, 'bold')
             )
-            case_label.grid(row=i, column=0, padx=15, pady=8, sticky='e')
+            case_label.grid(row=i, column=0, padx=10, pady=6, sticky='e')
 
             # Singular entry with consistent sizing
             entry_sg = tk.Entry(
                 self.table_frame,
-                width=25,
+                width=15,  # Reduced by 50%
                 font=('Times New Roman', 14),
                 relief='solid',
                 borderwidth=1
             )
-            entry_sg.grid(row=i, column=1, padx=15, pady=8, sticky='ew')
+            entry_sg.grid(row=i, column=1, padx=10, pady=6, sticky='ew')
             self.entries[f"{case}_sg"] = entry_sg
             entry_sg.bind('<Key>', self.handle_key_press)
             
@@ -782,19 +883,19 @@ class GreekGrammarApp:
                 text="❌",
                 foreground='red'
             )
-            error_label_sg.grid(row=i, column=1, sticky='e', padx=15)
+            error_label_sg.grid(row=i, column=1, sticky='e', padx=10)
             self.error_labels[f"{case}_sg"] = error_label_sg
             error_label_sg.grid_remove()
 
             # Plural entry with consistent sizing
             entry_pl = tk.Entry(
                 self.table_frame,
-                width=25,
+                width=15,  # Reduced by 50%
                 font=('Times New Roman', 14),
                 relief='solid',
                 borderwidth=1
             )
-            entry_pl.grid(row=i, column=2, padx=15, pady=8, sticky='ew')
+            entry_pl.grid(row=i, column=2, padx=10, pady=6, sticky='ew')
             self.entries[f"{case}_pl"] = entry_pl
             entry_pl.bind('<Key>', self.handle_key_press)
             
@@ -812,7 +913,7 @@ class GreekGrammarApp:
                 text="❌",
                 foreground='red'
             )
-            error_label_pl.grid(row=i, column=2, sticky='e', padx=15)
+            error_label_pl.grid(row=i, column=2, sticky='e', padx=10)
             self.error_labels[f"{case}_pl"] = error_label_pl
             error_label_pl.grid_remove()
 
@@ -828,57 +929,65 @@ class GreekGrammarApp:
         
         if is_two_termination:
             # 2-termination: Masculine/Feminine + Neuter (4 columns total)
-            self.table_frame.grid_columnconfigure(0, weight=1)  # Case column
-            for i in range(1, 5):  # Gender columns
-                self.table_frame.grid_columnconfigure(i, weight=2)
+            self.table_frame.grid_columnconfigure(0, weight=0, minsize=100)  # Case labels column
+            self.table_frame.grid_columnconfigure(1, weight=1, minsize=120)  # M/F Sg - reduced by 50%
+            self.table_frame.grid_columnconfigure(2, weight=1, minsize=120)  # M/F Pl - reduced by 50%
+            self.table_frame.grid_columnconfigure(3, weight=1, minsize=120)  # Neuter Sg - reduced by 50%
+            self.table_frame.grid_columnconfigure(4, weight=1, minsize=120)  # Neuter Pl - reduced by 50%
+            
+            # Configure row heights with reduced spacing
+            for i in range(8):  # 0-7 rows (header + subheader + 5 cases + padding)
+                self.table_frame.grid_rowconfigure(i, weight=0)  # Remove minimum height constraint
 
-            # Main headers
+            # Main headers with consistent styling and reduced padding
             ttk.Label(
                 self.table_frame,
                 text="",
                 font=('Arial', 14, 'bold')
-            ).grid(row=0, column=0, padx=10, pady=15, sticky='e')
+            ).grid(row=0, column=0, padx=10, pady=(5,10), sticky='e')
             
             ttk.Label(
                 self.table_frame,
                 text="Masculine/Feminine",
                 font=('Arial', 14, 'bold')
-            ).grid(row=0, column=1, columnspan=2, padx=10, pady=15)
+            ).grid(row=0, column=1, columnspan=2, padx=10, pady=(5,10))
             
             ttk.Label(
                 self.table_frame,
                 text="Neuter",
                 font=('Arial', 14, 'bold')
-            ).grid(row=0, column=3, columnspan=2, padx=10, pady=15)
+            ).grid(row=0, column=3, columnspan=2, padx=10, pady=(5,10))
 
-            # Sub-headers (Singular/Plural)
-            for i, header in enumerate(["Sg.", "Pl.", "Sg.", "Pl."]):
+            # Sub-headers (Singular/Plural) with reduced padding
+            for i, header in enumerate(["Singular", "Plural", "Singular", "Plural"]):
                 ttk.Label(
                     self.table_frame,
                     text=header,
-                    font=('Arial', 12)
-                ).grid(row=1, column=i + 1, padx=5, pady=5)
+                    font=('Arial', 12, 'bold')
+                ).grid(row=1, column=i + 1, padx=10, pady=(0,5))
 
             # Create input fields for each case
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
             for i, case in enumerate(cases, 2):  # Start from row 2
-                # Case label
-                ttk.Label(
+                # Case label with consistent styling
+                case_label = ttk.Label(
                     self.table_frame,
                     text=case,
-                    font=('Arial', 12, 'bold')
-                ).grid(row=i, column=0, padx=10, pady=8, sticky=tk.E)
+                    font=('Arial', 12, 'bold'),
+                    foreground='#34495e'
+                )
+                case_label.grid(row=i, column=0, padx=10, pady=6, sticky='e')
 
                 # Masculine/Feminine columns (use masculine data since they're identical)
                 for j, number in enumerate(["sg", "pl"]):
                     entry = tk.Entry(
                         self.table_frame,
-                        width=18,
-                        font=('Times New Roman', 12),
+                        width=15,  # Reduced by 50%
+                        font=('Times New Roman', 14),
                         relief='solid',
                         borderwidth=1
                     )
-                    entry.grid(row=i, column=j + 1, padx=5, pady=8, sticky='ew')
+                    entry.grid(row=i, column=j + 1, padx=10, pady=6, sticky='ew')
                     entry_key = f"{case}_masculine_{number}"  # Use masculine data
                     self.entries[entry_key] = entry
                     entry.bind('<Key>', self.handle_key_press)
@@ -897,7 +1006,7 @@ class GreekGrammarApp:
                         text="❌",
                         foreground='red'
                     )
-                    error_label.grid(row=i, column=j + 1, sticky='ne', padx=5)
+                    error_label.grid(row=i, column=j + 1, sticky='e', padx=10)
                     self.error_labels[entry_key] = error_label
                     error_label.grid_remove()
 
@@ -905,12 +1014,12 @@ class GreekGrammarApp:
                 for j, number in enumerate(["sg", "pl"]):
                     entry = tk.Entry(
                         self.table_frame,
-                        width=18,
-                        font=('Times New Roman', 12),
+                        width=15,  # Reduced by 50%
+                        font=('Times New Roman', 14),
                         relief='solid',
                         borderwidth=1
                     )
-                    entry.grid(row=i, column=j + 3, padx=5, pady=8, sticky='ew')
+                    entry.grid(row=i, column=j + 3, padx=10, pady=6, sticky='ew')
                     entry_key = f"{case}_neuter_{number}"
                     self.entries[entry_key] = entry
                     entry.bind('<Key>', self.handle_key_press)
@@ -929,65 +1038,70 @@ class GreekGrammarApp:
                         text="❌",
                         foreground='red'
                     )
-                    error_label.grid(row=i, column=j + 3, sticky='ne', padx=5)
+                    error_label.grid(row=i, column=j + 3, sticky='e', padx=10)
                     self.error_labels[entry_key] = error_label
                     error_label.grid_remove()
         else:
-            # 3-termination: Masculine + Feminine + Neuter (7 columns total)
-            self.table_frame.grid_columnconfigure(0, weight=1)  # Case column
-            for i in range(1, 7):  # Gender columns and spacers
-                self.table_frame.grid_columnconfigure(i, weight=2)
+            # 3-termination: Masculine + Feminine + Neuter (6 columns total)
+            self.table_frame.grid_columnconfigure(0, weight=0, minsize=100)  # Case labels column
+            for i in range(1, 7):  # Gender columns - reduced size
+                self.table_frame.grid_columnconfigure(i, weight=1, minsize=120)
 
-            # Main headers
+            # Configure row heights with reduced spacing
+            for i in range(8):  # 0-7 rows (header + subheader + 5 cases + padding)
+                self.table_frame.grid_rowconfigure(i, weight=0)  # Remove minimum height constraint
+
+            # Main headers with consistent styling and reduced padding
             ttk.Label(
                 self.table_frame,
                 text="",
                 font=('Arial', 14, 'bold')
-            ).grid(row=0, column=0, padx=10, pady=15, sticky='e')
+            ).grid(row=0, column=0, padx=10, pady=(5,10), sticky='e')
             
             ttk.Label(
                 self.table_frame,
                 text="Masculine",
                 font=('Arial', 14, 'bold')
-            ).grid(row=0, column=1, columnspan=2, padx=10, pady=15)
+            ).grid(row=0, column=1, columnspan=2, padx=10, pady=(5,10))
             
             ttk.Label(
                 self.table_frame,
                 text="Feminine", 
                 font=('Arial', 14, 'bold')
-            ).grid(row=0, column=3, columnspan=2, padx=10, pady=15)
+            ).grid(row=0, column=3, columnspan=2, padx=10, pady=(5,10))
             
             ttk.Label(
                 self.table_frame,
                 text="Neuter",
                 font=('Arial', 14, 'bold')
-            ).grid(row=0, column=5, columnspan=2, padx=10, pady=15)
+            ).grid(row=0, column=5, columnspan=2, padx=10, pady=(5,10))
 
-            # Sub-headers (Singular/Plural for each gender)
+            # Sub-headers (Singular/Plural for each gender) with reduced padding
             genders = ['masculine', 'feminine', 'neuter']
             for i, gender in enumerate(genders):
                 base_col = 1 + i * 2
                 ttk.Label(
                     self.table_frame,
-                    text="Sg.",
-                    font=('Arial', 12)
-                ).grid(row=1, column=base_col, padx=5, pady=5)
+                    text="Singular",
+                    font=('Arial', 12, 'bold')
+                ).grid(row=1, column=base_col, padx=10, pady=(0,5))
                 
                 ttk.Label(
                     self.table_frame,
-                    text="Pl.",
-                    font=('Arial', 12)
-                ).grid(row=1, column=base_col + 1, padx=5, pady=5)
+                    text="Plural",
+                    font=('Arial', 12, 'bold')
+                ).grid(row=1, column=base_col + 1, padx=10, pady=(0,5))
 
             # Create input fields for each case and gender
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
             for i, case in enumerate(cases, 2):  # Start from row 2
-                # Case label
-                ttk.Label(
+                # Case label with consistent styling
+                case_label = ttk.Label(
                     self.table_frame,
                     text=case,
-                    font=('Arial', 12, 'bold')
-                ).grid(row=i, column=0, padx=10, pady=8, sticky=tk.E)
+                    font=('Arial', 12, 'bold'),
+                    foreground='#34495e'
+                ).grid(row=i, column=0, padx=10, pady=6, sticky='e')
 
                 # Create entries for each gender and number
                 for j, gender in enumerate(genders):
@@ -996,12 +1110,12 @@ class GreekGrammarApp:
                     # Singular entry
                     entry_sg = tk.Entry(
                         self.table_frame,
-                        width=18,
-                        font=('Times New Roman', 12),
+                        width=15,  # Reduced by 50%
+                        font=('Times New Roman', 14),
                         relief='solid',
                         borderwidth=1
                     )
-                    entry_sg.grid(row=i, column=base_col, padx=5, pady=8, sticky='ew')
+                    entry_sg.grid(row=i, column=base_col, padx=10, pady=6, sticky='ew')
                     entry_key_sg = f"{case}_{gender}_sg"
                     self.entries[entry_key_sg] = entry_sg
                     entry_sg.bind('<Key>', self.handle_key_press)
@@ -1020,19 +1134,19 @@ class GreekGrammarApp:
                         text="❌",
                         foreground='red'
                     )
-                    error_label_sg.grid(row=i, column=base_col, sticky='ne', padx=5)
+                    error_label_sg.grid(row=i, column=base_col, sticky='e', padx=10)
                     self.error_labels[entry_key_sg] = error_label_sg
                     error_label_sg.grid_remove()
 
                     # Plural entry
                     entry_pl = tk.Entry(
                         self.table_frame,
-                        width=18,
-                        font=('Times New Roman', 12),
+                        width=15,  # Reduced by 50%
+                        font=('Times New Roman', 14),
                         relief='solid',
                         borderwidth=1
                     )
-                    entry_pl.grid(row=i, column=base_col + 1, padx=5, pady=8, sticky='ew')
+                    entry_pl.grid(row=i, column=base_col + 1, padx=10, pady=6, sticky='ew')
                     entry_key_pl = f"{case}_{gender}_pl"
                     self.entries[entry_key_pl] = entry_pl
                     entry_pl.bind('<Key>', self.handle_key_press)
@@ -1051,7 +1165,7 @@ class GreekGrammarApp:
                         text="❌",
                         foreground='red'
                     )
-                    error_label_pl.grid(row=i, column=base_col + 1, sticky='ne', padx=5)
+                    error_label_pl.grid(row=i, column=base_col + 1, sticky='e', padx=10)
                     self.error_labels[entry_key_pl] = error_label_pl
                     error_label_pl.grid_remove()
 
@@ -1813,6 +1927,10 @@ class GreekGrammarApp:
 
     def on_type_change(self, event):
         """Handle type change between Noun, Adjective, Pronoun, and Verb."""
+        # Save state before changing (only if event is not None, to avoid duplicate saves)
+        if event is not None:
+            self.save_current_state()
+            
         current_type = self.type_var.get()
         
         # Reset word index when changing types
@@ -1840,6 +1958,10 @@ class GreekGrammarApp:
 
     def on_mode_change(self, event):
         """Handle mode change in the dropdown."""
+        # Save state before changing (only if event is not None, to avoid duplicate saves)
+        if event is not None:
+            self.save_current_state()
+            
         # Reset word index when changing modes
         self.current_word_index = 0
         
@@ -3370,7 +3492,7 @@ class GreekGrammarApp:
                 entry.configure(bg='white')
 
     def reveal_answers(self):
-        """Show the correct answers in all fields."""
+        """Show the correct answers in all fields and track incorrect ones."""
         current_paradigm = self.get_current_paradigm()
         if not current_paradigm:
             return
@@ -3379,10 +3501,13 @@ class GreekGrammarApp:
         for error_label in self.error_labels.values():
             error_label.grid_remove()
         
+        # Clear previous incorrect entries tracking
+        self.incorrect_entries.clear()
+        
         current_type = self.type_var.get()
         
         if current_type == "Adjective":
-            # Fill adjective answers
+            # Check and fill adjective answers
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
             
             # Determine which genders to fill based on adjective type
@@ -3401,12 +3526,25 @@ class GreekGrammarApp:
                             answer_key = f"{case}_{number}"
                             if answer_key in current_paradigm[gender]:
                                 entry = self.entries[entry_key]
+                                correct_answer = current_paradigm[gender][answer_key]
+                                user_answer = entry.get().strip()
+                                
+                                # Check if answer is correct
+                                is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                                
                                 entry.configure(state='normal')
                                 entry.delete(0, tk.END)
-                                entry.insert(0, current_paradigm[gender][answer_key])
-                                entry.configure(state='readonly', bg='lightgray')
+                                entry.insert(0, correct_answer)
+                                
+                                if is_correct:
+                                    # Correct answer - make it gold and readonly
+                                    entry.configure(state='readonly', bg='#FFD700')  # Gold color
+                                else:
+                                    # Incorrect or missing answer - make it red and track it
+                                    entry.configure(bg='#FFB6B6')  # Light red color
+                                    self.incorrect_entries.add(entry_key)
         elif current_type == "Pronoun":
-            # Fill pronoun answers (no vocative)
+            # Check and fill pronoun answers (no vocative)
             pronoun_cases = ["Nominative", "Accusative", "Genitive", "Dative"]
             mode = self.mode_var.get()
             
@@ -3418,10 +3556,23 @@ class GreekGrammarApp:
                         
                         if entry_key in self.entries and entry_key in current_paradigm:
                             entry = self.entries[entry_key]
+                            correct_answer = current_paradigm[entry_key]
+                            user_answer = entry.get().strip()
+                            
+                            # Check if answer is correct
+                            is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                            
                             entry.configure(state='normal')
                             entry.delete(0, tk.END)
-                            entry.insert(0, current_paradigm[entry_key])
-                            entry.configure(state='readonly', bg='lightgray')
+                            entry.insert(0, correct_answer)
+                            
+                            if is_correct:
+                                # Correct answer - make it gold and readonly
+                                entry.configure(state='readonly', bg='#FFD700')  # Gold color
+                            else:
+                                # Incorrect or missing answer - make it red and track it
+                                entry.configure(bg='#FFB6B6')  # Light red color
+                                self.incorrect_entries.add(entry_key)
             else:
                 # Gender pronouns use structure like adjectives
                 genders = ["masculine", "feminine", "neuter"]
@@ -3435,28 +3586,54 @@ class GreekGrammarApp:
                                 answer_key = f"{case}_{number}"
                                 if answer_key in current_paradigm[gender]:
                                     entry = self.entries[entry_key]
+                                    correct_answer = current_paradigm[gender][answer_key]
+                                    user_answer = entry.get().strip()
+                                    
+                                    # Check if answer is correct
+                                    is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                                    
                                     entry.configure(state='normal')
                                     entry.delete(0, tk.END)
-                                    entry.insert(0, current_paradigm[gender][answer_key])
-                                    entry.configure(state='readonly', bg='lightgray')
+                                    entry.insert(0, correct_answer)
+                                    
+                                    if is_correct:
+                                        # Correct answer - make it gold and readonly
+                                        entry.configure(state='readonly', bg='#FFD700')  # Gold color
+                                    else:
+                                        # Incorrect or missing answer - make it red and track it
+                                        entry.configure(bg='#FFB6B6')  # Light red color
+                                        self.incorrect_entries.add(entry_key)
         elif current_type == "Verb":
             # Check if we're dealing with infinitives or finite verbs
             current_mood = self.mood_var.get()
             
             if current_mood == "Infinitive":
-                # Fill infinitive answers (voice-based structure)
+                # Check and fill infinitive answers (voice-based structure)
                 voices = ["active", "middle", "passive"]
                 for voice in voices:
                     entry_key = f"inf_{voice}"
                     
                     if entry_key in self.entries and entry_key in current_paradigm:
                         entry = self.entries[entry_key]
+                        correct_answer = current_paradigm[entry_key]
+                        user_answer = entry.get().strip()
+                        
+                        # Check if answer is correct
+                        is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                        
                         entry.configure(state='normal')
                         entry.delete(0, tk.END)
-                        entry.insert(0, current_paradigm[entry_key])
-                        entry.configure(state='readonly', bg='lightgray')
+                        entry.insert(0, correct_answer)
+                        
+                        if is_correct:
+                            # Correct answer - make it gold and readonly
+                            entry.configure(state='readonly', bg='#FFD700')  # Gold color
+                        else:
+                            # Incorrect or missing answer - make it red and track it
+                            entry.configure(bg='#FFB6B6')  # Light red color
+                            self.incorrect_entries.add(entry_key)
             else:
-                # Fill finite verb answers (person/number structure)
+                # Check and fill finite verb answers (person/number structure)
                 persons = ["1st", "2nd", "3rd"]
                 for person in persons:
                     for number in ["sg", "pl"]:
@@ -3464,12 +3641,25 @@ class GreekGrammarApp:
                         
                         if entry_key in self.entries and entry_key in current_paradigm:
                             entry = self.entries[entry_key]
+                            correct_answer = current_paradigm[entry_key]
+                            user_answer = entry.get().strip()
+                            
+                            # Check if answer is correct
+                            is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                            
                             entry.configure(state='normal')
                             entry.delete(0, tk.END)
-                            entry.insert(0, current_paradigm[entry_key])
-                            entry.configure(state='readonly', bg='lightgray')
+                            entry.insert(0, correct_answer)
+                            
+                            if is_correct:
+                                # Correct answer - make it gold and readonly
+                                entry.configure(state='readonly', bg='#FFD700')  # Gold color
+                            else:
+                                # Incorrect or missing answer - make it red and track it
+                                entry.configure(bg='#FFB6B6')  # Light red color
+                                self.incorrect_entries.add(entry_key)
         else:
-            # Fill noun answers (simple structure)
+            # Check and fill noun answers (simple structure)
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
             for case in cases:
                 for number in ["sg", "pl"]:
@@ -3477,10 +3667,117 @@ class GreekGrammarApp:
                     
                     if entry_key in self.entries and entry_key in current_paradigm:
                         entry = self.entries[entry_key]
+                        correct_answer = current_paradigm[entry_key]
+                        user_answer = entry.get().strip()
+                        
+                        # Check if answer is correct
+                        is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                        
                         entry.configure(state='normal')
                         entry.delete(0, tk.END)
-                        entry.insert(0, current_paradigm[entry_key])
-                        entry.configure(state='readonly', bg='lightgray')
+                        entry.insert(0, correct_answer)
+                        
+                        if is_correct:
+                            # Correct answer - make it gold and readonly
+                            entry.configure(state='readonly', bg='#FFD700')  # Gold color
+                        else:
+                            # Incorrect or missing answer - make it red and track it
+                            entry.configure(bg='#FFB6B6')  # Light red color
+                            self.incorrect_entries.add(entry_key)
+        
+        # Mark that answers have been revealed and update button
+        self.has_revealed = True
+        self.update_reset_retry_button()
+
+    def check_answer_correctness(self, user_answer, correct_answer):
+        """Check if user's answer matches the correct answer, ignoring accents and breathing marks."""
+        # Remove leading/trailing whitespace
+        user_answer = user_answer.strip()
+        correct_answer = correct_answer.strip()
+        
+        # If user answer is empty, it's incorrect
+        if not user_answer:
+            return False
+        
+        # Simple comparison first
+        if user_answer == correct_answer:
+            return True
+        
+        # Remove Greek diacritics (accents and breathing marks) for comparison
+        def remove_greek_diacritics(text):
+            """Remove Greek accents, breathing marks, and other diacritics."""
+            # Normalize to NFD (decomposed form) to separate base characters from diacritics
+            nfd_text = unicodedata.normalize('NFD', text)
+            
+            # Remove common Greek diacritical marks
+            diacritics_to_remove = [
+                '\u0300',  # Grave accent
+                '\u0301',  # Acute accent
+                '\u0302',  # Circumflex
+                '\u0304',  # Macron
+                '\u0306',  # Breve
+                '\u0308',  # Diaeresis
+                '\u0313',  # Smooth breathing
+                '\u0314',  # Rough breathing
+                '\u0342',  # Perispomeni (circumflex)
+                '\u0343',  # Koronis
+                '\u0344',  # Dialytika tonos
+                '\u0345',  # Iota subscript
+            ]
+            
+            # Remove each diacritic
+            for diacritic in diacritics_to_remove:
+                nfd_text = nfd_text.replace(diacritic, '')
+            
+            # Normalize back to NFC (composed form)
+            return unicodedata.normalize('NFC', nfd_text)
+        
+        # Compare without diacritics
+        user_clean = remove_greek_diacritics(user_answer)
+        correct_clean = remove_greek_diacritics(correct_answer)
+        
+        return user_clean == correct_clean
+
+    def retry_incorrect_answers(self):
+        """Clear only the incorrect/missing answers for retry, keeping correct ones locked."""
+        if not self.has_revealed:
+            return  # Should not happen since button is disabled before reveal
+        
+        # Clear only the incorrect entries
+        for entry_key in self.incorrect_entries:
+            if entry_key in self.entries:
+                entry = self.entries[entry_key]
+                entry.configure(state='normal')
+                entry.configure(bg='white')  # Reset to normal background
+                entry.delete(0, tk.END)
+        
+        # Apply prefill stems if enabled
+        self.apply_prefill_stems_to_all_entries()
+        
+        # Disable retry button again until next reveal
+        self.has_revealed = False
+        self.update_reset_retry_button()
+
+    def smart_reset_retry(self):
+        """Smart button that acts as Reset before reveal, Retry after reveal."""
+        if self.has_revealed and self.incorrect_entries:
+            # After reveal with incorrect entries - act as Retry
+            self.retry_incorrect_answers()
+        else:
+            # Before reveal or no incorrect entries - act as Reset
+            self.reset_table()
+
+    def update_reset_retry_button(self):
+        """Update the Reset/Retry button text and state based on current context."""
+        if not hasattr(self, 'reset_retry_button'):
+            return
+            
+        if self.has_revealed and self.incorrect_entries:
+            # After reveal with incorrect entries - show as Retry
+            self.reset_retry_button.configure(text="Retry", state='normal')
+        else:
+            # Before reveal or no incorrect entries - show as Reset
+            self.reset_retry_button.configure(text="Reset", state='normal')
 
     def clear_all_entries(self):
         """Clear all entries without recreating the table."""
@@ -3501,6 +3798,11 @@ class GreekGrammarApp:
             except tk.TclError:
                 # Widget may have been destroyed already
                 pass
+        
+        # Reset reveal/retry state
+        self.has_revealed = False
+        self.incorrect_entries.clear()
+        self.update_reset_retry_button()
 
     def reset_table(self):
         """Clear all entries and error indicators."""
@@ -3521,6 +3823,11 @@ class GreekGrammarApp:
             except tk.TclError:
                 # Widget may have been destroyed already
                 pass
+        
+        # Reset reveal/retry state
+        self.has_revealed = False
+        self.incorrect_entries.clear()
+        self.update_reset_retry_button()
         
         # Clear dictionaries and recreate the table
         self.entries.clear()
