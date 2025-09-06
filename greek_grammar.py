@@ -3,6 +3,9 @@ from tkinter import ttk, messagebox, font
 import json
 import unicodedata
 import sys
+from datetime import datetime
+from database import DatabaseManager
+from learn_mode import UserManager, LearningSession, ProgressTracker
 
 # Unicode combining characters for Greek diacritics
 SMOOTH_BREATHING = '\u0313'  # ᾿
@@ -65,6 +68,15 @@ class GreekGrammarApp:
         self.has_revealed = False
         self.incorrect_entries = set()  # Track which entries were incorrect
         
+        # Initialize Learn Mode components
+        self.db_manager = DatabaseManager()
+        self.user_manager = UserManager(self.db_manager)
+        self.current_user = None
+        self.current_session = None
+        self.learn_mode_enabled = tk.BooleanVar(value=False)
+        self.attempt_start_time = None
+        self.progress_tracker = None  # Will be initialized after main_frame
+        
         # Initialize practice configuration
         self.config = PracticeConfig()
         
@@ -122,6 +134,9 @@ class GreekGrammarApp:
         for i in range(3):
             self.main_frame.grid_columnconfigure(i, weight=1)
 
+        # Initialize progress tracker now that main_frame exists
+        self.progress_tracker = ProgressTracker(self.main_frame, self.db_manager)
+
         # Title and Instructions
         title_frame = ttk.Frame(self.main_frame)
         title_frame.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky='ew')
@@ -156,6 +171,15 @@ class GreekGrammarApp:
             variable=self.config.randomize_next
         )
         randomize_next_cb.grid(row=0, column=1, sticky='e', padx=(10, 0))
+        
+        # Learn Mode checkbox
+        learn_mode_cb = ttk.Checkbutton(
+            practice_options_frame,
+            text="Learn Mode",
+            variable=self.learn_mode_enabled,
+            command=self.toggle_learn_mode
+        )
+        learn_mode_cb.grid(row=0, column=2, sticky='e', padx=(10, 0))
         
         # Help button in top right corner
         help_button = ttk.Button(
@@ -338,6 +362,39 @@ class GreekGrammarApp:
                 # Clear the field
                 entry.delete(0, tk.END)
 
+    def toggle_learn_mode(self):
+        """Toggle Learn Mode on/off"""
+        if self.learn_mode_enabled.get():
+            # Enable Learn Mode
+            user = self.user_manager.show_user_selection(self.root)
+            if user:
+                self.current_user = user
+                self.current_session = LearningSession(self.db_manager, user['user_id'])
+                self.progress_tracker.set_user(user)
+                self.progress_tracker.create_progress_display()
+                self.attempt_start_time = None
+                messagebox.showinfo("Learn Mode", f"Learn Mode enabled for {user['username']}")
+                print(f"Learn Mode enabled for user: {user['username']} ({user['user_id']})")
+            else:
+                # User cancelled, disable Learn Mode
+                self.learn_mode_enabled.set(False)
+        else:
+            # Disable Learn Mode
+            if self.current_session:
+                summary = self.current_session.end_session()
+                if summary and summary['total_attempts'] > 0:
+                    messagebox.showinfo("Session Complete", 
+                        f"Session Summary:\n"
+                        f"Total Attempts: {summary['total_attempts']}\n"
+                        f"Accuracy: {summary['accuracy']:.1f}%\n"
+                        f"Duration: {summary['duration_seconds']//60}m {summary['duration_seconds']%60}s\n"
+                        f"Paradigms Practiced: {len(summary['paradigms_practiced'])}")
+            
+            self.current_user = None
+            self.current_session = None
+            self.progress_tracker.hide_progress_display()
+            print("Learn Mode disabled")
+
     def update_word_display(self):
         """Update the word display by extracting the word from the mode name."""
         mode = self.mode_var.get()
@@ -359,6 +416,12 @@ class GreekGrammarApp:
         
         # Update the word label
         self.word_label.config(text=word)
+        
+        # Update progress tracker if in Learn Mode
+        if self.learn_mode_enabled.get() and self.current_user:
+            paradigm_type = current_type
+            paradigm_name = mode
+            self.progress_tracker.update_current_paradigm(paradigm_type, paradigm_name)
 
     def save_current_state(self, force=False):
         """Save the current table state to history."""
@@ -559,10 +622,16 @@ class GreekGrammarApp:
                                                           key=lambda x: self.verb_voice_order.index(x) if x in self.verb_voice_order else 999)
                         
                         if available_voices_next_mood:
+                            old_mood = current_mood
                             self.mood_var.set(next_mood)
                             self.tense_var.set(next_tense)
                             self.voice_var.set(available_voices_next_mood[0])
                             self.update_tense_mood_constraints()
+                            # Recreate table if mood changed between infinitive and finite forms
+                            if (old_mood == "Infinitive") != (next_mood == "Infinitive"):
+                                current_paradigm = self.get_current_paradigm()
+                                if current_paradigm:
+                                    self.create_verb_table(current_paradigm)
                             # Clear entries and apply prefill stems for the new combination
                             self.clear_all_entries()
                             self.apply_prefill_stems_to_all_entries()
@@ -587,10 +656,16 @@ class GreekGrammarApp:
                         self.verb_voice_order.index(x[2]) if x[2] in self.verb_voice_order else 999
                     ))
                     first_combo = available_combinations[0]
+                    old_mood = current_mood
                     self.mood_var.set(first_combo[1])
                     self.tense_var.set(first_combo[0])
                     self.voice_var.set(first_combo[2])
                     self.update_tense_mood_constraints()
+                    # Recreate table if mood changed between infinitive and finite forms
+                    if (old_mood == "Infinitive") != (first_combo[1] == "Infinitive"):
+                        current_paradigm = self.get_current_paradigm()
+                        if current_paradigm:
+                            self.create_verb_table(current_paradigm)
             return
         
         # Normal handling for non-infinitive moods
@@ -660,10 +735,16 @@ class GreekGrammarApp:
                                                       key=lambda x: self.verb_voice_order.index(x) if x in self.verb_voice_order else 999)
                     
                     if available_voices_next_mood:
+                        old_mood = current_mood
                         self.mood_var.set(next_mood)
                         self.tense_var.set(next_tense)
                         self.voice_var.set(available_voices_next_mood[0])
                         self.update_tense_mood_constraints()
+                        # Recreate table if mood changed between infinitive and finite forms
+                        if (old_mood == "Infinitive") != (next_mood == "Infinitive"):
+                            current_paradigm = self.get_current_paradigm()
+                            if current_paradigm:
+                                self.create_verb_table(current_paradigm)
                         # Clear entries and apply prefill stems for the new combination
                         self.clear_all_entries()
                         self.apply_prefill_stems_to_all_entries()
@@ -689,10 +770,16 @@ class GreekGrammarApp:
                     self.verb_voice_order.index(x[2]) if x[2] in self.verb_voice_order else 999
                 ))
                 first_combo = available_combinations[0]
+                old_mood = current_mood
                 self.mood_var.set(first_combo[1])
                 self.tense_var.set(first_combo[0])
                 self.voice_var.set(first_combo[2])
                 self.update_tense_mood_constraints()
+                # Recreate table if mood changed between infinitive and finite forms
+                if (old_mood == "Infinitive") != (first_combo[1] == "Infinitive"):
+                    current_paradigm = self.get_current_paradigm()
+                    if current_paradigm:
+                        self.create_verb_table(current_paradigm)
                 # Clear entries and apply prefill stems for the new combination
                 self.clear_all_entries()
                 self.apply_prefill_stems_to_all_entries()
@@ -1736,6 +1823,56 @@ class GreekGrammarApp:
                 error_label.grid_remove()  # Hide initially
                 self.error_labels[entry_key] = error_label
 
+    def is_greek_vowel(self, char):
+        """Check if a character is a Greek vowel (with or without diacritics)."""
+        if not char:
+            return False
+        
+        # Decompose the character to get the base letter
+        decomposed = unicodedata.normalize('NFD', char)
+        base_char = decomposed[0] if decomposed else char
+        
+        # Check basic Greek vowels
+        if base_char.lower() in 'αεηιουω':
+            return True
+        
+        # Also check common precomposed Greek vowels with diacritics
+        greek_vowels = {
+            # Basic vowels
+            'α', 'ε', 'η', 'ι', 'ο', 'υ', 'ω',
+            'Α', 'Ε', 'Η', 'Ι', 'Ο', 'Υ', 'Ω',
+            # With accents
+            'ά', 'έ', 'ή', 'ί', 'ό', 'ύ', 'ώ',
+            'Ά', 'Έ', 'Ή', 'Ί', 'Ό', 'Ύ', 'Ώ',
+            'ὰ', 'ὲ', 'ὴ', 'ὶ', 'ὸ', 'ὺ', 'ὼ',
+            'Ὰ', 'Ὲ', 'Ὴ', 'Ὶ', 'Ὸ', 'Ὺ', 'Ὼ',
+            'ᾶ', 'ῆ', 'ῖ', 'ῦ', 'ῶ',
+            # With breathing marks
+            'ἀ', 'ἐ', 'ἠ', 'ἰ', 'ὀ', 'ὐ', 'ὠ',
+            'ἁ', 'ἑ', 'ἡ', 'ἱ', 'ὁ', 'ὑ', 'ὡ',
+            'Ἀ', 'Ἐ', 'Ἠ', 'Ἰ', 'Ὀ', 'Ὑ', 'Ὠ',
+            'Ἁ', 'Ἑ', 'Ἡ', 'Ἱ', 'Ὁ', 'Ὑ', 'Ὡ',
+            # With breathing and accents
+            'ἄ', 'ἔ', 'ἤ', 'ἴ', 'ὄ', 'ὔ', 'ὤ',
+            'ἅ', 'ἕ', 'ἥ', 'ἵ', 'ὅ', 'ὕ', 'ὥ',
+            'ἂ', 'ἒ', 'ἢ', 'ἲ', 'ὂ', 'ὒ', 'ὢ',
+            'ἃ', 'ἓ', 'ἣ', 'ἳ', 'ὃ', 'ὓ', 'ὣ',
+            'ἆ', 'ἦ', 'ἶ', 'ὖ', 'ὦ',
+            'ἇ', 'ἧ', 'ἷ', 'ὗ', 'ὧ',
+            # With iota subscript
+            'ᾳ', 'ῃ', 'ῳ',
+            'ᾼ', 'ῌ', 'ῼ',
+            # With breathing and iota subscript
+            'ᾀ', 'ᾐ', 'ᾠ', 'ᾁ', 'ᾑ', 'ᾡ',
+            'ᾄ', 'ᾔ', 'ᾤ', 'ᾅ', 'ᾕ', 'ᾥ',
+            'ᾂ', 'ᾒ', 'ᾢ', 'ᾃ', 'ᾓ', 'ᾣ',
+            'ᾆ', 'ᾖ', 'ᾦ', 'ᾇ', 'ᾗ', 'ᾧ',
+            # With accents and iota subscript
+            'ᾴ', 'ῄ', 'ῴ', 'ᾲ', 'ῂ', 'ῲ', 'ᾷ', 'ῇ', 'ῷ'
+        }
+        
+        return char in greek_vowels
+
     def handle_key_press(self, event):
         """Handle special character input.
         
@@ -1761,7 +1898,7 @@ class GreekGrammarApp:
                 prev_char = text[cursor_pos-1:cursor_pos]
                 print(f"Previous character: {prev_char}")
                 
-                if prev_char.lower() in 'αεηιουω':
+                if self.is_greek_vowel(prev_char):
                     result = None
                     if char == '[':
                         result = self.add_smooth_breathing(prev_char)
@@ -1789,75 +1926,264 @@ class GreekGrammarApp:
         return None
 
     def add_smooth_breathing(self, char):
-        """Add smooth breathing to a vowel."""
-        breathings = {
-            'α': 'ἀ', 'ε': 'ἐ', 'η': 'ἠ', 'ι': 'ἰ', 
-            'ο': 'ὀ', 'υ': 'ὐ', 'ω': 'ὠ',
-            'Α': 'Ἀ', 'Ε': 'Ἐ', 'Η': 'Ἠ', 'Ι': 'Ἰ',
-            'Ο': 'Ὀ', 'Υ': 'Υ̓', 'Ω': 'Ὠ'
+        """Add smooth breathing to a vowel, handling existing diacritics."""
+        # Decompose the character to separate base letter from combining marks
+        decomposed = unicodedata.normalize('NFD', char)
+        
+        if not decomposed:
+            return char
+            
+        base_char = decomposed[0]
+        existing_marks = decomposed[1:]
+        
+        # Check if base character can have breathing
+        base_vowels = {
+            'α': 'α', 'ε': 'ε', 'η': 'η', 'ι': 'ι', 
+            'ο': 'ο', 'υ': 'υ', 'ω': 'ω',
+            'Α': 'Α', 'Ε': 'Ε', 'Η': 'Η', 'Ι': 'Ι',
+            'Ο': 'Ο', 'Υ': 'Υ', 'Ω': 'Ω',
+            # Also handle precomposed characters with accents or other marks
+            'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι', 'ό': 'ο', 'ύ': 'υ', 'ώ': 'ω',
+            'ὰ': 'α', 'ὲ': 'ε', 'ὴ': 'η', 'ὶ': 'ι', 'ὸ': 'ο', 'ὺ': 'υ', 'ὼ': 'ω',
+            'ᾶ': 'α', 'ῆ': 'η', 'ῖ': 'ι', 'ῦ': 'υ', 'ῶ': 'ω',
+            'ᾳ': 'α', 'ῃ': 'η', 'ῳ': 'ω'
         }
-        result = breathings.get(char, char)
+        
+        # Get the base vowel (remove any existing accents/breathing)
+        base_vowel = base_vowels.get(base_char, base_char)
+        if base_vowel not in 'αεηιουωΑΕΗΙΟΥΩ':
+            print(f"Cannot add breathing to non-vowel: {char}")
+            return char
+        
+        # Remove any existing breathing marks from existing marks
+        new_marks = [mark for mark in existing_marks if mark not in [SMOOTH_BREATHING, ROUGH_BREATHING]]
+        
+        # Add smooth breathing at the beginning (breathing comes first in canonical order)
+        final_char = base_vowel + SMOOTH_BREATHING + ''.join(new_marks)
+        
+        # Normalize to precomposed form if possible
+        result = unicodedata.normalize('NFC', final_char)
         print(f"Smooth breathing: {char} -> {result}")
         return result
         
     def add_rough_breathing(self, char):
-        """Add rough breathing to a vowel."""
-        breathings = {
-            'α': 'ἁ', 'ε': 'ἑ', 'η': 'ἡ', 'ι': 'ἱ', 
-            'ο': 'ὁ', 'υ': 'ὑ', 'ω': 'ὡ',
-            'Α': 'Ἁ', 'Ε': 'Ἑ', 'Η': 'Ἡ', 'Ι': 'Ἱ',
-            'Ο': 'Ὁ', 'Υ': 'Ὑ', 'Ω': 'Ὡ'
+        """Add rough breathing to a vowel, handling existing diacritics."""
+        # Decompose the character to separate base letter from combining marks
+        decomposed = unicodedata.normalize('NFD', char)
+        
+        if not decomposed:
+            return char
+            
+        base_char = decomposed[0]
+        existing_marks = decomposed[1:]
+        
+        # Check if base character can have breathing
+        base_vowels = {
+            'α': 'α', 'ε': 'ε', 'η': 'η', 'ι': 'ι', 
+            'ο': 'ο', 'υ': 'υ', 'ω': 'ω',
+            'Α': 'Α', 'Ε': 'Ε', 'Η': 'Η', 'Ι': 'Ι',
+            'Ο': 'Ο', 'Υ': 'Υ', 'Ω': 'Ω',
+            # Also handle precomposed characters with accents or other marks
+            'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι', 'ό': 'ο', 'ύ': 'υ', 'ώ': 'ω',
+            'ὰ': 'α', 'ὲ': 'ε', 'ὴ': 'η', 'ὶ': 'ι', 'ὸ': 'ο', 'ὺ': 'υ', 'ὼ': 'ω',
+            'ᾶ': 'α', 'ῆ': 'η', 'ῖ': 'ι', 'ῦ': 'υ', 'ῶ': 'ω',
+            'ᾳ': 'α', 'ῃ': 'η', 'ῳ': 'ω'
         }
-        result = breathings.get(char, char)
+        
+        # Get the base vowel (remove any existing accents/breathing)
+        base_vowel = base_vowels.get(base_char, base_char)
+        if base_vowel not in 'αεηιουωΑΕΗΙΟΥΩ':
+            print(f"Cannot add breathing to non-vowel: {char}")
+            return char
+        
+        # Remove any existing breathing marks from existing marks
+        new_marks = [mark for mark in existing_marks if mark not in [SMOOTH_BREATHING, ROUGH_BREATHING]]
+        
+        # Add rough breathing at the beginning (breathing comes first in canonical order)
+        final_char = base_vowel + ROUGH_BREATHING + ''.join(new_marks)
+        
+        # Normalize to precomposed form if possible
+        result = unicodedata.normalize('NFC', final_char)
         print(f"Rough breathing: {char} -> {result}")
         return result
 
     def add_iota_subscript(self, char):
-        """Add iota subscript to a vowel."""
-        subscripts = {
-            'α': 'ᾳ', 'η': 'ῃ', 'ω': 'ῳ',
-            'Α': 'ᾼ', 'Η': 'ῌ', 'Ω': 'ῼ'
-        }
-        if char not in subscripts:
-            print(f"Cannot add iota subscript to {char}")
+        """Add iota subscript to a vowel, handling existing diacritics."""
+        # Decompose the character to separate base letter from combining marks
+        decomposed = unicodedata.normalize('NFD', char)
+        
+        if not decomposed:
             return char
-        result = subscripts[char]
+            
+        base_char = decomposed[0]
+        existing_marks = decomposed[1:]
+        
+        # Check if base character can have iota subscript
+        base_vowels = {
+            'α': 'α', 'η': 'η', 'ω': 'ω',
+            'Α': 'Α', 'Η': 'Η', 'Ω': 'Ω',
+            # Also handle precomposed characters with accents or breathing
+            'ά': 'α', 'ή': 'η', 'ώ': 'ω',
+            'ὰ': 'α', 'ὴ': 'η', 'ὼ': 'ω',
+            'ᾶ': 'α', 'ῆ': 'η', 'ῶ': 'ω',
+            'ἀ': 'α', 'ἠ': 'η', 'ὠ': 'ω',
+            'ἁ': 'α', 'ἡ': 'η', 'ὡ': 'ω',
+            'ἄ': 'α', 'ἤ': 'η', 'ὤ': 'ω',
+            'ἅ': 'α', 'ἥ': 'η', 'ὥ': 'ω',
+            'ἂ': 'α', 'ἢ': 'η', 'ὢ': 'ω',
+            'ἃ': 'α', 'ἣ': 'η', 'ὣ': 'ω',
+            'ἆ': 'α', 'ἦ': 'η', 'ὦ': 'ω',
+            'ἇ': 'α', 'ἧ': 'η', 'ὧ': 'ω'
+        }
+        
+        # Get the base vowel (remove any existing accents/breathing)
+        base_vowel = base_vowels.get(base_char, base_char)
+        if base_vowel not in 'αηωΑΗΩ':
+            print(f"Cannot add iota subscript to {char} (only α, η, ω can have iota subscript)")
+            return char
+        
+        # Check if iota subscript already exists
+        if IOTA_SUBSCRIPT in existing_marks:
+            print(f"Iota subscript already present in {char}")
+            return char
+        
+        # Add iota subscript at the end (it comes last in canonical order)
+        final_char = base_vowel + ''.join(existing_marks) + IOTA_SUBSCRIPT
+        
+        # Normalize to precomposed form if possible
+        result = unicodedata.normalize('NFC', final_char)
         print(f"Iota subscript: {char} -> {result}")
         return result
 
     def add_acute_accent(self, char):
-        """Add acute accent to a vowel."""
-        accents = {
-            'α': 'ά', 'ε': 'έ', 'η': 'ή', 'ι': 'ί', 
-            'ο': 'ό', 'υ': 'ύ', 'ω': 'ώ',
-            'Α': 'Ά', 'Ε': 'Έ', 'Η': 'Ή', 'Ι': 'Ί',
-            'Ο': 'Ό', 'Υ': 'Ύ', 'Ω': 'Ώ'
+        """Add acute accent to a vowel, handling existing diacritics."""
+        # Decompose the character to separate base letter from combining marks
+        decomposed = unicodedata.normalize('NFD', char)
+        
+        if not decomposed:
+            return char
+            
+        base_char = decomposed[0]
+        existing_marks = decomposed[1:]
+        
+        # Check if base character can have accent
+        base_vowels = {
+            'α': 'α', 'ε': 'ε', 'η': 'η', 'ι': 'ι', 
+            'ο': 'ο', 'υ': 'υ', 'ω': 'ω',
+            'Α': 'Α', 'Ε': 'Ε', 'Η': 'Η', 'Ι': 'Ι',
+            'Ο': 'Ο', 'Υ': 'Υ', 'Ω': 'Ω',
+            # Also handle precomposed characters with breathing or other marks
+            'ἀ': 'α', 'ἐ': 'ε', 'ἠ': 'η', 'ἰ': 'ι', 'ὀ': 'ο', 'ὐ': 'υ', 'ὠ': 'ω',
+            'ἁ': 'α', 'ἑ': 'ε', 'ἡ': 'η', 'ἱ': 'ι', 'ὁ': 'ο', 'ὑ': 'υ', 'ὡ': 'ω',
+            'ᾳ': 'α', 'ῃ': 'η', 'ῳ': 'ω'
         }
-        result = accents.get(char, char)
+        
+        # Get the base vowel (remove any existing accents/breathing)
+        base_vowel = base_vowels.get(base_char, base_char)
+        if base_vowel not in 'αεηιουωΑΕΗΙΟΥΩ':
+            print(f"Cannot add accent to non-vowel: {char}")
+            return char
+        
+        # Remove any existing accent marks from existing marks
+        accent_marks = ['\u0301', '\u0300', '\u0342']  # acute, grave, circumflex
+        new_marks = [mark for mark in existing_marks if mark not in accent_marks]
+        
+        # Add acute accent in proper position (after breathing, before iota subscript)
+        breathing_marks = [mark for mark in new_marks if mark in [SMOOTH_BREATHING, ROUGH_BREATHING]]
+        other_marks = [mark for mark in new_marks if mark not in [SMOOTH_BREATHING, ROUGH_BREATHING]]
+        
+        final_char = base_vowel + ''.join(breathing_marks) + '\u0301' + ''.join(other_marks)
+        
+        # Normalize to precomposed form if possible
+        result = unicodedata.normalize('NFC', final_char)
         print(f"Acute accent: {char} -> {result}")
         return result
 
     def add_grave_accent(self, char):
-        """Add grave accent to a vowel."""
-        accents = {
-            'α': 'ὰ', 'ε': 'ὲ', 'η': 'ὴ', 'ι': 'ὶ', 
-            'ο': 'ὸ', 'υ': 'ὺ', 'ω': 'ὼ',
-            'Α': 'Ὰ', 'Ε': 'Ὲ', 'Η': 'Ὴ', 'Ι': 'Ὶ',
-            'Ο': 'Ὸ', 'Υ': 'Ὺ', 'Ω': 'Ὼ'
+        """Add grave accent to a vowel, handling existing diacritics."""
+        # Decompose the character to separate base letter from combining marks
+        decomposed = unicodedata.normalize('NFD', char)
+        
+        if not decomposed:
+            return char
+            
+        base_char = decomposed[0]
+        existing_marks = decomposed[1:]
+        
+        # Check if base character can have accent
+        base_vowels = {
+            'α': 'α', 'ε': 'ε', 'η': 'η', 'ι': 'ι', 
+            'ο': 'ο', 'υ': 'υ', 'ω': 'ω',
+            'Α': 'Α', 'Ε': 'Ε', 'Η': 'Η', 'Ι': 'Ι',
+            'Ο': 'Ο', 'Υ': 'Υ', 'Ω': 'Ω',
+            # Also handle precomposed characters with breathing or other marks
+            'ἀ': 'α', 'ἐ': 'ε', 'ἠ': 'η', 'ἰ': 'ι', 'ὀ': 'ο', 'ὐ': 'υ', 'ὠ': 'ω',
+            'ἁ': 'α', 'ἑ': 'ε', 'ἡ': 'η', 'ἱ': 'ι', 'ὁ': 'ο', 'ὑ': 'υ', 'ὡ': 'ω',
+            'ᾳ': 'α', 'ῃ': 'η', 'ῳ': 'ω'
         }
-        result = accents.get(char, char)
+        
+        # Get the base vowel (remove any existing accents/breathing)
+        base_vowel = base_vowels.get(base_char, base_char)
+        if base_vowel not in 'αεηιουωΑΕΗΙΟΥΩ':
+            print(f"Cannot add accent to non-vowel: {char}")
+            return char
+        
+        # Remove any existing accent marks from existing marks
+        accent_marks = ['\u0301', '\u0300', '\u0342']  # acute, grave, circumflex
+        new_marks = [mark for mark in existing_marks if mark not in accent_marks]
+        
+        # Add grave accent in proper position (after breathing, before iota subscript)
+        breathing_marks = [mark for mark in new_marks if mark in [SMOOTH_BREATHING, ROUGH_BREATHING]]
+        other_marks = [mark for mark in new_marks if mark not in [SMOOTH_BREATHING, ROUGH_BREATHING]]
+        
+        final_char = base_vowel + ''.join(breathing_marks) + '\u0300' + ''.join(other_marks)
+        
+        # Normalize to precomposed form if possible
+        result = unicodedata.normalize('NFC', final_char)
         print(f"Grave accent: {char} -> {result}")
         return result
 
     def add_circumflex_accent(self, char):
-        """Add circumflex accent to a vowel."""
-        accents = {
-            'α': 'ᾶ', 'η': 'ῆ', 'ι': 'ῖ', 
-            'υ': 'ῦ', 'ω': 'ῶ',
-            'Α': 'ᾶ', 'Η': 'ῆ', 'Ι': 'ῖ',
-            'Υ': 'ῦ', 'Ω': 'ῶ'
+        """Add circumflex accent to a vowel, handling existing diacritics."""
+        # Decompose the character to separate base letter from combining marks
+        decomposed = unicodedata.normalize('NFD', char)
+        
+        if not decomposed:
+            return char
+            
+        base_char = decomposed[0]
+        existing_marks = decomposed[1:]
+        
+        # Check if base character can have circumflex (only α, η, ι, υ, ω can have circumflex)
+        base_vowels = {
+            'α': 'α', 'η': 'η', 'ι': 'ι', 
+            'υ': 'υ', 'ω': 'ω',
+            'Α': 'Α', 'Η': 'Η', 'Ι': 'Ι',
+            'Υ': 'Υ', 'Ω': 'Ω',
+            # Also handle precomposed characters with breathing or other marks
+            'ἀ': 'α', 'ἠ': 'η', 'ἰ': 'ι', 'ὐ': 'υ', 'ὠ': 'ω',
+            'ἁ': 'α', 'ἡ': 'η', 'ἱ': 'ι', 'ὑ': 'υ', 'ὡ': 'ω',
+            'ᾳ': 'α', 'ῃ': 'η', 'ῳ': 'ω'
         }
-        result = accents.get(char, char)
+        
+        # Get the base vowel (remove any existing accents/breathing)
+        base_vowel = base_vowels.get(base_char, base_char)
+        if base_vowel not in 'αηιυωΑΗΙΥΩ':
+            print(f"Cannot add circumflex to {char} (only α, η, ι, υ, ω can have circumflex)")
+            return char
+        
+        # Remove any existing accent marks from existing marks
+        accent_marks = ['\u0301', '\u0300', '\u0342']  # acute, grave, circumflex
+        new_marks = [mark for mark in existing_marks if mark not in accent_marks]
+        
+        # Add circumflex accent in proper position (after breathing, before iota subscript)
+        breathing_marks = [mark for mark in new_marks if mark in [SMOOTH_BREATHING, ROUGH_BREATHING]]
+        other_marks = [mark for mark in new_marks if mark not in [SMOOTH_BREATHING, ROUGH_BREATHING]]
+        
+        final_char = base_vowel + ''.join(breathing_marks) + '\u0342' + ''.join(other_marks)
+        
+        # Normalize to precomposed form if possible
+        result = unicodedata.normalize('NFC', final_char)
         print(f"Circumflex accent: {char} -> {result}")
         return result
 
@@ -3497,6 +3823,11 @@ class GreekGrammarApp:
         if not current_paradigm:
             return
         
+        # Capture user answers BEFORE revealing
+        user_answers_before_reveal = {}
+        for entry_key, entry in self.entries.items():
+            user_answers_before_reveal[entry_key] = entry.get().strip()
+        
         # Clear error indicators
         for error_label in self.error_labels.values():
             error_label.grid_remove()
@@ -3685,9 +4016,119 @@ class GreekGrammarApp:
                             entry.configure(bg='#FFB6B6')  # Light red color
                             self.incorrect_entries.add(entry_key)
         
+        # Record attempt in Learn Mode BEFORE revealing answers
+        if self.learn_mode_enabled.get() and self.current_session:
+            self.record_learn_mode_attempt(user_answers_before_reveal)
+        
         # Mark that answers have been revealed and update button
         self.has_revealed = True
         self.update_reset_retry_button()
+
+    def record_learn_mode_attempt(self, user_answers_before_reveal=None):
+        """Record the current table attempt in Learn Mode"""
+        if not self.current_session or not self.entries:
+            return
+        
+        # Get current paradigm info
+        paradigm_type = self.type_var.get()
+        paradigm_name = self.mode_var.get()
+        
+        # Use provided user answers or collect current ones (fallback)
+        if user_answers_before_reveal is not None:
+            user_answers = user_answers_before_reveal
+        else:
+            user_answers = {}
+            for entry_key, entry in self.entries.items():
+                user_answers[entry_key] = entry.get().strip()
+        
+        # Get correct answers
+        correct_answers = {}
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            return
+        
+        current_type = self.type_var.get()
+        
+        if current_type == "Adjective":
+            # Handle adjective answers
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            is_two_termination = current_paradigm.get("type") == "adjective_2termination"
+            genders = ["masculine", "neuter"] if is_two_termination else ["masculine", "feminine", "neuter"]
+            
+            for case in cases:
+                for gender in genders:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{gender}_{number}"
+                        if entry_key in self.entries and gender in current_paradigm:
+                            answer_key = f"{case}_{number}"
+                            if answer_key in current_paradigm[gender]:
+                                correct_answers[entry_key] = current_paradigm[gender][answer_key]
+        
+        elif current_type == "Pronoun":
+            # Handle pronoun answers
+            pronoun_cases = ["Nominative", "Accusative", "Genitive", "Dative"]
+            mode = self.mode_var.get()
+            
+            if "Personal I" in mode or "Personal You" in mode:
+                for case in pronoun_cases:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{number}"
+                        if entry_key in self.entries and entry_key in current_paradigm:
+                            correct_answers[entry_key] = current_paradigm[entry_key]
+            else:
+                genders = ["masculine", "feminine", "neuter"]
+                for case in pronoun_cases:
+                    for gender in genders:
+                        for number in ["sg", "pl"]:
+                            entry_key = f"{case}_{gender}_{number}"
+                            if entry_key in self.entries and gender in current_paradigm:
+                                answer_key = f"{case}_{number}"
+                                if answer_key in current_paradigm[gender]:
+                                    correct_answers[entry_key] = current_paradigm[gender][answer_key]
+        
+        elif current_type == "Verb":
+            # Handle verb answers
+            current_mood = self.mood_var.get()
+            
+            if current_mood == "Infinitive":
+                voices = ["active", "middle", "passive"]
+                for voice in voices:
+                    entry_key = f"inf_{voice}"
+                    if entry_key in self.entries and entry_key in current_paradigm:
+                        correct_answers[entry_key] = current_paradigm[entry_key]
+            else:
+                persons = ["1st", "2nd", "3rd"]
+                for person in persons:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{person}_{number}"
+                        if entry_key in self.entries and entry_key in current_paradigm:
+                            correct_answers[entry_key] = current_paradigm[entry_key]
+        
+        else:
+            # Handle noun answers
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            for case in cases:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{case}_{number}"
+                    if entry_key in self.entries and entry_key in current_paradigm:
+                        correct_answers[entry_key] = current_paradigm[entry_key]
+        
+        # Calculate time taken if we tracked start time
+        time_taken = None
+        if self.attempt_start_time:
+            time_taken = int((datetime.now() - self.attempt_start_time).total_seconds())
+        
+        # Record the attempt
+        accuracy = self.current_session.record_table_attempt(
+            paradigm_type, paradigm_name, user_answers, correct_answers, time_taken
+        )
+        
+        # Update progress display
+        session_stats = self.current_session.get_session_stats()
+        self.progress_tracker.update_session_stats(session_stats)
+        
+        print(f"Learn Mode: Recorded attempt for {paradigm_type} - {paradigm_name}, "
+              f"Accuracy: {accuracy:.1f}%, Session total: {session_stats['total_attempts']} attempts")
 
     def check_answer_correctness(self, user_answer, correct_answer):
         """Check if user's answer matches the correct answer, ignoring accents and breathing marks."""
@@ -3803,6 +4244,10 @@ class GreekGrammarApp:
         self.has_revealed = False
         self.incorrect_entries.clear()
         self.update_reset_retry_button()
+        
+        # Start timing for Learn Mode
+        if self.learn_mode_enabled.get():
+            self.attempt_start_time = datetime.now()
 
     def reset_table(self):
         """Clear all entries and error indicators."""
@@ -3829,6 +4274,10 @@ class GreekGrammarApp:
         self.incorrect_entries.clear()
         self.update_reset_retry_button()
         
+        # Start timing for Learn Mode
+        if self.learn_mode_enabled.get():
+            self.attempt_start_time = datetime.now()
+        
         # Clear dictionaries and recreate the table
         self.entries.clear()
         self.error_labels.clear()
@@ -3851,26 +4300,56 @@ Navigation:
 • Left/Right arrows: Move between singular/plural
 • Tab: Move between fields
 
-Special Characters:
-• Type a vowel (α, ε, η, ι, ο, υ, ω) followed by:
-  - ] for rough breathing (e.g., o] → ὁ)
-  - [ for smooth breathing (e.g., η[ → ἡ)
-  - { for iota subscript (e.g., α{ → ᾳ)
+Special Characters & Diacritics:
+Type a vowel (α, ε, η, ι, ο, υ, ω) followed by diacritic shortcuts:
+
+Breathing Marks:
+• [ for smooth breathing (e.g., α[ → ἀ, ε[ → ἐ)
+• ] for rough breathing (e.g., α] → ἁ, ε] → ἑ)
+
+Accents:
+• / for acute accent (e.g., α/ → ά, ε/ → έ)
+• \\ for grave accent (e.g., α\\ → ὰ, ε\\ → ὲ)
+• = for circumflex accent (e.g., α= → ᾶ, η= → ῆ)
+
+Iota Subscript:
+• { for iota subscript (e.g., α{ → ᾳ, η{ → ῃ, ω{ → ῳ)
+  (Only α, η, ω can have iota subscript)
+
+Combining Diacritics:
+The system now supports combining multiple diacritics!
+• ἀ{ → ᾀ (smooth breathing + iota subscript)
+• ἁ/ → ἅ (rough breathing + acute accent)
+• ὠ= → ὦ (smooth breathing + circumflex)
+• ᾳ[ → ᾀ (iota subscript + smooth breathing)
+• ἄ{ → ᾄ (breathing + accent + iota subscript)
 
 Tips:
 • The word to decline is shown above the table
 • Gold background indicates correct answers
 • Red X marks indicate incorrect answers
-• Accents are not required'''
+• Accents are not required for checking
+• You can add diacritics in any order - the system will handle them correctly'''
 
         help_window = tk.Toplevel(self.root)
         help_window.title("Greek Grammar Help")
-        help_window.geometry("400x500")
+        help_window.geometry("500x650")
 
-        text_widget = tk.Text(help_window, wrap=tk.WORD, padx=10, pady=10)
+        # Create frame for text widget and scrollbar
+        text_frame = ttk.Frame(help_window)
+        text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Create text widget with scrollbar
+        text_widget = tk.Text(text_frame, wrap=tk.WORD, padx=10, pady=10)
+        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
+        text_widget.configure(yscrollcommand=scrollbar.set)
+        
         text_widget.insert("1.0", help_text)
         text_widget.config(state='disabled')
-        text_widget.pack(fill=tk.BOTH, expand=True)
+        
+        # Pack text widget and scrollbar
+        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     def handle_enter(self, event, current_key):
         """Handle Enter key press in form fields."""
