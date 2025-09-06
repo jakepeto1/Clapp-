@@ -3,9 +3,17 @@ from tkinter import ttk, messagebox, font
 import json
 import unicodedata
 import sys
+import os
 from datetime import datetime
 from database import DatabaseManager
 from learn_mode import UserManager, LearningSession, ProgressTracker
+
+# Try to import PIL for better image handling
+try:
+    from PIL import Image, ImageTk
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
 
 # Unicode combining characters for Greek diacritics
 SMOOTH_BREATHING = '\u0313'  # ᾿
@@ -40,12 +48,12 @@ class PracticeConfig:
         self.prefill_stems.set(False)
         self.randomize_next.set(False)
 
-class GreekGrammarApp:
+class StoaGrammarApp:
     """Provides an interactive interface for practicing Greek declensions."""
     
     def __init__(self, root):
         self.root = root
-        self.root.title("Ancient Greek Grammar Study")
+        self.root.title("Stoa Grammar Study")
         
         # Initialize state variables
         self.table_frame = None
@@ -92,6 +100,10 @@ class GreekGrammarApp:
         self.normal_font = font.Font(family=self.greek_font[0], size=self.greek_font[1])
         self.bold_font = font.Font(family=self.greek_font[0], size=self.greek_font[1], weight='bold')
         
+        # Load logos
+        self.header_logo = self.load_header_logo()  # Long logo for header
+        self.app_icon = self.load_app_icon()        # Small icon for window
+        
         # Configure styles for better appearance
         style = ttk.Style()
         style.configure('Title.TLabel', font=('Arial', 24, 'bold'), padding=(0, 10))
@@ -123,10 +135,6 @@ class GreekGrammarApp:
         self.main_frame.grid_rowconfigure(2, weight=0)  # Selector row - fixed
         self.main_frame.grid_rowconfigure(3, weight=1)  # Table row - expandable
         self.main_frame.grid_rowconfigure(4, weight=0)  # Button row - fixed
-        self.main_frame.grid_columnconfigure(0, weight=1)  # Center everything horizontally
-        self.main_frame.grid_rowconfigure(2, weight=0)  # Word row - fixed
-        self.main_frame.grid_rowconfigure(3, weight=1)  # Table row - expandable (moved up)
-        self.main_frame.grid_rowconfigure(4, weight=0)  # Button row - fixed
         for i in range(3):
             self.main_frame.grid_columnconfigure(i, weight=1)
 
@@ -140,12 +148,28 @@ class GreekGrammarApp:
         title_frame.grid_columnconfigure(1, weight=0)  # Practice options column
         title_frame.grid_columnconfigure(2, weight=0)  # Help button column
         
-        title_label = ttk.Label(
-            title_frame, 
-            text="Ancient Greek Grammar Study",
-            style='Title.TLabel'
-        )
-        title_label.grid(row=0, column=0, sticky='w')
+        # Logo or title
+        if self.header_logo:
+            # Use header logo (long logo)
+            logo_label = ttk.Label(title_frame, image=self.header_logo)
+            logo_label.grid(row=0, column=0, sticky='w')
+            # Keep a reference to prevent garbage collection
+            logo_label.image = self.header_logo
+        else:
+            # Fallback to text title
+            title_label = ttk.Label(
+                title_frame, 
+                text="Stoa Grammar Study",
+                style='Title.TLabel'
+            )
+            title_label.grid(row=0, column=0, sticky='w')
+            
+        # Set window icon (small icon)
+        if self.app_icon:
+            try:
+                self.root.iconphoto(True, self.app_icon)
+            except Exception as e:
+                print(f"Could not set window icon: {e}")
         
         # Practice options in top corner (simplified)
         practice_options_frame = ttk.Frame(title_frame)
@@ -338,13 +362,18 @@ class GreekGrammarApp:
             font=('Arial', 16),
             foreground="black",
             background="white",
-            activeforeground="black",
+            activeforeground="gold",
             activebackground="#f0f0f0",
             relief="flat",
             borderwidth=0,
             command=self.toggle_star,
             cursor="hand2"
         )
+        
+        # Add hover effects to star button
+        self.star_button.bind("<Enter>", self.on_star_hover_enter)
+        self.star_button.bind("<Leave>", self.on_star_hover_leave)
+        
         self.star_button.grid(row=0, column=2, padx=(10, 0))
         
         # Initialize star button state
@@ -359,7 +388,6 @@ class GreekGrammarApp:
         # Initialize navigation history with initial state
         self.table_history = []
         self.current_history_index = -1  # Start at -1 since we're about to add first state
-        print("Initializing navigation history")
         # Initial state will be saved by save_current_state
         self.save_current_state()
 
@@ -389,7 +417,6 @@ class GreekGrammarApp:
                 self.progress_tracker.create_progress_display()
                 self.attempt_start_time = None
                 messagebox.showinfo("Learn Mode", f"Learn Mode enabled for {user['username']}")
-                print(f"Learn Mode enabled for user: {user['username']} ({user['user_id']})")
             else:
                 # User cancelled, disable Learn Mode
                 self.learn_mode_enabled.set(False)
@@ -408,7 +435,6 @@ class GreekGrammarApp:
             self.current_user = None
             self.current_session = None
             self.progress_tracker.hide_progress_display()
-            print("Learn Mode disabled")
 
     def update_word_display(self):
         """Update the word display by extracting the word from the mode name."""
@@ -481,7 +507,6 @@ class GreekGrammarApp:
         if len(self.table_history) == 0 or force:
             self.table_history.append(current_state)
             self.current_history_index = len(self.table_history) - 1
-            print(f"State saved (initial/forced). Total states: {len(self.table_history)}, Current index: {self.current_history_index}")
             return
 
         # If this state is different from the current one
@@ -493,13 +518,9 @@ class GreekGrammarApp:
             # Add the new state
             self.table_history.append(current_state)
             self.current_history_index = len(self.table_history) - 1
-            print(f"New state saved. Total states: {len(self.table_history)}, Current index: {self.current_history_index}")
-        else:
-            print(f"State unchanged. Total states: {len(self.table_history)}, Current index: {self.current_history_index}")
 
     def next_answer(self):
         """Navigate to the next item in the current dropdown list."""
-        print("Next button pressed")
         
         # Check if randomize next is enabled
         if self.config.randomize_next.get():
@@ -531,7 +552,6 @@ class GreekGrammarApp:
                 
             except ValueError:
                 # Current mode not found in list, stay at current mode
-                print(f"Debug: Current mode '{current_mode}' not found in starred modes list")
                 pass
         elif current_type == "Verb":
             # For verbs, use the complex voice/tense/mood navigation
@@ -552,7 +572,6 @@ class GreekGrammarApp:
                 
             except ValueError:
                 # Current mode not found in list, stay at current mode
-                print(f"Debug: Current mode '{current_mode}' not found in modes list")
                 pass
         
         # Clear all entries and apply prefill stems if enabled for the new combination
@@ -876,7 +895,6 @@ class GreekGrammarApp:
             
         except ValueError:
             # Current mode not found in list, stay at current mode
-            print(f"Debug: Current verb mode '{current_mode}' not found in verb modes list")
             pass
 
     def create_declension_table(self):
@@ -884,20 +902,22 @@ class GreekGrammarApp:
         if self.table_frame:
             self.table_frame.destroy()
             
-        # Create a container frame that can expand to fill available space
+        # Create a container frame that can expand and center content
+        # Table can now use full space since buttons are floating
         table_container = ttk.Frame(self.main_frame)
-        table_container.grid(row=3, column=0, columnspan=3, sticky='nsew')
-        table_container.grid_columnconfigure(0, weight=1)  # Center the table horizontally
-        table_container.grid_rowconfigure(0, weight=1)     # Center the table vertically
+        table_container.grid(row=3, column=0, columnspan=3, rowspan=2, sticky='nsew')
+        table_container.grid_columnconfigure(0, weight=1)  # Left padding
+        table_container.grid_columnconfigure(1, weight=0)  # Table content
+        table_container.grid_columnconfigure(2, weight=1)  # Right padding
+        table_container.grid_rowconfigure(0, weight=1)
         
-        # Create the table frame inside the container with minimal padding for spacing
+        # Create the table frame in the center column - add bottom padding for floating buttons
         self.table_frame = ttk.Frame(table_container)
-        self.table_frame.grid(row=0, column=0, sticky='nsew', padx=20, pady=20)  # Reduced horizontal padding for smaller table
+        self.table_frame.grid(row=0, column=1, sticky='nsew', padx=20, pady=(0, 80))
         
-        # Configure grid weights for the table frame
-        self.table_frame.grid_columnconfigure(0, weight=1)
-        self.table_frame.grid_columnconfigure(1, weight=1)
-        self.table_frame.grid_columnconfigure(2, weight=1)
+        # Configure grid weights for responsive design
+        for i in range(10):  # Allow for up to 10 columns (adjectives can have 6+ columns)
+            self.table_frame.grid_columnconfigure(i, weight=1)
         
         current_paradigm = self.get_current_paradigm()
         if not current_paradigm:
@@ -915,15 +935,16 @@ class GreekGrammarApp:
         else:
             self.create_noun_table(current_paradigm)
         
-        # Bottom button frame positioned after table, stays at bottom when window resizes
+        # Bottom button frame positioned as overlay to allow table to extend underneath
         bottom_button_frame = ttk.Frame(self.main_frame)
-        bottom_button_frame.grid(row=4, column=0, sticky='ew', pady=(20, 20))
+        # Use place instead of grid to create floating buttons that don't constrain table space
+        bottom_button_frame.place(relx=0.0, rely=1.0, anchor='sw', relwidth=1.0)
         
         # Container frame for buttons to allow centering
         button_container = ttk.Frame(bottom_button_frame)
         button_container.grid(row=0, column=1, pady=10)
         
-        # Configure the bottom frame for centering
+        # Configure the bottom frame for centering floating buttons
         bottom_button_frame.grid_columnconfigure(0, weight=1)  # Left padding space
         bottom_button_frame.grid_columnconfigure(1, weight=0)  # Button container (centered)
         bottom_button_frame.grid_columnconfigure(2, weight=1)  # Right padding space
@@ -1956,14 +1977,12 @@ class GreekGrammarApp:
         
         # Handle special diacritic keys
         if char in ['[', ']', '{', '/', '\\', '=']:
-            print(f"Diacritic key detected: {char}")
             cursor_pos = entry.index(tk.INSERT)
             
             # Get the character before the cursor
             if cursor_pos > 0:
                 text = entry.get()
                 prev_char = text[cursor_pos-1:cursor_pos]
-                print(f"Previous character: {prev_char}")
                 
                 if self.is_greek_vowel(prev_char):
                     result = None
@@ -1983,7 +2002,6 @@ class GreekGrammarApp:
                     if result and result != prev_char:
                         entry.delete(cursor_pos-1, cursor_pos)
                         entry.insert(cursor_pos-1, result)
-                        print(f"Inserted character with diacritic: {result}")
                         # Position cursor after the modified character
                         entry.icursor(cursor_pos)
             
@@ -2030,7 +2048,6 @@ class GreekGrammarApp:
         
         # Normalize to precomposed form if possible
         result = unicodedata.normalize('NFC', final_char)
-        print(f"Smooth breathing: {char} -> {result}")
         return result
         
     def add_rough_breathing(self, char):
@@ -2071,7 +2088,6 @@ class GreekGrammarApp:
         
         # Normalize to precomposed form if possible
         result = unicodedata.normalize('NFC', final_char)
-        print(f"Rough breathing: {char} -> {result}")
         return result
 
     def add_iota_subscript(self, char):
@@ -2119,7 +2135,6 @@ class GreekGrammarApp:
         
         # Normalize to precomposed form if possible
         result = unicodedata.normalize('NFC', final_char)
-        print(f"Iota subscript: {char} -> {result}")
         return result
 
     def add_acute_accent(self, char):
@@ -2163,7 +2178,6 @@ class GreekGrammarApp:
         
         # Normalize to precomposed form if possible
         result = unicodedata.normalize('NFC', final_char)
-        print(f"Acute accent: {char} -> {result}")
         return result
 
     def add_grave_accent(self, char):
@@ -2207,7 +2221,6 @@ class GreekGrammarApp:
         
         # Normalize to precomposed form if possible
         result = unicodedata.normalize('NFC', final_char)
-        print(f"Grave accent: {char} -> {result}")
         return result
 
     def add_circumflex_accent(self, char):
@@ -4453,7 +4466,7 @@ class GreekGrammarApp:
 
     def show_help(self):
         """Show help dialog."""
-        help_text = '''Ancient Greek Grammar Study
+        help_text = '''Stoa Grammar Study
 
 Instructions:
 1. Select a declension type from the dropdown menu
@@ -4500,7 +4513,7 @@ Tips:
 • You can add diacritics in any order - the system will handle them correctly'''
 
         help_window = tk.Toplevel(self.root)
-        help_window.title("Greek Grammar Help")
+        help_window.title("Stoa Grammar Help")
         help_window.geometry("500x650")
 
         # Create frame for text widget and scrollbar
@@ -5012,7 +5025,6 @@ Tips:
                 with open(self.starred_file, 'r', encoding='utf-8') as f:
                     starred_list = json.load(f)
                     self.starred_items = set(starred_list)
-                    print(f"Loaded {len(self.starred_items)} starred items")
         except Exception as e:
             print(f"Error loading starred items: {e}")
             self.starred_items = set()
@@ -5026,6 +5038,131 @@ Tips:
             print(f"Saved {len(self.starred_items)} starred items")
         except Exception as e:
             print(f"Error saving starred items: {e}")
+
+    def load_header_logo(self):
+        """Load and resize the long logo for the app header."""
+        logo_paths = [
+            os.path.join('assets', 'stoa long logo.png'),
+            os.path.join('assets', 'stoa long logo.jpg'),
+            os.path.join('assets', 'stoa long logo.jpeg'),
+            'stoa long logo.png',
+            'stoa long logo.jpg',
+            'stoa long logo.jpeg'
+        ]
+        
+        for logo_path in logo_paths:
+            if os.path.exists(logo_path):
+                try:
+                    if PIL_AVAILABLE:
+                        # Use PIL for better resizing
+                        image = Image.open(logo_path)
+                        # Resize long logo to fit nicely in header
+                        image = image.convert("RGBA")
+                        original_width, original_height = image.size
+                        
+                        # Calculate new size maintaining aspect ratio
+                        # Target height for header logo (100px for good balance)
+                        max_height = 100
+                        max_width = 600  # Allow wider for long logo
+                        
+                        # Calculate scaling factor
+                        height_ratio = max_height / original_height
+                        width_ratio = max_width / original_width
+                        ratio = min(height_ratio, width_ratio, 1.0)  # Don't upscale
+                        
+                        if ratio < 1.0:  # Only resize if needed
+                            new_width = int(original_width * ratio)
+                            new_height = int(original_height * ratio)
+                            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                        
+                        return ImageTk.PhotoImage(image)
+                    else:
+                        # Fallback: tkinter PhotoImage with subsample for size reduction
+                        if logo_path.lower().endswith('.png'):
+                            original_image = tk.PhotoImage(file=logo_path)
+                            
+                            # Get original dimensions
+                            original_width = original_image.width()
+                            original_height = original_image.height()
+                            
+                            # Calculate subsample factor to reduce size
+                            # Target height ~100px for header logo
+                            target_height = 100
+                            if original_height > target_height:
+                                subsample_factor = max(1, original_height // target_height)
+                                return original_image.subsample(subsample_factor, subsample_factor)
+                            else:
+                                return original_image
+                        else:
+                            print(f"PIL not available. Cannot load {logo_path}. Please use PNG format or install PIL.")
+                            continue
+                            
+                except Exception as e:
+                    print(f"Error loading header logo from {logo_path}: {e}")
+                    continue
+        
+        print("No header logo found. Searched paths:", logo_paths)
+        return None
+
+    def load_app_icon(self):
+        """Load the small icon for the app window."""
+        icon_paths = [
+            os.path.join('assets', 'stoa small logo.png'),
+            os.path.join('assets', 'stoa small logo.jpg'),
+            os.path.join('assets', 'stoa small logo.jpeg'),
+            'stoa small logo.png',
+            'stoa small logo.jpg',
+            'stoa small logo.jpeg'
+        ]
+        
+        for icon_path in icon_paths:
+            if os.path.exists(icon_path):
+                try:
+                    if PIL_AVAILABLE:
+                        # Use PIL for better resizing
+                        image = Image.open(icon_path)
+                        # Keep icon small for window icon
+                        image = image.convert("RGBA")
+                        original_width, original_height = image.size
+                        
+                        # Target size for window icon (small)
+                        max_size = 32  # Standard window icon size
+                        
+                        # Calculate scaling factor
+                        ratio = min(max_size / original_width, max_size / original_height, 1.0)
+                        
+                        if ratio < 1.0:  # Only resize if needed
+                            new_width = int(original_width * ratio)
+                            new_height = int(original_height * ratio)
+                            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                        
+                        return ImageTk.PhotoImage(image)
+                    else:
+                        # Fallback: tkinter PhotoImage
+                        if icon_path.lower().endswith('.png'):
+                            original_image = tk.PhotoImage(file=icon_path)
+                            
+                            # Get original dimensions
+                            original_width = original_image.width()
+                            original_height = original_image.height()
+                            
+                            # Calculate subsample factor for small icon
+                            target_size = 32
+                            if original_width > target_size or original_height > target_size:
+                                subsample_factor = max(1, max(original_width, original_height) // target_size)
+                                return original_image.subsample(subsample_factor, subsample_factor)
+                            else:
+                                return original_image
+                        else:
+                            print(f"PIL not available. Cannot load {icon_path}. Please use PNG format or install PIL.")
+                            continue
+                            
+                except Exception as e:
+                    print(f"Error loading app icon from {icon_path}: {e}")
+                    continue
+        
+        print("No app icon found. Searched paths:", icon_paths)
+        return None
 
     def get_current_item_key(self):
         """Get the current table's key for starring (format: 'type:mode')."""
@@ -5163,14 +5300,32 @@ Tips:
             is_starred = self.is_current_item_starred()
             
             if current_type == "Starred":
-                # In starred mode, always show filled star (can only unstar)
-                self.star_button.config(text="★", foreground="black")
+                # In starred mode, always show filled yellow star (can only unstar)
+                self.star_button.config(text="★", foreground="gold")
             elif is_starred:
-                # In normal mode but item is starred - filled star
-                self.star_button.config(text="★", foreground="black")
+                # In normal mode but item is starred - filled yellow star
+                self.star_button.config(text="★", foreground="gold")
             else:
-                # In normal mode and item is not starred - outline star
+                # In normal mode and item is not starred - outline black star
                 self.star_button.config(text="☆", foreground="black")
+
+    def on_star_hover_enter(self, event):
+        """Handle mouse entering the star button area."""
+        if self.star_button:
+            is_starred = self.is_current_item_starred()
+            if is_starred:
+                # Hover effect for starred items - brighter yellow
+                self.star_button.config(foreground="#FFD700", background="#FFF8DC")
+            else:
+                # Hover effect for unstarred items - preview yellow
+                self.star_button.config(text="★", foreground="#FFD700", background="#FFF8DC")
+
+    def on_star_hover_leave(self, event):
+        """Handle mouse leaving the star button area."""
+        if self.star_button:
+            # Reset to normal appearance
+            self.star_button.config(background="white")
+            self.update_star_button()  # Restore normal state
 
     def get_starred_display_items(self):
         """Get list of starred items formatted for dropdown display."""
@@ -5222,21 +5377,16 @@ Tips:
 
 def main():
     try:
-        print("Starting application...")
         root = tk.Tk()
-        root.title("Ancient Greek Grammar Study")
+        root.title("Stoa Grammar Study")
         
-        print("Configuring window...")
         root.minsize(600, 400)
         root.geometry("800x600")
         
-        print("Configuring styles...")
         style = ttk.Style()
         style.configure('Content.TFrame', background='white', relief='solid')
         
-        print("Creating application...")
-        app = GreekGrammarApp(root)
-        print("Starting main loop...")
+        app = StoaGrammarApp(root)
         root.mainloop()
     except Exception as e:
         print(f"Error: {str(e)}")

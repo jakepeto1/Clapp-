@@ -8,7 +8,7 @@ import os
 class DatabaseManager:
     """Manages SQLite database for Learn Mode functionality"""
     
-    def __init__(self, db_path: str = "greek_grammar_learn.db"):
+    def __init__(self, db_path: str = "stoa_grammar_learn.db"):
         self.db_path = db_path
         self.init_database()
     

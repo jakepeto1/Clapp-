@@ -32,7 +32,7 @@ class UserManager:
         main_frame.grid(row=0, column=0, sticky='nsew')
         
         # Title
-        title_label = ttk.Label(main_frame, text="Greek Grammar Learn Mode", 
+        title_label = ttk.Label(main_frame, text="Stoa Grammar Learn Mode", 
                                font=('Arial', 16, 'bold'))
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
         

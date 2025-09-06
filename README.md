@@ -1,4 +1,4 @@
-# Ancient Greek Grammar Study Application
+# Stoa Grammar Study Application
 
 ## Overview
 
@@ -69,17 +69,19 @@ This is a comprehensive interactive learning application for studying Ancient Gr
 ## File Structure
 
 ```
-greek_grammar.py     # Main application with GUI and learning logic
+stoa_grammar.py      # Main application with GUI and learning logic
+database.py          # Database management for Learn Mode functionality  
+learn_mode.py        # Learn Mode interface and progress tracking
 paradigms.json       # Complete database of Greek grammatical forms
-test_*.py           # Various test files for functionality validation
-debug_*.py          # Debugging utilities for specific features
-check_*.py          # Verification scripts for paradigm accuracy
+starred_items.json   # User's starred/favorited paradigms
+stoa_grammar_learn.db # SQLite database for Learn Mode data
+assets/              # Logo and image assets
 ```
 
 ## Usage Instructions
 
 ### Getting Started
-1. Run `python greek_grammar.py` to launch the application
+1. Run `python stoa_grammar.py` to launch the application
 2. Select a grammatical category (Noun, Adjective, Pronoun, or Verb)
 3. Choose a specific paradigm from the dropdown menu
 4. For verbs, select tense, voice, and mood combinations
