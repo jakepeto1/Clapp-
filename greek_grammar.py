@@ -80,6 +80,14 @@ class GreekGrammarApp:
         # Initialize practice configuration
         self.config = PracticeConfig()
         
+        # Initialize starred items system
+        self.starred_items = set()  # Set of starred items in format "type:mode"
+        self.starred_file = "starred_items.json"
+        self.star_button = None  # Will be created in setup_ui
+        
+        # Load starred items from file
+        self.load_starred_items()
+        
         # Set up proper Unicode handling for Greek characters
         if sys.platform.startswith('win'):
             try:
@@ -223,7 +231,7 @@ class GreekGrammarApp:
         type_dropdown = ttk.Combobox(
             mode_frame,
             textvariable=self.type_var,
-            values=["Noun", "Adjective", "Pronoun", "Verb"],
+            values=["Starred", "Noun", "Adjective", "Pronoun", "Verb"],
             font=('Times New Roman', 12),
             width=12,
             state='readonly'
@@ -335,6 +343,23 @@ class GreekGrammarApp:
         )
         self.word_label.grid(row=0, column=1)
 
+        # Star button for favoriting tables
+        self.star_button = tk.Button(
+            word_frame,
+            text="☆",
+            font=('Arial', 16),
+            foreground="gray",
+            background="white",
+            relief="flat",
+            borderwidth=0,
+            command=self.toggle_star,
+            cursor="hand2"
+        )
+        self.star_button.grid(row=0, column=2, padx=(10, 0))
+        
+        # Initialize star button state
+        self.update_star_button()
+
         # Create declension table
         self.create_declension_table()
         
@@ -400,22 +425,40 @@ class GreekGrammarApp:
         mode = self.mode_var.get()
         current_type = self.type_var.get()
         
-        # Extract the word from the mode name (usually in parentheses)
-        if "(" in mode and ")" in mode:
-            # Extract text within parentheses - handle multiple words
-            parentheses_content = mode.split("(")[1].split(")")[0]
-            
-            # For modes with multiple words like "ὁ, ἡ, το", take the first part
-            if ", " in parentheses_content:
-                word = parentheses_content.split(", ")[0]
+        # Handle starred items with different format
+        if current_type == "Starred":
+            # For starred verbs like "λύω - Present Active Indicative"
+            if " - " in mode:
+                word = mode.split(" - ")[0]
+            # For other starred items like "Personal I (ἐγώ)"
+            elif "(" in mode and ")" in mode:
+                parentheses_content = mode.split("(")[1].split(")")[0]
+                if ", " in parentheses_content:
+                    word = parentheses_content.split(", ")[0]
+                else:
+                    word = parentheses_content
             else:
-                word = parentheses_content
+                word = mode
         else:
-            # Fallback for modes without parentheses
-            word = "—"
+            # Extract the word from the mode name (usually in parentheses)
+            if "(" in mode and ")" in mode:
+                # Extract text within parentheses - handle multiple words
+                parentheses_content = mode.split("(")[1].split(")")[0]
+                
+                # For modes with multiple words like "ὁ, ἡ, το", take the first part
+                if ", " in parentheses_content:
+                    word = parentheses_content.split(", ")[0]
+                else:
+                    word = parentheses_content
+            else:
+                # Fallback for modes without parentheses
+                word = "—"
         
         # Update the word label
         self.word_label.config(text=word)
+        
+        # Update star button state
+        self.update_star_button()
         
         # Update progress tracker if in Learn Mode
         if self.learn_mode_enabled.get() and self.current_user:
@@ -482,7 +525,25 @@ class GreekGrammarApp:
         current_type = self.type_var.get()
         current_mode = self.mode_var.get()
         
-        if current_type == "Verb":
+        if current_type == "Starred":
+            # For starred items, navigate within the starred list
+            current_modes = self.modes  # This is the current dropdown list
+            
+            try:
+                current_index = current_modes.index(current_mode)
+                # Move to next mode, wrap around if at the end
+                next_index = (current_index + 1) % len(current_modes)
+                next_mode = current_modes[next_index]
+                
+                # Update the mode selection
+                self.mode_var.set(next_mode)
+                self.on_mode_change(None)  # Trigger the mode change event with None event
+                
+            except ValueError:
+                # Current mode not found in list, stay at current mode
+                print(f"Debug: Current mode '{current_mode}' not found in starred modes list")
+                pass
+        elif current_type == "Verb":
             # For verbs, use the complex voice/tense/mood navigation
             self.next_verb_combination()
         else:
@@ -515,6 +576,18 @@ class GreekGrammarApp:
         # Save current state before random navigation
         self.save_current_state()
         
+        current_type = self.type_var.get()
+        
+        if current_type == "Starred":
+            # If we're in starred mode, randomize within starred items only
+            available_modes = self.modes
+            if available_modes and available_modes != ["No starred items"]:
+                random_mode = random.choice(available_modes)
+                self.mode_var.set(random_mode)
+                self.on_mode_change(None)
+            return
+        
+        # For non-starred types, use normal random logic
         # Randomly select a type
         available_types = ["Noun", "Adjective", "Pronoun", "Verb"]
         random_type = random.choice(available_types)
@@ -829,7 +902,7 @@ class GreekGrammarApp:
             return
 
         # Check if this is an adjective, noun, pronoun, or verb
-        current_type = self.type_var.get()
+        current_type = self.get_effective_type()
         
         if current_type == "Adjective":
             self.create_adjective_table(current_paradigm)
@@ -2252,7 +2325,7 @@ class GreekGrammarApp:
         return result
 
     def on_type_change(self, event):
-        """Handle type change between Noun, Adjective, Pronoun, and Verb."""
+        """Handle type change between Starred, Noun, Adjective, Pronoun, and Verb."""
         # Save state before changing (only if event is not None, to avoid duplicate saves)
         if event is not None:
             self.save_current_state()
@@ -2262,7 +2335,15 @@ class GreekGrammarApp:
         # Reset word index when changing types
         self.current_word_index = 0
         
-        if current_type == "Noun":
+        if current_type == "Starred":
+            # Handle starred items
+            self.modes = self.get_starred_display_items()
+            if self.modes:
+                self.mode_var.set(self.modes[0])
+            else:
+                self.mode_var.set("No starred items")
+                self.modes = ["No starred items"]
+        elif current_type == "Noun":
             self.modes = self.noun_modes.copy()
             self.mode_var.set("First Declension (μουσα)")
         elif current_type == "Adjective":
@@ -2291,8 +2372,88 @@ class GreekGrammarApp:
         # Reset word index when changing modes
         self.current_word_index = 0
         
+        # Handle starred items specially
+        if self.type_var.get() == "Starred":
+            selected_display = self.mode_var.get()
+            
+            if selected_display == "No starred items":
+                return
+            
+            # Find the corresponding starred item key
+            starred_item_key = None
+            for item_key in self.starred_items:
+                parts = item_key.split(':')
+                if len(parts) >= 2:
+                    item_type = parts[0]
+                    mode = parts[1]
+                    
+                    if item_type == "Verb" and len(parts) >= 5:
+                        voice = parts[2]
+                        tense = parts[3]
+                        mood = parts[4]
+                        
+                        # Create display text that matches get_starred_display_items format
+                        if "(" in mode and ")" in mode:
+                            verb_name = mode.split("(")[1].split(")")[0]
+                            display_text = f"{verb_name} - {tense} {voice} {mood}"
+                        else:
+                            display_text = f"{mode} - {tense} {voice} {mood}"
+                    else:
+                        display_text = mode
+                    
+                    if display_text == selected_display:
+                        starred_item_key = item_key
+                        break
+            
+            if starred_item_key:
+                # Parse and set the appropriate type and mode
+                parts = starred_item_key.split(':')
+                original_type = parts[0]
+                original_mode = parts[1]
+                
+                # Temporarily switch to the original type to load the paradigm
+                # But keep type_var as "Starred" so navigation works correctly
+                self._loading_starred_item = True
+                
+                if original_type == "Verb" and len(parts) >= 5:
+                    # For verbs, also set voice, tense, mood
+                    voice = parts[2]
+                    tense = parts[3]
+                    mood = parts[4]
+                    
+                    # Set verb form variables
+                    if hasattr(self, 'voice_var'):
+                        self.voice_var.set(voice)
+                    if hasattr(self, 'tense_var'):
+                        self.tense_var.set(tense)
+                    if hasattr(self, 'mood_var'):
+                        self.mood_var.set(mood)
+                
+                # Set the mode to the original mode for table loading
+                self.mode_var.set(original_mode)
+                
+                # Load the appropriate modes list for paradigm lookup
+                if original_type == "Noun":
+                    self._temp_modes = self.noun_modes.copy()
+                elif original_type == "Adjective":
+                    self._temp_modes = self.adjective_modes.copy()
+                elif original_type == "Pronoun":
+                    self._temp_modes = self.pronoun_modes.copy()
+                elif original_type == "Verb":
+                    self._temp_modes = self.verb_modes.copy()
+                
+                self._loading_starred_item = False
+                
+                # Reset the mode display back to the starred display format
+                self.mode_var.set(selected_display)
+                
+                # Force table recreation for starred items
+                self.reset_table()
+                self.update_word_display()
+                return  # Don't call reset_table again at the end
+            
         # For verbs, reset tense/voice/mood to appropriate defaults when switching between different verbs
-        if self.type_var.get() == "Verb":
+        elif self.type_var.get() == "Verb":
             # Get available options for the new verb
             mode = self.mode_var.get()
             
@@ -2506,36 +2667,68 @@ class GreekGrammarApp:
         mode = self.mode_var.get()
         current_type = self.type_var.get()
         
+        # Handle starred items - need to get the original mode for paradigm lookup
+        original_mode = mode
+        original_type = current_type
+        
+        if current_type == "Starred":
+            # Find the original type and mode for this starred item
+            starred_item_key = None
+            for item_key in self.starred_items:
+                parts = item_key.split(':')
+                if len(parts) >= 2:
+                    item_type = parts[0]
+                    item_mode = parts[1]
+                    
+                    if item_type == "Verb" and len(parts) >= 5:
+                        voice = parts[2]
+                        tense = parts[3]
+                        mood = parts[4]
+                        
+                        # Create display text that matches get_starred_display_items format
+                        if "(" in item_mode and ")" in item_mode:
+                            verb_name = item_mode.split("(")[1].split(")")[0]
+                            display_text = f"{verb_name} - {tense} {voice} {mood}"
+                        else:
+                            display_text = f"{item_mode} - {tense} {voice} {mood}"
+                    else:
+                        display_text = item_mode
+                    
+                    if display_text == mode:
+                        original_type = item_type
+                        original_mode = item_mode
+                        break
+        
         # For verbs, use dropdown selections to determine paradigm
-        if current_type == "Verb":
+        if original_type == "Verb":
             # Get the base verb from the mode
-            if "λύω" in mode:
+            if "λύω" in original_mode:
                 verb_base = "luo"
-            elif "εἰμί" in mode:
+            elif "εἰμί" in original_mode:
                 verb_base = "eimi"
-            elif "φιλέω" in mode:
+            elif "φιλέω" in original_mode:
                 verb_base = "phileo"
-            elif "τιμάω" in mode:
+            elif "τιμάω" in original_mode:
                 verb_base = "timao"
-            elif "δηλόω" in mode:
+            elif "δηλόω" in original_mode:
                 verb_base = "deloo"
-            elif "βάλλω" in mode:
+            elif "βάλλω" in original_mode:
                 verb_base = "ballo"
-            elif "βαίνω" in mode:
+            elif "βαίνω" in original_mode:
                 verb_base = "baino"
-            elif "δίδωμι" in mode:
+            elif "δίδωμι" in original_mode:
                 verb_base = "didomi"
-            elif "τίθημι" in mode:
+            elif "τίθημι" in original_mode:
                 verb_base = "tithemi"
-            elif "ἵστημι" in mode:
+            elif "ἵστημι" in original_mode:
                 verb_base = "histemi"
-            elif "οἶδα" in mode:
+            elif "οἶδα" in original_mode:
                 verb_base = "oida"
-            elif "εἶμι" in mode:
+            elif "εἶμι" in original_mode:
                 verb_base = "eimi_go"
-            elif "φημί" in mode:
+            elif "φημί" in original_mode:
                 verb_base = "phemi"
-            elif "ἵημι" in mode:
+            elif "ἵημι" in original_mode:
                 verb_base = "hiemi"
             else:
                 return None
@@ -2645,7 +2838,7 @@ class GreekGrammarApp:
             "Present Indicative Active - Step (βαίνω)": "baino_pres_ind_act"
         }
         
-        paradigm_key = paradigm_map.get(mode)
+        paradigm_key = paradigm_map.get(original_mode)
         return self.paradigms.get(paradigm_key) if paradigm_key else None
 
     def strip_breathing_marks(self, text):
@@ -3679,7 +3872,7 @@ class GreekGrammarApp:
             return
         
         all_correct = True
-        current_type = self.type_var.get()
+        current_type = self.get_effective_type()  # Use effective type to handle starred items
         
         if current_type == "Adjective":
             # Check adjective answers 
@@ -3835,7 +4028,7 @@ class GreekGrammarApp:
         # Clear previous incorrect entries tracking
         self.incorrect_entries.clear()
         
-        current_type = self.type_var.get()
+        current_type = self.get_effective_type()  # Use effective type to handle starred items
         
         if current_type == "Adjective":
             # Check and fill adjective answers
@@ -4833,6 +5026,224 @@ Tips:
                         self.entries[next_key].focus()
         
         return "break"
+
+    # Starred Items Management
+    def load_starred_items(self):
+        """Load starred items from file."""
+        try:
+            import os
+            if os.path.exists(self.starred_file):
+                import json
+                with open(self.starred_file, 'r', encoding='utf-8') as f:
+                    starred_list = json.load(f)
+                    self.starred_items = set(starred_list)
+                    print(f"Loaded {len(self.starred_items)} starred items")
+        except Exception as e:
+            print(f"Error loading starred items: {e}")
+            self.starred_items = set()
+
+    def save_starred_items(self):
+        """Save starred items to file."""
+        try:
+            import json
+            with open(self.starred_file, 'w', encoding='utf-8') as f:
+                json.dump(list(self.starred_items), f, ensure_ascii=False, indent=2)
+            print(f"Saved {len(self.starred_items)} starred items")
+        except Exception as e:
+            print(f"Error saving starred items: {e}")
+
+    def get_current_item_key(self):
+        """Get the current table's key for starring (format: 'type:mode')."""
+        current_type = self.type_var.get()
+        current_mode = self.mode_var.get()
+        
+        # If we're in starred mode, we need to find the original key
+        if current_type == "Starred":
+            # Find the corresponding starred item key
+            for item_key in self.starred_items:
+                parts = item_key.split(':')
+                if len(parts) >= 2:
+                    item_type = parts[0]
+                    item_mode = parts[1]
+                    
+                    if item_type == "Verb" and len(parts) >= 5:
+                        voice = parts[2]
+                        tense = parts[3]
+                        mood = parts[4]
+                        
+                        # Create display text that matches get_starred_display_items format
+                        if "(" in item_mode and ")" in item_mode:
+                            verb_name = item_mode.split("(")[1].split(")")[0]
+                            display_text = f"{verb_name} - {tense} {voice} {mood}"
+                        else:
+                            display_text = f"{item_mode} - {tense} {voice} {mood}"
+                    else:
+                        display_text = item_mode
+                    
+                    if display_text == current_mode:
+                        return item_key
+            
+            # Fallback - shouldn't happen
+            return f"Unknown:{current_mode}"
+        
+        # For non-starred items, generate the key normally
+        # For verbs, include voice/tense/mood in the key for specificity
+        if current_type == "Verb":
+            current_voice = getattr(self, 'voice_var', None)
+            current_tense = getattr(self, 'tense_var', None) 
+            current_mood = getattr(self, 'mood_var', None)
+            
+            if current_voice and current_tense and current_mood:
+                voice = current_voice.get()
+                tense = current_tense.get()
+                mood = current_mood.get()
+                return f"{current_type}:{current_mode}:{voice}:{tense}:{mood}"
+        
+        return f"{current_type}:{current_mode}"
+
+    def get_effective_type(self):
+        """Get the effective type for table creation (handles starred items)."""
+        current_type = self.type_var.get()
+        
+        if current_type != "Starred":
+            return current_type
+        
+        # For starred items, determine the original type
+        current_mode = self.mode_var.get()
+        
+        # Find the original type for this starred item
+        for item_key in self.starred_items:
+            parts = item_key.split(':')
+            if len(parts) >= 2:
+                item_type = parts[0]
+                item_mode = parts[1]
+                
+                if item_type == "Verb" and len(parts) >= 5:
+                    voice = parts[2]
+                    tense = parts[3]
+                    mood = parts[4]
+                    
+                    # Create display text that matches get_starred_display_items format
+                    if "(" in item_mode and ")" in item_mode:
+                        verb_name = item_mode.split("(")[1].split(")")[0]
+                        display_text = f"{verb_name} - {tense} {voice} {mood}"
+                    else:
+                        display_text = f"{item_mode} - {tense} {voice} {mood}"
+                else:
+                    display_text = item_mode
+                
+                if display_text == current_mode:
+                    return item_type
+        
+        # Fallback to Noun if we can't determine the type
+        return "Noun"
+
+    def is_current_item_starred(self):
+        """Check if the current table is starred."""
+        return self.get_current_item_key() in self.starred_items
+
+    def toggle_star(self):
+        """Toggle star status of current table."""
+        current_type = self.type_var.get()
+        item_key = self.get_current_item_key()
+        
+        if item_key in self.starred_items:
+            # Unstar
+            self.starred_items.remove(item_key)
+            print(f"Unstarred: {item_key}")
+            
+            # If we're in starred mode and we just unstarred the current item,
+            # we need to handle navigation since this item will disappear from the list
+            if current_type == "Starred":
+                self.update_starred_dropdown()
+                # If there are still starred items, navigate to the first one
+                remaining_items = self.get_starred_display_items()
+                if remaining_items:
+                    self.mode_var.set(remaining_items[0])
+                    self.on_mode_change(None)
+                else:
+                    # No more starred items, switch to Noun type
+                    self.type_var.set("Noun")
+                    self.on_type_change(None)
+                    
+        elif current_type != "Starred":
+            # Only allow starring when NOT in starred mode
+            self.starred_items.add(item_key)
+            print(f"Starred: {item_key}")
+        else:
+            # In starred mode, only allow unstarring
+            print("Cannot star items while in Starred mode - only unstarring is allowed")
+            return
+        
+        # Save to file
+        self.save_starred_items()
+        
+        # Update star button appearance
+        self.update_star_button()
+
+    def update_star_button(self):
+        """Update the star button appearance based on current star status."""
+        if self.star_button:
+            current_type = self.type_var.get()
+            is_starred = self.is_current_item_starred()
+            
+            if current_type == "Starred":
+                # In starred mode, always show filled star (can only unstar)
+                self.star_button.config(text="★", foreground="gold")
+            elif is_starred:
+                # In normal mode but item is starred
+                self.star_button.config(text="★", foreground="gold")
+            else:
+                # In normal mode and item is not starred
+                self.star_button.config(text="☆", foreground="gray")
+
+    def get_starred_display_items(self):
+        """Get list of starred items formatted for dropdown display."""
+        starred_display = []
+        
+        for item_key in sorted(self.starred_items):
+            # Parse the item key
+            parts = item_key.split(':')
+            if len(parts) >= 2:
+                item_type = parts[0]
+                mode = parts[1]
+                
+                if item_type == "Verb" and len(parts) >= 5:
+                    # For verbs, create a more concise display
+                    voice = parts[2]
+                    tense = parts[3]
+                    mood = parts[4]
+                    
+                    # Extract just the verb name from the mode (what's in parentheses)
+                    if "(" in mode and ")" in mode:
+                        verb_name = mode.split("(")[1].split(")")[0]
+                        display_text = f"{verb_name} - {tense} {voice} {mood}"
+                    else:
+                        display_text = f"{mode} - {tense} {voice} {mood}"
+                else:
+                    # For other types, just use the mode
+                    display_text = mode
+                
+                starred_display.append(display_text)
+        
+        return starred_display
+
+    def update_starred_dropdown(self):
+        """Update the mode dropdown when in starred mode."""
+        if self.type_var.get() == "Starred":
+            starred_items = self.get_starred_display_items()
+            self.modes = starred_items  # Update self.modes as well
+            self.mode_dropdown['values'] = starred_items
+            
+            # If current selection is no longer valid, select first item
+            if starred_items and self.mode_var.get() not in starred_items:
+                self.mode_var.set(starred_items[0])
+                self.on_mode_change(None)
+            elif not starred_items:
+                # No starred items left, set to "No starred items"
+                self.modes = ["No starred items"]
+                self.mode_dropdown['values'] = self.modes
+                self.mode_var.set("No starred items")
 
 def main():
     try:
