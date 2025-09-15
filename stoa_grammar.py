@@ -48,12 +48,12 @@ class PracticeConfig:
         self.prefill_stems.set(False)
         self.randomize_next.set(False)
 
-class StoaGrammarApp:
+class BellerophonGrammarApp:
     """Provides an interactive interface for practicing Greek declensions."""
     
     def __init__(self, root):
         self.root = root
-        self.root.title("Stoa Grammar Study")
+        self.root.title("Bellerophon Grammar Study")
         
         # Initialize state variables
         self.table_frame = None
@@ -159,7 +159,7 @@ class StoaGrammarApp:
             # Fallback to text title
             title_label = ttk.Label(
                 title_frame, 
-                text="Stoa Grammar Study",
+                text="Bellerophon Grammar Study",
                 style='Title.TLabel'
             )
             title_label.grid(row=0, column=0, sticky='w')
@@ -4466,7 +4466,7 @@ class StoaGrammarApp:
 
     def show_help(self):
         """Show help dialog."""
-        help_text = '''Stoa Grammar Study
+        help_text = '''Bellerophon Grammar Study
 
 Instructions:
 1. Select a declension type from the dropdown menu
@@ -4513,7 +4513,7 @@ Tips:
 • You can add diacritics in any order - the system will handle them correctly'''
 
         help_window = tk.Toplevel(self.root)
-        help_window.title("Stoa Grammar Help")
+        help_window.title("Bellerophon Grammar Help")
         help_window.geometry("500x650")
 
         # Create frame for text widget and scrollbar
@@ -5042,12 +5042,12 @@ Tips:
     def load_header_logo(self):
         """Load and resize the long logo for the app header."""
         logo_paths = [
-            os.path.join('assets', 'stoa long logo.png'),
-            os.path.join('assets', 'stoa long logo.jpg'),
-            os.path.join('assets', 'stoa long logo.jpeg'),
-            'stoa long logo.png',
-            'stoa long logo.jpg',
-            'stoa long logo.jpeg'
+            os.path.join('assets', 'Bellerphon_grammar_long-remove bg.png'),
+            os.path.join('assets', 'Bellerphon_grammar_long-remove bg.jpg'),
+            os.path.join('assets', 'Bellerphon_grammar_long-remove bg.jpeg'),
+            'Bellerphon_grammar_long-remove bg.png',
+            'Bellerphon_grammar_long-remove bg.jpg',
+            'Bellerphon_grammar_long-remove bg.jpeg'
         ]
         
         for logo_path in logo_paths:
@@ -5061,8 +5061,8 @@ Tips:
                         original_width, original_height = image.size
                         
                         # Calculate new size maintaining aspect ratio
-                        # Target height for header logo (100px for good balance)
-                        max_height = 100
+                        # Target height for header logo (120px for better visibility)
+                        max_height = 120
                         max_width = 600  # Allow wider for long logo
                         
                         # Calculate scaling factor
@@ -5107,12 +5107,12 @@ Tips:
     def load_app_icon(self):
         """Load the small icon for the app window."""
         icon_paths = [
-            os.path.join('assets', 'stoa small logo.png'),
-            os.path.join('assets', 'stoa small logo.jpg'),
-            os.path.join('assets', 'stoa small logo.jpeg'),
-            'stoa small logo.png',
-            'stoa small logo.jpg',
-            'stoa small logo.jpeg'
+            os.path.join('assets', 'bell icon.png'),
+            os.path.join('assets', 'bell icon.jpg'),
+            os.path.join('assets', 'bell icon.jpeg'),
+            'bell icon.png',
+            'bell icon.jpg',
+            'bell icon.jpeg'
         ]
         
         for icon_path in icon_paths:
@@ -5378,7 +5378,7 @@ Tips:
 def main():
     try:
         root = tk.Tk()
-        root.title("Stoa Grammar Study")
+        root.title("Bellerophon Grammar Study")
         
         root.minsize(600, 400)
         root.geometry("800x600")
@@ -5386,7 +5386,7 @@ def main():
         style = ttk.Style()
         style.configure('Content.TFrame', background='white', relief='solid')
         
-        app = StoaGrammarApp(root)
+        app = BellerophonGrammarApp(root)
         root.mainloop()
     except Exception as e:
         print(f"Error: {str(e)}")
