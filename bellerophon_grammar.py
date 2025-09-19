@@ -27,7 +27,6 @@ class PracticeConfig:
         self.ignore_breathings = tk.BooleanVar(value=False)
         self.prefill_stems = tk.BooleanVar(value=False)
         self.randomize_next = tk.BooleanVar(value=False)
-        
         # Future toggles can be added here
         # self.ignore_accents = tk.BooleanVar(value=False)
         # self.show_hints = tk.BooleanVar(value=True)
@@ -49,6 +48,10 @@ class PracticeConfig:
         self.randomize_next.set(False)
 
 class BellerophonGrammarApp:
+    def get_effective_type(self):
+        """Stub for get_effective_type to prevent AttributeError. Replace with correct logic if needed."""
+        return getattr(self, 'type_var', None).get() if hasattr(self, 'type_var') else None
+
     def __init__(self, root):
         self.root = root
         # --- BEGIN: moved UI setup and initialization code into __init__ ---
@@ -68,9 +71,17 @@ class BellerophonGrammarApp:
         self.star_button = None  # Will be created in setup_ui
         # Load starred items from file
         self.load_starred_items()
+        # Initialize header logo and app icon before any UI code that checks them
+        self.header_logo = self.load_header_logo()
+        self.app_icon = self.load_app_icon()
+        # Initialize table_frame to None to avoid AttributeError before first use
+        self.table_frame = None
+        # Initialize entries and error_labels as empty dicts to avoid AttributeError before first use
+        self.entries = {}
+        self.error_labels = {}
         # Set up proper Unicode handling for Greek characters
         if sys.platform.startswith('win'):
-            try:
+            try
                 import locale
                 locale.setlocale(locale.LC_ALL, 'Greek_Greece.UTF-8')
             except locale.Error:
@@ -78,202 +89,6 @@ class BellerophonGrammarApp:
                     locale.setlocale(locale.LC_ALL, 'el_GR.UTF-8')
                 except locale.Error:
                     print("Warning: Greek locale not available. Unicode support may be limited.")
-        # Setup fonts
-        self.greek_font = ('Times New Roman', 12)
-        self.normal_font = font.Font(family=self.greek_font[0], size=self.greek_font[1])
-        self.bold_font = font.Font(family=self.greek_font[0], size=self.greek_font[1], weight='bold')
-        # Load logos
-        self.header_logo = self.load_header_logo()  # Long logo for header
-        self.app_icon = self.load_app_icon()        # Small icon for window
-        # Configure styles for better appearance
-        style = ttk.Style()
-        style.configure('Title.TLabel', font=('Arial', 24, 'bold'), padding=(0, 10))
-        # Configure root window with better sizing and resizing behavior
-        self.root.configure(padx=20, pady=20)
-        self.root.state('zoomed')  # Start maximized
-        self.root.minsize(1000, 700)  # Set minimum size to prevent content from being cut off
-        # Main container that will expand to fill the window
-        self.main_frame = ttk.Frame(self.root)
-        self.main_frame.grid(row=0, column=0, sticky='nsew')
-        # Configure grid weights for proper expansion
-        self.root.grid_rowconfigure(0, weight=1)
-        self.root.grid_columnconfigure(0, weight=1)
-        # Configure main_frame rows to expand properly
-        self.main_frame.grid_rowconfigure(0, weight=0)  # Title - fixed
-        self.main_frame.grid_rowconfigure(1, weight=0)  # Type selector - fixed
-        self.main_frame.grid_rowconfigure(2, weight=0)  # Mode selector - fixed
-        self.main_frame.grid_rowconfigure(3, weight=1)  # Table area - expands
-        self.main_frame.grid_rowconfigure(4, weight=0)  # Buttons - fixed
-        self.main_frame.grid_columnconfigure(0, weight=1)  # Center everything horizontally
-        # Configure main_frame grid weights for responsive layout
-        self.main_frame.grid_rowconfigure(0, weight=0)  # Title row - fixed
-        self.main_frame.grid_rowconfigure(1, weight=0)  # Mode row - fixed
-        self.main_frame.grid_rowconfigure(2, weight=0)  # Selector row - fixed
-        self.main_frame.grid_rowconfigure(3, weight=1)  # Table row - expandable
-        self.main_frame.grid_rowconfigure(4, weight=0)  # Button row - fixed
-        for i in range(3):
-            self.main_frame.grid_columnconfigure(i, weight=1)
-        # Initialize progress tracker now that main_frame exists
-        self.progress_tracker = ProgressTracker(self.main_frame, self.db_manager)
-        # Title and Instructions
-        title_frame = ttk.Frame(self.main_frame)
-        title_frame.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky='ew')
-        title_frame.grid_columnconfigure(0, weight=1)  # Allow title to expand
-        title_frame.grid_columnconfigure(1, weight=0)  # Practice options column
-        title_frame.grid_columnconfigure(2, weight=0)  # Help button column
-        # Logo or title
-        if self.header_logo:
-            # Use header logo (long logo)
-            logo_label = ttk.Label(title_frame, image=self.header_logo)
-            logo_label.grid(row=0, column=0, sticky='w')
-            # Keep a reference to prevent garbage collection
-            logo_label.image = self.header_logo
-        else:
-            # Fallback to text title
-            title_label = ttk.Label(
-                title_frame, 
-                text="Bellerophon Grammar Study",
-                style='Title.TLabel'
-            )
-            title_label.grid(row=0, column=0, sticky='w')
-        # Set window icon (small icon)
-        if self.app_icon:
-            try:
-                self.root.iconphoto(True, self.app_icon)
-            except Exception as e:
-                print(f"Could not set window icon: {e}")
-        # Practice options in top corner (simplified)
-        practice_options_frame = ttk.Frame(title_frame)
-        practice_options_frame.grid(row=0, column=1, sticky='ne', padx=(10, 10))
-        # Prefill stems checkbox (simplified, no breathing option)
-        prefill_stems_cb = ttk.Checkbutton(
-            practice_options_frame,
-            text="Prefill stems",
-            variable=self.config.prefill_stems,
-            command=self.on_prefill_stems_toggle
-        )
-        prefill_stems_cb.grid(row=0, column=0, sticky='e')
-        # Randomize next checkbox
-        randomize_next_cb = ttk.Checkbutton(
-            practice_options_frame,
-            text="Randomize next",
-            variable=self.config.randomize_next
-        )
-        randomize_next_cb.grid(row=0, column=1, sticky='e', padx=(10, 0))
-        # Learn Mode checkbox
-        learn_mode_cb = ttk.Checkbutton(
-            practice_options_frame,
-            text="Learn Mode",
-            variable=self.learn_mode_enabled,
-            command=self.toggle_learn_mode
-        )
-        learn_mode_cb.grid(row=0, column=2, sticky='e', padx=(10, 0))
-        # Help button in top right corner
-        help_button = ttk.Button(
-            title_frame,
-            text="Help",
-            command=self.show_help,
-            width=8
-        )
-        help_button.grid(row=0, column=2, sticky='ne')
-        # Load paradigms
-        try:
-            with open('paradigms.json', 'r', encoding='utf-8') as f:
-                self.paradigms = json.load(f)
-        except FileNotFoundError:
-            messagebox.showerror("Error", "Could not find paradigms.json file")
-            self.root.destroy()
-            return
-        except json.JSONDecodeError:
-            messagebox.showerror("Error", "Could not parse paradigms.json file")
-            self.root.destroy()
-            return
-        # Initialize verb navigation state for complex verb navigation
-        self.verb_voice_order = ["Active", "Middle", "Passive"]
-        self.verb_tense_order = ["Present", "Imperfect", "Future", "Aorist", "Perfect", "Pluperfect"] 
-        self.verb_mood_order = ["Indicative", "Subjunctive", "Optative", "Imperative"]
-        # ...existing code...
-
-    def get_effective_type(self):
-        """Return the effective type for the current selection, mapping 'Starred' to the original type if needed."""
-        current_type = self.type_var.get()
-        # In Starred mode, map display label to internal key
-        if current_type == "Starred":
-            display_map = self.get_starred_display_map()
-            current_display = self.mode_var.get()
-            item_key = display_map.get(current_display)
-        else:
-            item_key = self.get_current_item_key()
-
-        if item_key and item_key in self.starred_items:
-            # Unstar
-            self.starred_items.remove(item_key)
-            print(f"Unstarred: {item_key}")
-
-            # If we're in starred mode and we just unstarred the current item,
-            # we need to handle navigation since this item will disappear from the list
-            if current_type == "Starred":
-                self.update_starred_dropdown()
-                remaining_items = self.get_starred_display_items()
-                display_map = self.get_starred_display_map()
-                # If the current display is not valid, move to the next valid item
-                current_display = self.mode_var.get()
-                if current_display not in display_map:
-                    if remaining_items:
-                        self.mode_var.set(remaining_items[0])
-                        self.on_mode_change(None)
-                    else:
-                        self.type_var.set("Noun")
-                        self.on_type_change(None)
-                else:
-                    # If still valid, just update the UI
-                    self.on_mode_change(None)
-        self.incorrect_entries = set()  # Track which entries were incorrect
-        
-        # Initialize Learn Mode components
-        self.db_manager = DatabaseManager()
-        self.user_manager = UserManager(self.db_manager)
-        self.current_user = None
-        self.attempt_start_time = None
-        self.progress_tracker = None  # Will be initialized after main_frame
-        
-        # Initialize practice configuration
-        self.config = PracticeConfig()
-        
-        # Initialize starred items system
-        self.starred_items = set()  # Set of starred items in format "type:mode"
-        self.starred_file = "starred_items.json"
-        self.star_button = None  # Will be created in setup_ui
-        
-        # Load starred items from file
-        self.load_starred_items()
-        
-        # Set up proper Unicode handling for Greek characters
-        if sys.platform.startswith('win'):
-            try:
-                import locale
-                locale.setlocale(locale.LC_ALL, 'Greek_Greece.UTF-8')
-            except locale.Error:
-                try:
-                    locale.setlocale(locale.LC_ALL, 'el_GR.UTF-8')
-                except locale.Error:
-                    print("Warning: Greek locale not available. Unicode support may be limited.")
-        
-        # Setup fonts
-        self.greek_font = ('Times New Roman', 12)
-        self.normal_font = font.Font(family=self.greek_font[0], size=self.greek_font[1])
-        self.bold_font = font.Font(family=self.greek_font[0], size=self.greek_font[1], weight='bold')
-        
-        # Load logos
-        self.header_logo = self.load_header_logo()  # Long logo for header
-        self.app_icon = self.load_app_icon()        # Small icon for window
-        
-        # Configure styles for better appearance
-        style = ttk.Style()
-        style.configure('Title.TLabel', font=('Arial', 24, 'bold'), padding=(0, 10))
-        
-        # Configure root window with better sizing and resizing behavior
-        self.root.configure(padx=20, pady=20)
         self.root.state('zoomed')  # Start maximized
         self.root.minsize(1000, 700)  # Set minimum size to prevent content from being cut off
         
