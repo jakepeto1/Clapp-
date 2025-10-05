@@ -48,9 +48,355 @@ class PracticeConfig:
         self.randomize_next.set(False)
 
 class BellerophonGrammarApp:
+    def get_effective_type_from_item_key(self, item_key):
+        """Extracts the type (Noun, Verb, etc.) from a starred item key."""
+        return item_key.split(":", 1)[0] if item_key and ":" in item_key else None
+    
     def get_effective_type(self):
-        """Stub for get_effective_type to prevent AttributeError. Replace with correct logic if needed."""
-        return getattr(self, 'type_var', None).get() if hasattr(self, 'type_var') else None
+        """Get the effective type, resolving Starred items to their real type."""
+        current_type = getattr(self, 'type_var', None)
+        if not current_type:
+            return None
+        
+        type_value = current_type.get()
+        
+        # If we're in Starred mode, extract the real type from the current item
+        if type_value == "Starred":
+            current_mode = getattr(self, 'mode_var', None)
+            if current_mode and current_mode.get() != "No starred items":
+                # Use display map to find the actual item key
+                display_map = self.get_starred_display_map()
+                item_key = display_map.get(current_mode.get())
+                if item_key:
+                    return self.get_effective_type_from_item_key(item_key)
+        
+        return type_value
+    
+    def clear_error(self, key):
+        """Clear error indicator for a specific entry key."""
+        if key in self.error_labels:
+            try:
+                self.error_labels[key].grid_remove()
+            except tk.TclError:
+                pass  # Widget may have been destroyed
+    
+    def init_starred_verb(self, starred_key):
+        """Initialize a starred verb with its specific form data."""
+        parts = starred_key.split(':')
+        if len(parts) < 5 or parts[0] != "Verb":
+            return False
+            
+        mode = parts[1]
+        voice = parts[2]
+        tense = parts[3]
+        mood = parts[4]
+        
+        # Store the starred verb state
+        self._starred_verb_data = {
+            'mode': mode,
+            'voice': voice,
+            'tense': tense,
+            'mood': mood,
+            'key': starred_key
+        }
+        
+        # Initialize or update the verb form variables
+        if not hasattr(self, 'voice_var'):
+            self.voice_var = tk.StringVar(value=voice)
+        else:
+            self.voice_var.set(voice)
+            
+        if not hasattr(self, 'tense_var'):
+            self.tense_var = tk.StringVar(value=tense)
+        else:
+            self.tense_var.set(tense)
+            
+        if not hasattr(self, 'mood_var'):
+            self.mood_var = tk.StringVar(value=mood)
+        else:
+            self.mood_var.set(mood)
+        
+        return True
+    
+    def get_starred_verb_paradigm(self):
+        """Get paradigm specifically for starred verbs."""
+        if not hasattr(self, '_starred_verb_data'):
+            return None
+            
+        data = self._starred_verb_data
+        mode = data['mode']
+        
+        # Extract verb base from mode
+        verb_base = None
+        if "λύω" in mode:
+            verb_base = "luo"
+        elif "εἰμί" in mode:
+            verb_base = "eimi"
+        elif "φιλέω" in mode:
+            verb_base = "phileo"
+        elif "τιμάω" in mode:
+            verb_base = "timao"
+        elif "δηλόω" in mode:
+            verb_base = "deloo"
+        elif "βάλλω" in mode:
+            verb_base = "ballo"
+        elif "βαίνω" in mode:
+            verb_base = "baino"
+        elif "δίδωμι" in mode:
+            verb_base = "didomi"
+        elif "τίθημι" in mode:
+            verb_base = "tithemi"
+        elif "ἵστημι" in mode:
+            verb_base = "histemi"
+        elif "οἶδα" in mode:
+            verb_base = "oida"
+        elif "εἶμι" in mode:
+            verb_base = "eimi_go"
+        elif "φημί" in mode:
+            verb_base = "phemi"
+        elif "ἵημι" in mode:
+            verb_base = "hiemi"
+        
+        if not verb_base:
+            print(f"Warning: Could not determine verb base for mode: {mode}")
+            return None
+        
+        # Map form values to paradigm keys
+        tense_map = {
+            "present": "pres", "imperfect": "impf", "aorist": "aor",
+            "future": "fut", "perfect": "perf", "pluperfect": "plpf"
+        }
+        mood_map = {
+            "indicative": "ind", "subjunctive": "subj", "optative": "opt",
+            "imperative": "imp", "infinitive": "inf"
+        }
+        voice_map = {
+            "active": "act", "middle": "mid", "passive": "pass"
+        }
+        
+        tense_key = tense_map.get(data['tense'].lower(), data['tense'].lower())
+        mood_key = mood_map.get(data['mood'].lower(), data['mood'].lower())
+        voice_key = voice_map.get(data['voice'].lower(), data['voice'].lower())
+        
+        # Build paradigm key
+        if data['mood'].lower() == "infinitive":
+            # For infinitives, combine all voices
+            combined_paradigm = {}
+            for voice_name, voice_abbr in voice_map.items():
+                voice_paradigm_key = f"{verb_base}_{tense_key}_{mood_key}_{voice_abbr}"
+                voice_paradigm = self.paradigms.get(voice_paradigm_key)
+                if voice_paradigm:
+                    inf_key = f"inf_{voice_name}"
+                    if inf_key in voice_paradigm:
+                        combined_paradigm[inf_key] = voice_paradigm[inf_key]
+            return combined_paradigm if combined_paradigm else None
+        else:
+            paradigm_key = f"{verb_base}_{tense_key}_{mood_key}_{voice_key}"
+            return self.paradigms.get(paradigm_key)
+    
+    def create_starred_verb_table(self, paradigm):
+        """Create a verb table specifically for starred verbs with locked controls."""
+        if not paradigm or not hasattr(self, '_starred_verb_data'):
+            return
+        
+        # Clear entry and error label dictionaries before destroying widgets
+        self.entries.clear()
+        self.error_labels.clear()
+        
+        # Destroy existing table frame and create new one (like create_declension_table)
+        if hasattr(self, 'table_frame') and self.table_frame:
+            self.table_frame.destroy()
+            
+        # Create a container frame that can expand and center content
+        # Table can now use full space since buttons are floating
+        table_container = ttk.Frame(self.main_frame)
+        table_container.grid(row=3, column=0, columnspan=3, rowspan=2, sticky='nsew')
+        table_container.grid_columnconfigure(0, weight=1)  # Left padding
+        table_container.grid_columnconfigure(1, weight=0)  # Table content
+        table_container.grid_columnconfigure(2, weight=1)  # Right padding
+        table_container.grid_rowconfigure(0, weight=1)
+        
+        # Create the table frame in the center column - add bottom padding for floating buttons
+        self.table_frame = ttk.Frame(table_container)
+        self.table_frame.grid(row=0, column=1, sticky='nsew', padx=20, pady=(0, 80))
+        
+        # Configure grid weights for responsive design
+        for i in range(10):  # Allow for up to 10 columns
+            self.table_frame.grid_columnconfigure(i, weight=1)
+        
+        # Use the standard verb table creation method for proper layout
+        # The _in_starred_context flag will prevent unwanted mode changes
+        self.current_starred_paradigm = paradigm
+        self.create_verb_table(paradigm)
+        
+        # Add buttons (create_verb_table doesn't create buttons, only create_declension_table does)
+        self.create_buttons_for_starred_verbs()
+    
+    def create_buttons_for_starred_verbs(self):
+        """Create the control buttons for starred verbs."""
+        # Bottom button frame positioned as overlay to allow table to extend underneath
+        bottom_button_frame = ttk.Frame(self.main_frame)
+        # Use place instead of grid to create floating buttons that don't constrain table space
+        bottom_button_frame.place(relx=0.0, rely=1.0, anchor='sw', relwidth=1.0)
+        
+        # Container frame for buttons to allow centering
+        button_container = ttk.Frame(bottom_button_frame)
+        button_container.grid(row=0, column=1, pady=10)
+        
+        # Configure the bottom frame for centering floating buttons
+        bottom_button_frame.grid_columnconfigure(0, weight=1)  # Left padding space
+        bottom_button_frame.grid_columnconfigure(1, weight=0)  # Button container (centered)
+        bottom_button_frame.grid_columnconfigure(2, weight=1)  # Right padding space
+        
+        # Configure button container columns with equal weight for center alignment
+        button_container.grid_columnconfigure(0, weight=1)  # Space before first button
+        button_container.grid_columnconfigure(1, weight=0)  # Reveal button
+        button_container.grid_columnconfigure(2, weight=0)  # Reset/Retry button
+        button_container.grid_columnconfigure(3, weight=0)  # Next button
+        button_container.grid_columnconfigure(4, weight=1)  # Space after last button
+        
+        # Style for buttons - now all buttons use the same large style
+        button_style = ttk.Style()
+        button_style.configure('Large.TButton',
+                             font=('Arial', 11),
+                             padding=(10, 6))
+        
+        # Create all buttons with consistent styling and size
+        reveal_button = ttk.Button(
+            button_container,
+            text="Reveal",
+            command=self.reveal_answers,
+            style='Large.TButton',
+            width=12
+        )
+        reveal_button.grid(row=0, column=1, padx=15)
+        
+        # Combined Reset/Retry button in the center
+        reset_retry_button = ttk.Button(
+            button_container,
+            text="Reset",
+            command=self.smart_reset_retry,
+            style='Large.TButton',
+            width=12
+        )
+        reset_retry_button.grid(row=0, column=2, padx=20)  # Extra padding to emphasize center position
+        
+        # Store reference to reset/retry button for state management
+        self.reset_retry_button = reset_retry_button
+        
+        next_button = ttk.Button(
+            button_container,
+            text="Next",
+            command=self.next_answer,
+            style='Large.TButton',
+            width=12
+        )
+        next_button.grid(row=0, column=3, padx=15)
+        
+        # Apply stem prefilling if enabled
+        self.apply_prefill_stems_to_all_entries()
+    
+    def create_starred_finite_verb_table(self, paradigm, verb_data):
+        """Create finite verb table for starred verbs."""
+        # Configure table columns
+        self.table_frame.grid_columnconfigure(0, weight=1)  # Person/Number
+        self.table_frame.grid_columnconfigure(1, weight=1)  # Form
+        self.table_frame.grid_columnconfigure(2, weight=2)  # Your Answer
+        
+        # Headers
+        ttk.Label(self.table_frame, text="Person/Number", font=('Arial', 12, 'bold')).grid(row=2, column=0, padx=10, pady=10)
+        ttk.Label(self.table_frame, text="Form", font=('Arial', 12, 'bold')).grid(row=2, column=1, padx=10, pady=10)
+        ttk.Label(self.table_frame, text="Your Answer", font=('Arial', 12, 'bold')).grid(row=2, column=2, padx=10, pady=10)
+        
+        # Person/Number entries - always create all entries, even if paradigm doesn't have them
+        persons = ["1st Sing", "2nd Sing", "3rd Sing", "1st Plur", "2nd Plur", "3rd Plur"]
+        keys = ["1st_sg", "2nd_sg", "3rd_sg", "1st_pl", "2nd_pl", "3rd_pl"]
+        
+        for i, (person, key) in enumerate(zip(persons, keys), 3):
+            # Person label
+            ttk.Label(self.table_frame, text=person, font=('Arial', 12, 'bold')).grid(row=i, column=0, padx=10, pady=8, sticky='e')
+            
+            # Form label - show the actual verb form from paradigm
+            form_text = paradigm.get(key, "—")
+            ttk.Label(self.table_frame, text=form_text, font=('Times New Roman', 12)).grid(row=i, column=1, padx=10, pady=8, sticky='w')
+            
+            # Entry field - create entry regardless of whether it's in paradigm
+            entry_frame = tk.Frame(self.table_frame)
+            entry_frame.grid(row=i, column=2, padx=5, pady=8, sticky='ew')
+            entry_frame.grid_columnconfigure(0, weight=1)
+            
+            # Check if this form exists in the paradigm
+            form_exists = key in paradigm
+            
+            if form_exists:
+                # Create normal entry
+                entry = tk.Entry(entry_frame, width=18, font=('Times New Roman', 12), relief='solid', borderwidth=1)
+                entry.grid(row=0, column=0, sticky='ew')
+                entry.bind('<KeyPress>', self.handle_key_press)
+                entry.bind('<KeyRelease>', lambda e, k=key: (self.handle_text_change(e, k), self.clear_error(k)))
+                entry.bind('<Return>', lambda e, k=key: self.handle_enter(e, k))
+                
+                self.entries[key] = entry
+                
+                # Error label
+                error_label = ttk.Label(entry_frame, text="X", foreground='red', font=('Arial', 10, 'bold'))
+                error_label.grid(row=0, column=1, padx=(5, 0))
+                error_label.grid_remove()
+                self.error_labels[key] = error_label
+            else:
+                # Grey out missing forms
+                entry = tk.Entry(entry_frame, width=18, font=('Times New Roman', 12), relief='solid', borderwidth=1, state='disabled', disabledbackground='#f0f0f0')
+                entry.grid(row=0, column=0, sticky='ew')
+    
+    def create_starred_infinitive_table(self, paradigm, verb_data):
+        """Create infinitive table for starred verbs."""
+        # Configure table columns
+        self.table_frame.grid_columnconfigure(0, weight=1)  # Voice
+        self.table_frame.grid_columnconfigure(1, weight=1)  # Form
+        self.table_frame.grid_columnconfigure(2, weight=2)  # Your Answer
+        
+        # Headers
+        ttk.Label(self.table_frame, text="Tense × Voice", font=('Arial', 12, 'bold')).grid(row=2, column=0, padx=10, pady=10)
+        ttk.Label(self.table_frame, text="Form", font=('Arial', 12, 'bold')).grid(row=2, column=1, padx=10, pady=10)
+        ttk.Label(self.table_frame, text="Your Answer", font=('Arial', 12, 'bold')).grid(row=2, column=2, padx=10, pady=10)
+        
+        # Voice entries
+        voices = ["Active", "Middle", "Passive"]
+        voice_keys = ["inf_active", "inf_middle", "inf_passive"]
+        
+        for i, (voice, key) in enumerate(zip(voices, voice_keys), 3):
+            # Voice label
+            ttk.Label(self.table_frame, text=f"{verb_data['tense']} {voice}", font=('Arial', 12, 'bold')).grid(row=i, column=0, padx=10, pady=8, sticky='w')
+            
+            # Form label - show the actual infinitive form from paradigm
+            form_text = paradigm.get(key, "—")
+            ttk.Label(self.table_frame, text=form_text, font=('Times New Roman', 12)).grid(row=i, column=1, padx=10, pady=8, sticky='w')
+            
+            # Entry field - create regardless of whether it's in paradigm
+            entry_frame = tk.Frame(self.table_frame)
+            entry_frame.grid(row=i, column=2, padx=5, pady=8, sticky='ew')
+            entry_frame.grid_columnconfigure(0, weight=1)
+            
+            form_exists = key in paradigm
+            
+            if form_exists:
+                entry = tk.Entry(entry_frame, width=18, font=('Times New Roman', 12), relief='solid', borderwidth=1)
+                entry.grid(row=0, column=0, sticky='ew')
+                entry.bind('<KeyPress>', self.handle_key_press)
+                entry.bind('<KeyRelease>', lambda e, k=key: (self.handle_text_change(e, k), self.clear_error(k)))
+                entry.bind('<Return>', lambda e, k=key: self.handle_enter(e, k))
+                
+                self.entries[key] = entry
+                
+                # Error label
+                error_label = ttk.Label(entry_frame, text="X", foreground='red', font=('Arial', 10, 'bold'))
+                error_label.grid(row=0, column=1, padx=(5, 0))
+                error_label.grid_remove()
+                self.error_labels[key] = error_label
+            else:
+                # Grey out missing forms
+                entry = tk.Entry(entry_frame, width=18, font=('Times New Roman', 12), relief='solid', borderwidth=1, state='disabled', disabledbackground='#f0f0f0')
+                entry.grid(row=0, column=0, sticky='ew')
 
     def __init__(self, root):
         self.root = root
@@ -81,7 +427,7 @@ class BellerophonGrammarApp:
         self.error_labels = {}
         # Set up proper Unicode handling for Greek characters
         if sys.platform.startswith('win'):
-            try
+            try:
                 import locale
                 locale.setlocale(locale.LC_ALL, 'Greek_Greece.UTF-8')
             except locale.Error:
@@ -413,9 +759,12 @@ class BellerophonGrammarApp:
         mode = self.mode_var.get()
         # Use effective type so "Starred" items map back to their original type
         current_type = self.get_effective_type()
+        
+        # Check if we're in Starred tab (raw type check, not effective type)
+        is_starred = self.type_var.get() == "Starred"
 
         # Handle starred items with robust verb extraction
-        if current_type == "Starred":
+        if is_starred:
             verb_names = ["λύω", "εἰμί", "φιλέω", "τιμάω", "δηλόω", "βάλλω", "βαίνω", "δίδωμι", "τίθημι", "ἵστημι", "οἶδα", "εἶμι", "φημί", "ἵημι"]
             found_verb = None
             for v in verb_names:
@@ -517,11 +866,12 @@ class BellerophonGrammarApp:
         # Save current state before navigation with force=True to ensure it's saved
         self.save_current_state(force=True)
 
-        # Use effective type so Starred maps back to original (Adjective/Noun/etc.)
-        current_type = self.get_effective_type()
+        # Check raw type_var first - if we're in Starred tab, navigate within starred items
+        # even if the effective type is Verb
+        raw_type = self.type_var.get()
         current_mode = self.mode_var.get()
 
-        if current_type == "Starred":
+        if raw_type == "Starred":
             # For starred items, navigate within the starred list
             current_modes = self.modes  # This is the current dropdown list
             try:
@@ -536,7 +886,7 @@ class BellerophonGrammarApp:
             except ValueError:
                 # Current mode not found in list, stay at current mode
                 pass
-        elif current_type == "Verb":
+        elif self.get_effective_type() == "Verb":
             # For verbs, use the complex voice/tense/mood navigation
             self.next_verb_combination()
         else:
@@ -696,9 +1046,7 @@ class BellerophonGrammarApp:
                             self.update_tense_mood_constraints()
                             # Recreate table if mood changed between infinitive and finite forms
                             if (old_mood == "Infinitive") != (next_mood == "Infinitive"):
-                                current_paradigm = self.get_current_paradigm()
-                                if current_paradigm:
-                                    self.create_verb_table(current_paradigm)
+                                self.reset_table()
                             # Clear entries and apply prefill stems for the new combination
                             self.clear_all_entries()
                             self.apply_prefill_stems_to_all_entries()
@@ -732,9 +1080,7 @@ class BellerophonGrammarApp:
                     self.update_tense_mood_constraints()
                     # Recreate table if mood changed between infinitive and finite forms
                     if (old_mood == "Infinitive") != (first_combo[1] == "Infinitive"):
-                        current_paradigm = self.get_current_paradigm()
-                        if current_paradigm:
-                            self.create_verb_table(current_paradigm)
+                        self.reset_table()
             return
         
         # Normal handling for non-infinitive moods
@@ -815,9 +1161,7 @@ class BellerophonGrammarApp:
                         self.update_tense_mood_constraints()
                         # Recreate table if mood changed between infinitive and finite forms
                         if (old_mood == "Infinitive") != (next_mood == "Infinitive"):
-                            current_paradigm = self.get_current_paradigm()
-                            if current_paradigm:
-                                self.create_verb_table(current_paradigm)
+                            self.reset_table()
                         # Clear entries and apply prefill stems for the new combination
                         self.clear_all_entries()
                         self.apply_prefill_stems_to_all_entries()
@@ -852,9 +1196,7 @@ class BellerophonGrammarApp:
                 self.update_tense_mood_constraints()
                 # Recreate table if mood changed between infinitive and finite forms
                 if (old_mood == "Infinitive") != (first_combo[1] == "Infinitive"):
-                    current_paradigm = self.get_current_paradigm()
-                    if current_paradigm:
-                        self.create_verb_table(current_paradigm)
+                    self.reset_table()
                 # Clear entries and apply prefill stems for the new combination
                 self.clear_all_entries()
                 self.apply_prefill_stems_to_all_entries()
@@ -1647,16 +1989,20 @@ class BellerophonGrammarApp:
         
         self.tense_var = tk.StringVar(value=tense_value)
         
+        # Determine if dropdowns should be disabled (in Starred mode or during starred context)
+        dropdown_state = "disabled" if (self.type_var.get() == "Starred" or getattr(self, '_in_starred_context', False)) else "readonly"
+        
         self.tense_dropdown = ttk.Combobox(
             selectors_frame,
             textvariable=self.tense_var,
             values=available_tenses,
-            state="readonly",
+            state=dropdown_state,
             width=12,
             font=('Arial', 10)
         )
         self.tense_dropdown.grid(row=1, column=0, sticky='ew', padx=(0, 10))
-        self.tense_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
+        if dropdown_state != "disabled":
+            self.tense_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
         
         # Voice selector
         ttk.Label(selectors_frame, text="Voice:", font=('Arial', 10, 'bold')).grid(row=0, column=1, sticky='w', padx=(0, 5))
@@ -1694,12 +2040,13 @@ class BellerophonGrammarApp:
             selectors_frame,
             textvariable=self.voice_var,
             values=available_voices,
-            state="readonly",
+            state=dropdown_state,
             width=12,
             font=('Arial', 10)
         )
         self.voice_dropdown.grid(row=1, column=1, sticky='ew', padx=(0, 10))
-        self.voice_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
+        if dropdown_state != "disabled":
+            self.voice_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
         
         # Mood selector
         ttk.Label(selectors_frame, text="Mood:", font=('Arial', 10, 'bold')).grid(row=0, column=2, sticky='w', padx=(0, 5))
@@ -1737,12 +2084,13 @@ class BellerophonGrammarApp:
             selectors_frame,
             textvariable=self.mood_var,
             values=available_moods,
-            state="readonly",
+            state=dropdown_state,
             width=12,
             font=('Arial', 10)
         )
         self.mood_dropdown.grid(row=1, column=2, sticky='ew')
-        self.mood_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
+        if dropdown_state != "disabled":
+            self.mood_dropdown.bind('<<ComboboxSelected>>', self.on_verb_form_change)
         
         # Check if we're dealing with infinitive - different table layout needed
         current_mood = self.mood_var.get()
@@ -1901,6 +2249,10 @@ class BellerophonGrammarApp:
         refreshes the displayed word and instruction. It is intentionally
         defensive to avoid crashing the UI from transient state.
         """
+        # Don't allow form changes when in Starred mode - forms should be locked
+        if self.type_var.get() == "Starred" or getattr(self, '_in_starred_context', False):
+            return
+        
         # Update constraints; prefer the normal updater but fall back if it fails
         try:
             self.update_tense_mood_constraints()
@@ -2343,15 +2695,36 @@ class BellerophonGrammarApp:
         if event is not None:
             self.save_current_state()
         
+        # Clear starred verb data when switching away from starred mode
+        if self.type_var.get() != "Starred":
+            if hasattr(self, 'current_starred_paradigm'):
+                delattr(self, 'current_starred_paradigm')
+            if hasattr(self, '_starred_verb_data'):
+                delattr(self, '_starred_verb_data')
+        
         # Use the raw type_var to check for Starred
         if self.type_var.get() == "Starred":
             # Handle starred items
-            self.modes = self.get_starred_display_items()
-            if self.modes:
-                self.mode_var.set(self.modes[0])
+            display_items = self.get_starred_display_items()
+            
+            if display_items:
+                self.modes = display_items
+                self.mode_var.set(display_items[0])
             else:
-                self.mode_var.set("No starred items")
                 self.modes = ["No starred items"]
+                self.mode_var.set("No starred items")
+            
+            # Update the dropdown values
+            self.mode_dropdown['values'] = self.modes
+            
+            # Update instruction text
+            self.update_instruction_text()
+            
+            # For starred items, delegate to on_mode_change to handle proper initialization
+            # This ensures starred verbs get properly initialized with their specific data
+            self.on_mode_change(None)
+            return
+            
         elif self.type_var.get() == "Noun":
             self.modes = self.noun_modes.copy()
             self.mode_var.set("First Declension (μουσα)")
@@ -2384,86 +2757,62 @@ class BellerophonGrammarApp:
         # Handle starred items specially
         if self.type_var.get() == "Starred":
             selected_display = self.mode_var.get()
-            
             if selected_display == "No starred items":
                 return
             
-            # Find the corresponding starred item key
-            starred_item_key = None
-            for item_key in self.starred_items:
-                parts = item_key.split(':')
-                if len(parts) >= 2:
-                    item_type = parts[0]
-                    mode = parts[1]
-                    
-                    if item_type == "Verb" and len(parts) >= 5:
-                        voice = parts[2]
-                        tense = parts[3]
-                        mood = parts[4]
-                        
-                        # Create display text that matches get_starred_display_items format
-                        if "(" in mode and ")" in mode:
-                            verb_name = mode.split("(")[1].split(")")[0]
-                            display_text = f"{verb_name} - {tense} {voice} {mood}"
-                        else:
-                            display_text = f"{mode} - {tense} {voice} {mood}"
-                    else:
-                        display_text = mode
-                    
-                    if display_text == selected_display:
-                        starred_item_key = item_key
-                        break
+            # Use the display map to find the correct starred item key
+            display_map = self.get_starred_display_map()
+            starred_item_key = display_map.get(selected_display)
             
-            if starred_item_key:
-                # Parse and set the appropriate type and mode
-                parts = starred_item_key.split(':')
-                original_type = parts[0]
-                original_mode = parts[1]
-                
-                # Temporarily switch to the original type to load the paradigm
-                # But keep type_var as "Starred" so navigation works correctly
-                
-                if original_type == "Verb" and len(parts) >= 5:
-                    # For verbs, also set voice, tense, mood
-                    voice = parts[2]
-                    tense = parts[3]
-                    mood = parts[4]
-                    
-                    # Set verb form variables
-                    if hasattr(self, 'voice_var'):
-                        self.voice_var.set(voice)
-                    if hasattr(self, 'tense_var'):
-                        if self.type_var.get() == "Starred":
-                            selected_display = self.mode_var.get()
-                            if selected_display == "No starred items":
-                                return
-                            # Use the display map to get the full key
-                            display_map = self.get_starred_display_map()
-                            starred_item_key = display_map.get(selected_display)
-                            if starred_item_key:
-                                parts = starred_item_key.split(':')
-                                original_type = parts[0]
-                                original_mode = parts[1]
-                                # For verbs, also set voice/tense/mood
-                                if original_type == "Verb" and len(parts) >= 5:
-                                    voice = parts[2]
-                                    tense = parts[3]
-                                    mood = parts[4]
-                                    if hasattr(self, 'voice_var'):
-                                        self.voice_var.set(voice)
-                                    if hasattr(self, 'tense_var'):
-                                        self.tense_var.set(tense)
-                                    if hasattr(self, 'mood_var'):
-                                        self.mood_var.set(mood)
-                                # Set the mode/voice/tense/mood to the real values for table loading
-                                self.mode_var.set(original_mode)
-                                # Do NOT reset type_var to the real type—keep as Starred
-                                # Force table recreation for starred items
-                                self.reset_table()
-                                self.update_word_display()
-                                return  # Don't call reset_table again at the end
-                            else:
-                                return
+            if not starred_item_key:
+                print(f"Warning: Could not find starred item for display: {selected_display}")
+                return
+            
+            # Parse the starred item key
+            parts = starred_item_key.split(':')
+            if len(parts) < 2:
+                print(f"Warning: Invalid starred item key: {starred_item_key}")
+                return
+            
+            item_type = parts[0]
+            mode = parts[1]
+            
+            # Set a flag to indicate we're in starred context
+            self._in_starred_context = True
+            
+            # Temporarily set type for table creation, but DON'T change mode_var
+            # mode_var must stay as the display name for get_effective_type() to work
+            self.type_var.set(item_type)
+            # DO NOT SET mode_var here - it must remain as selected_display
+            
+            # Handle verb-specific logic with dedicated starred verb system
+            if item_type == "Verb":
+                # Use the dedicated starred verb system
+                if self.init_starred_verb(starred_item_key):
+                    paradigm = self.get_starred_verb_paradigm()
+                    if paradigm:
+                        self.create_starred_verb_table(paradigm)
+                    else:
+                        print(f"Warning: No paradigm found for starred verb: {starred_item_key}")
+                        self.create_declension_table()
+                else:
+                    # Fallback for malformed verb keys
+                    print(f"Warning: Could not initialize starred verb: {starred_item_key}")
+                    self.create_declension_table()
+            else:
+                # Non-verb: use declension table
+                self.create_declension_table()
+            
+            # Restore type_var to Starred BEFORE updating UI
+            # This is critical so update_word_display() can detect we're in starred mode
+            self.type_var.set("Starred")
+            
+            # Update UI (now that type_var is restored)
+            self.update_word_display()
+            
+            # Clear the starred context flag
+            self._in_starred_context = False
+            return
         # Ensure we always have the current mode and verb form variables
         # defined for the logic below, whether or not we're in Starred mode.
         mode = self.mode_var.get()
@@ -2689,40 +3038,33 @@ class BellerophonGrammarApp:
 
     def get_current_paradigm(self):
         """Get the currently selected paradigm."""
+        
+        # For starred verbs, return the stored paradigm directly
+        if hasattr(self, 'current_starred_paradigm') and self.current_starred_paradigm:
+            return self.current_starred_paradigm
+        
         mode = self.mode_var.get()
         current_type = self.type_var.get()
         
         # Handle starred items - need to get the original mode for paradigm lookup
         original_mode = mode
         original_type = current_type
+        starred_verb_forms = None  # Will hold (voice, tense, mood) for starred verbs
         
         if current_type == "Starred":
-            # Find the original type and mode for this starred item
-            starred_item_key = None
-            for item_key in self.starred_items:
-                parts = item_key.split(':')
+            # Use the display map to find the starred item key
+            display_map = self.get_starred_display_map()
+            starred_item_key = display_map.get(mode)
+            
+            if starred_item_key:
+                parts = starred_item_key.split(':')
                 if len(parts) >= 2:
-                    item_type = parts[0]
-                    item_mode = parts[1]
+                    original_type = parts[0]
+                    original_mode = parts[1]
                     
-                    if item_type == "Verb" and len(parts) >= 5:
-                        voice = parts[2]
-                        tense = parts[3]
-                        mood = parts[4]
-                        
-                        # Create display text that matches get_starred_display_items format
-                        if "(" in item_mode and ")" in item_mode:
-                            verb_name = item_mode.split("(")[1].split(")")[0]
-                            display_text = f"{verb_name} - {tense} {voice} {mood}"
-                        else:
-                            display_text = f"{item_mode} - {tense} {voice} {mood}"
-                    else:
-                        display_text = item_mode
-                    
-                    if display_text == mode:
-                        original_type = item_type
-                        original_mode = item_mode
-                        break
+                    # For starred verbs, extract the exact tense/mood/voice from the key
+                    if original_type == "Verb" and len(parts) >= 5:
+                        starred_verb_forms = (parts[2], parts[3], parts[4])  # (voice, tense, mood)
         
         # For verbs, use dropdown selections to determine paradigm
         if original_type == "Verb":
@@ -2758,15 +3100,29 @@ class BellerophonGrammarApp:
             else:
                 return None
             
-            # Get tense, voice, mood from dropdowns (if they exist)
-            tense = getattr(self, 'tense_var', None)
-            voice = getattr(self, 'voice_var', None)
-            mood = getattr(self, 'mood_var', None)
+            # Get tense, voice, mood - prioritize starred forms, then dropdowns
+            if starred_verb_forms:
+                # Use the exact forms from the starred item key
+                voice_val, tense_val, mood_val = starred_verb_forms
+                voice_val = voice_val.lower()
+                tense_val = tense_val.lower()
+                mood_val = mood_val.lower()
+            else:
+                # Get from dropdowns (if they exist)
+                tense = getattr(self, 'tense_var', None)
+                voice = getattr(self, 'voice_var', None)
+                mood = getattr(self, 'mood_var', None)
+                
+                if tense and voice and mood:
+                    tense_val = tense.get().lower()
+                    voice_val = voice.get().lower()
+                    mood_val = mood.get().lower()
+                else:
+                    # No dropdown values available, use fallback
+                    tense_val = voice_val = mood_val = None
             
-            if tense and voice and mood:
-                tense_val = tense.get().lower()
-                voice_val = voice.get().lower()
-                mood_val = mood.get().lower()
+            # Only proceed if we have all three values
+            if tense_val and voice_val and mood_val:
                 
                 # Map tense names to paradigm keys
                 tense_map = {
@@ -3863,33 +4219,37 @@ class BellerophonGrammarApp:
         current_type = self.get_effective_type()
         
         # Iterate through all entries and prefill them
-        for entry_key, entry in self.entries.items():
-            # Get the correct answer for this entry
-            correct_answer = ""
-            
-            if current_type == "Adjective":
-                # Parse entry_key like "Nominative_masculine_sg"
-                parts = entry_key.split('_')
-                if len(parts) == 3:
-                    case, gender, number = parts
-                    if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
-                        correct_answer = current_paradigm[gender][f"{case}_{number}"]
-            elif current_type == "Pronoun":
-                # Handle pronouns similar to adjectives for gender pronouns
-                parts = entry_key.split('_')
-                if len(parts) == 3:
-                    case, gender, number = parts
-                    if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
-                        correct_answer = current_paradigm[gender][f"{case}_{number}"]
+        for entry_key, entry in list(self.entries.items()):  # Use list() to avoid dict change during iteration
+            try:
+                # Get the correct answer for this entry
+                correct_answer = ""
+                
+                if current_type == "Adjective":
+                    # Parse entry_key like "Nominative_masculine_sg"
+                    parts = entry_key.split('_')
+                    if len(parts) == 3:
+                        case, gender, number = parts
+                        if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                            correct_answer = current_paradigm[gender][f"{case}_{number}"]
+                elif current_type == "Pronoun":
+                    # Handle pronouns similar to adjectives for gender pronouns
+                    parts = entry_key.split('_')
+                    if len(parts) == 3:
+                        case, gender, number = parts
+                        if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                            correct_answer = current_paradigm[gender][f"{case}_{number}"]
+                    else:
+                        # Simple pronoun structure
+                        correct_answer = current_paradigm.get(entry_key, "")
                 else:
-                    # Simple pronoun structure
+                    # Noun, verb, simple structure
                     correct_answer = current_paradigm.get(entry_key, "")
-            else:
-                # Noun, verb, simple structure
-                correct_answer = current_paradigm.get(entry_key, "")
-            
-            if correct_answer:
-                self.prefill_entry_with_stem(entry_key, correct_answer)
+                
+                if correct_answer:
+                    self.prefill_entry_with_stem(entry_key, correct_answer)
+            except tk.TclError:
+                # Widget was destroyed, skip it
+                continue
 
     def check_answers(self):
         """Check all user inputs against correct answers."""
@@ -4501,10 +4861,66 @@ class BellerophonGrammarApp:
         if self.learn_mode_enabled.get():
             self.attempt_start_time = datetime.now()
         
-        # Clear dictionaries and recreate the table
+        # Clear dictionaries and recreate the table based on type
         self.entries.clear()
         self.error_labels.clear()
-        self.create_declension_table()
+        
+        # Get the effective type to determine which table to create
+        current_type = self.get_effective_type()
+        
+        # Set starred context flag if we're in starred mode
+        is_starred = self.type_var.get() == "Starred"
+        
+        if is_starred:
+            self._in_starred_context = True
+        
+        try:
+            if current_type == "Verb":
+                # For verbs, check if this is a starred verb
+                if is_starred:
+                    # Starred verb - need to use starred verb system
+                    # First ensure starred verb data is initialized
+                    if not hasattr(self, '_starred_verb_data') or not hasattr(self, 'current_starred_paradigm'):
+                        # Try to reinitialize from current mode selection
+                        selected_display = self.mode_var.get()
+                        display_map = self.get_starred_display_map()
+                        starred_item_key = display_map.get(selected_display)
+                        
+                        if starred_item_key:
+                            # Reinitialize the starred verb
+                            self.init_starred_verb(starred_item_key)
+                    
+                    # Now get paradigm and create table
+                    paradigm = self.get_starred_verb_paradigm()
+                    if paradigm:
+                        self.create_starred_verb_table(paradigm)
+                    else:
+                        print(f"Warning: No paradigm found for starred verb in reset_table")
+                        self.create_declension_table()
+                else:
+                    # Regular verb - use normal system (create_declension_table creates both table and buttons)
+                    self.create_declension_table()
+            elif current_type == "Adjective":
+                # Create adjective table
+                current_paradigm = self.get_current_paradigm()
+                if current_paradigm:
+                    self.create_adjective_table(current_paradigm)
+                else:
+                    self.create_declension_table()
+            elif current_type == "Pronoun":
+                # Create pronoun table
+                current_paradigm = self.get_current_paradigm()
+                if current_paradigm:
+                    self.create_pronoun_table(current_paradigm)
+                else:
+                    self.create_declension_table()
+            else:
+                # For nouns and fallback cases, use the standard declension table creator
+                self.create_declension_table()
+        finally:
+            # Clear the starred context flag
+            if is_starred:
+                self._in_starred_context = False
 
     def show_help(self):
         """Show help dialog."""
@@ -4696,7 +5112,7 @@ Tips:
 
     def move_to_next_entry(self, current_key):
         """Move focus to the next logical entry."""
-        current_type = self.type_var.get()
+        current_type = self.get_effective_type()
         cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
         
         if current_type == "Adjective":
@@ -5319,9 +5735,15 @@ Tips:
         return None
 
     def get_current_item_key(self):
-        """Get the current table's key for starring (format: 'type:mode')."""
+        """Get the current table's key for starring (format: 'type:mode' or 'Verb:mode:voice:tense:mood')."""
         current_type = self.type_var.get()
         current_mode = self.mode_var.get()
+        
+        # If we're in Starred tab, extract the actual item key from the display map
+        if current_type == "Starred":
+            display_map = self.get_starred_display_map()
+            return display_map.get(current_mode, "")
+        
         # For verbs, include voice/tense/mood in the key for specificity
         if current_type == "Verb":
             voice = getattr(self, 'voice_var', None)
@@ -5344,42 +5766,51 @@ Tips:
         item_key = self.get_current_item_key()
         
         if item_key in self.starred_items:
-            # Unstar
+            # Unstar the item
             self.starred_items.remove(item_key)
-            print(f"Unstarred: {item_key}")
+            self.save_starred_items()
             
-            # If we're in starred mode and we just unstarred the current item,
-            # we need to handle navigation since this item will disappear from the list
-
-
+            # Special handling if we're in the Starred tab
             if current_type == "Starred":
-                self.update_starred_dropdown()
-                remaining_items = self.get_starred_display_items()
+                # Get remaining starred items
                 display_map = self.get_starred_display_map()
-                # If the current display is not valid, move to the next valid item
-                current_display = self.mode_var.get()
-                if current_display not in display_map:
-                    if remaining_items:
-                        self.mode_var.set(remaining_items[0])
-                        self.on_mode_change(None)
-                    else:
-                        self.type_var.set("Noun")
-                        self.on_type_change(None)
-                else:
-                    # If still valid, just update the UI
-                    self.on_mode_change(None)
+                remaining_displays = list(display_map.keys())
+                
+                if remaining_displays:
+                    # Update dropdown with remaining items
+                    self.modes = remaining_displays
+                    self.mode_dropdown['values'] = self.modes
                     
+                    # Select the first remaining item
+                    next_display = remaining_displays[0]
+                    self.mode_var.set(next_display)
+                    
+                    # Trigger on_mode_change to display the next item properly
+                    self.on_mode_change(None)
+                else:
+                    # No starred items left - switch to Noun type
+                    self.modes = ["No starred items"]
+                    self.mode_dropdown['values'] = self.modes
+                    self.mode_var.set("No starred items")
+                    
+                    # Switch to Noun and display first noun paradigm
+                    self.type_var.set("Noun")
+                    self.on_type_change(None)
+            else:
+                # We're in a regular tab - just update the star button
+                self.update_star_button()
+            
+            return  # Exit early after unstarring
+        
         elif current_type != "Starred":
-            # Only allow starring when NOT in starred mode
+            # Star the item (only allowed in normal tabs, not in Starred tab)
             self.starred_items.add(item_key)
+            self.save_starred_items()
             print(f"Starred: {item_key}")
         else:
             # In starred mode, only allow unstarring
             print("Cannot star items while in Starred mode - only unstarring is allowed")
             return
-        
-        # Save to file
-        self.save_starred_items()
         
         # Update star button appearance
         self.update_star_button()
@@ -5433,37 +5864,47 @@ Tips:
         display_map = {}
         for item_key in getattr(self, 'starred_items', set()):
             parts = item_key.split(':')
-            if not parts:
+            if len(parts) < 2:
+                # Invalid key format - skip
                 continue
+            
             item_type = parts[0]
+            
             if item_type == 'Verb' and len(parts) >= 5:
                 mode = parts[1]
                 voice = parts[2]
                 tense = parts[3]
                 mood = parts[4]
+                
+                # Extract verb name from mode (e.g., "Present Indicative Active - Release (λύω)")
                 if "(" in mode and ")" in mode:
                     verb_name = mode.split("(")[1].split(")")[0]
                     display_label = f"{verb_name} - {tense} {voice} {mood}"
                 else:
                     display_label = f"{mode} - {tense} {voice} {mood}"
             else:
-                # Non-verb starred entries use the mode string as label
-                display_label = parts[1] if len(parts) > 1 else item_key
-            # Avoid duplicates: later items override earlier ones
+                # Non-verb starred entries: use the mode string as label
+                display_label = parts[1]
+            
+            # Store the mapping (later items with same display override earlier ones)
             display_map[display_label] = item_key
+        
         return display_map
 
     def update_starred_dropdown(self):
         """Update the mode dropdown when in starred mode."""
         if self.type_var.get() == "Starred":
             starred_items = self.get_starred_display_items()
-            self.modes = starred_items  # Update self.modes as well
-            self.mode_dropdown['values'] = starred_items
-            # If current selection is no longer valid, select first item
-            if starred_items and self.mode_var.get() not in starred_items:
-                self.mode_var.set(starred_items[0])
-                self.on_mode_change(None)
-            elif not starred_items:
+            
+            if starred_items:
+                self.modes = starred_items
+                self.mode_dropdown['values'] = starred_items
+                
+                # If current selection is no longer valid, select first item
+                if self.mode_var.get() not in starred_items:
+                    self.mode_var.set(starred_items[0])
+                    self.on_mode_change(None)
+            else:
                 # No starred items left, set to "No starred items"
                 self.modes = ["No starred items"]
                 self.mode_dropdown['values'] = self.modes
