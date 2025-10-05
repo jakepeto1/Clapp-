@@ -296,6 +296,34 @@ class BellerophonGrammarApp:
         # Apply stem prefilling if enabled
         self.apply_prefill_stems_to_all_entries()
     
+
+    def get_available_types(self):
+        """Get the list of available types based on whether starred items exist."""
+        base_types = ["Noun", "Adjective", "Pronoun", "Verb"]
+        
+        # Check if there are any starred items
+        starred_items = self.get_starred_display_items()
+        if starred_items:
+            # If starred items exist, add "Starred" at the end
+            return base_types + ["Starred"]
+        else:
+            # If no starred items, just return base types
+            return base_types
+    
+    def update_type_dropdown(self):
+        """Update the type dropdown values based on current starred items."""
+        available_types = self.get_available_types()
+        
+        # Update the dropdown values
+        if hasattr(self, 'type_dropdown'):
+            current_value = self.type_var.get()
+            self.type_dropdown['values'] = available_types
+            
+            # If current selection is "Starred" but no starred items exist, switch to "Noun"
+            if current_value == "Starred" and "Starred" not in available_types:
+                self.type_var.set("Noun")
+                self.on_type_change(None)
+    
     def create_starred_finite_verb_table(self, paradigm, verb_data):
         """Create finite verb table for starred verbs."""
         # Configure table columns
@@ -565,16 +593,16 @@ class BellerophonGrammarApp:
         )
         
         self.type_var = tk.StringVar(value="Noun")
-        type_dropdown = ttk.Combobox(
+        self.type_dropdown = ttk.Combobox(
             mode_frame,
             textvariable=self.type_var,
-            values=["Starred", "Noun", "Adjective", "Pronoun", "Verb"],
+            values=self.get_available_types(),
             font=('Times New Roman', 12),
             width=12,
             state='readonly'
         )
-        type_dropdown.grid(row=0, column=1, sticky='w', padx=(0, 20))
-        type_dropdown.bind('<<ComboboxSelected>>', self.on_type_change)
+        self.type_dropdown.grid(row=0, column=1, sticky='w', padx=(0, 20))
+        self.type_dropdown.bind('<<ComboboxSelected>>', self.on_type_change)
 
         ttk.Label(mode_frame, text="Select Study Mode:").grid(
             row=0, column=2, padx=(0, 10)
@@ -905,12 +933,6 @@ class BellerophonGrammarApp:
                 # Current mode not found in list, stay at current mode
                 pass
 
-        # Clear all entries and apply prefill stems if enabled for the new combination
-        self.clear_all_entries()
-        self.apply_prefill_stems_to_all_entries()
-        # Always update the word display and instruction after navigation
-        self.update_word_display()
-
     def random_next(self):
         """Navigate to a completely random table (type, mode, and for verbs: voice/tense/mood)."""
         import random
@@ -1222,8 +1244,109 @@ class BellerophonGrammarApp:
             # Current mode not found in list, stay at current mode
             pass
 
+    def get_table_signature(self):
+        """Get a signature representing the current table structure to avoid unnecessary rebuilds."""
+        current_type = self.get_effective_type()
+        current_mode = self.mode_var.get()
+        
+        # Create a signature that uniquely identifies the table structure
+        signature = {
+            'type': current_type,
+            'mode': current_mode  # Include mode to be more conservative
+        }
+        
+        # For now, let's be very conservative and only optimize for identical modes
+        # This prevents issues while still reducing some flashing
+        return signature
+
+    def update_noun_table_content(self):
+        """Update noun table content without rebuilding the structure."""
+        # Clear all existing entries and reset their state
+        for entry in self.entries.values():
+            if entry and entry.winfo_exists():
+                entry.delete(0, tk.END)
+                entry.configure(bg='white')  # Reset background color
+        
+        # Clear and hide all error labels
+        for error_label in self.error_labels.values():
+            if error_label and error_label.winfo_exists():
+                error_label.config(text="")
+                error_label.grid_remove()  # Hide the error label
+        
+        # Clear incorrect entries tracking
+        if hasattr(self, 'incorrect_entries'):
+            self.incorrect_entries.clear()
+        
+        # Update word display for the new paradigm
+        self.update_word_display()
+        
+        # Apply stem prefilling if enabled
+        self.apply_prefill_stems_to_all_entries()
+
+    def should_rebuild_table(self):
+        """Check if we need to rebuild the table or can just clear entries."""
+        new_signature = self.get_table_signature()
+        
+        # If no previous signature, we need to build
+        if not hasattr(self, '_last_table_signature'):
+            self._last_table_signature = new_signature
+            return True
+            
+        # If signatures match, we can just clear entries
+        if self._last_table_signature == new_signature:
+            return False
+            
+        # Signatures differ, need to rebuild
+        self._last_table_signature = new_signature
+        return True
+    
+    def clear_table_entries(self):
+        """Clear all entry values without rebuilding the table structure."""
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            return
+            
+        current_type = self.get_effective_type()
+        
+        # We need to rebuild the table content (entries) but not the structure
+        # Clear existing table content but keep the frame
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+            
+        # Recreate the table content with the new paradigm
+        if current_type == "Adjective":
+            self.create_adjective_table(current_paradigm)
+        elif current_type == "Pronoun":
+            self.create_pronoun_table(current_paradigm)
+        elif current_type == "Verb":
+            self.create_verb_table(current_paradigm)
+        else:
+            self.create_noun_table(current_paradigm)
+        
+        # Apply stem prefilling if enabled
+        self.apply_prefill_stems_to_all_entries()
+
     def create_declension_table(self):
         """Create the declension table with input fields for each case."""
+        current_type = self.get_effective_type()
+        
+        # Optimize for nouns: all nouns use the same table structure (Case x Singular/Plural)
+        # Don't use optimization in starred context or if entries are empty
+        if (current_type == "Noun" and 
+            hasattr(self, 'table_frame') and self.table_frame and 
+            hasattr(self, '_last_table_type') and self._last_table_type == "Noun" and
+            len(self.entries) > 0 and
+            not getattr(self, '_in_starred_context', False) and
+            self.table_frame.winfo_exists()):
+            
+            # Same table structure, just update the content
+            self.update_noun_table_content()
+            return
+        
+        # Store the current table type for future optimization
+        self._last_table_type = current_type
+            
+        # Need to rebuild the table
         if self.table_frame:
             self.table_frame.destroy()
             
@@ -2704,25 +2827,27 @@ class BellerophonGrammarApp:
         
         # Use the raw type_var to check for Starred
         if self.type_var.get() == "Starred":
-            # Handle starred items
+            # Handle starred items (should only be accessible if items exist)
             display_items = self.get_starred_display_items()
             
             if display_items:
                 self.modes = display_items
                 self.mode_var.set(display_items[0])
+                
+                # Update the dropdown values
+                self.mode_dropdown['values'] = self.modes
+                
+                # Update instruction text
+                self.update_instruction_text()
+                
+                # For starred items, delegate to on_mode_change to handle proper initialization
+                # This ensures starred verbs get properly initialized with their specific data
+                self.on_mode_change(None)
             else:
-                self.modes = ["No starred items"]
-                self.mode_var.set("No starred items")
-            
-            # Update the dropdown values
-            self.mode_dropdown['values'] = self.modes
-            
-            # Update instruction text
-            self.update_instruction_text()
-            
-            # For starred items, delegate to on_mode_change to handle proper initialization
-            # This ensures starred verbs get properly initialized with their specific data
-            self.on_mode_change(None)
+                # This shouldn't happen since "Starred" shouldn't be available without items
+                # But as a safety fallback, switch to Noun
+                self.type_var.set("Noun")
+                self.on_type_change(None)
             return
             
         elif self.type_var.get() == "Noun":
@@ -2757,8 +2882,6 @@ class BellerophonGrammarApp:
         # Handle starred items specially
         if self.type_var.get() == "Starred":
             selected_display = self.mode_var.get()
-            if selected_display == "No starred items":
-                return
             
             # Use the display map to find the correct starred item key
             display_map = self.get_starred_display_map()
@@ -4861,9 +4984,20 @@ class BellerophonGrammarApp:
         if self.learn_mode_enabled.get():
             self.attempt_start_time = datetime.now()
         
-        # Clear dictionaries and recreate the table based on type
-        self.entries.clear()
-        self.error_labels.clear()
+        # DON'T clear dictionaries if we're about to use optimization
+        # Only clear them if we need to rebuild from scratch
+        current_type = self.get_effective_type()
+        will_use_optimization = (current_type == "Noun" and 
+                                hasattr(self, 'table_frame') and self.table_frame and 
+                                hasattr(self, '_last_table_type') and self._last_table_type == "Noun" and
+                                len(self.entries) > 0 and
+                                not getattr(self, '_in_starred_context', False) and
+                                self.table_frame.winfo_exists())
+        
+        if not will_use_optimization:
+            # Clear dictionaries and recreate the table based on type
+            self.entries.clear()
+            self.error_labels.clear()
         
         # Get the effective type to determine which table to create
         current_type = self.get_effective_type()
@@ -5587,25 +5721,19 @@ Tips:
 
         # Build instruction text based on effective type and presence of lemma
         if current_type == "Verb":
-            # Short form like "Conjugate: λύω" is clearer when lemma is known
-            if lemma:
-                instruction_text = f"Conjugate: {lemma}"
-            else:
-                instruction_text = "Conjugate the verb:"
+            # Don't duplicate the verb name since it's already in the word label
+            instruction_text = "Conjugate the verb:"
 
         elif current_type == "Starred":
             # If the starred original type is a verb (lemma present), conjugate
             if lemma and any(v in (mode + (lemma or "")) for v in ["λύω", "εἰμί", "φιλέω", "τιμάω", "δηλόω", "βάλλω", "βαίνω", "δίδωμι", "τίθημι", "ἵστημι", "οἶδα", "εἶμι", "φημί", "ἵημι"]):
-                instruction_text = f"Conjugate: {lemma}"
+                instruction_text = "Conjugate the verb:"
             else:
                 instruction_text = "Decline the word:"
 
         else:
             # For nouns, adjectives, and pronouns
-            if lemma:
-                instruction_text = f"Decline the word:"
-            else:
-                instruction_text = "Decline the word:"
+            instruction_text = "Decline the word:"
 
         self.instruction_label.config(text=instruction_text)
 
@@ -5770,6 +5898,9 @@ Tips:
             self.starred_items.remove(item_key)
             self.save_starred_items()
             
+            # Update type dropdown (might remove "Starred" if no items left)
+            self.update_type_dropdown()
+            
             # Special handling if we're in the Starred tab
             if current_type == "Starred":
                 # Get remaining starred items
@@ -5788,11 +5919,7 @@ Tips:
                     # Trigger on_mode_change to display the next item properly
                     self.on_mode_change(None)
                 else:
-                    # No starred items left - switch to Noun type
-                    self.modes = ["No starred items"]
-                    self.mode_dropdown['values'] = self.modes
-                    self.mode_var.set("No starred items")
-                    
+                    # No starred items left - type dropdown already updated above
                     # Switch to Noun and display first noun paradigm
                     self.type_var.set("Noun")
                     self.on_type_change(None)
@@ -5807,6 +5934,9 @@ Tips:
             self.starred_items.add(item_key)
             self.save_starred_items()
             print(f"Starred: {item_key}")
+            
+            # Update type dropdown (might add "Starred" if first item)
+            self.update_type_dropdown()
         else:
             # In starred mode, only allow unstarring
             print("Cannot star items while in Starred mode - only unstarring is allowed")
