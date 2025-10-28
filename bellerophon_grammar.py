@@ -5,8 +5,9 @@ import unicodedata
 import sys
 import os
 from datetime import datetime
+from typing import List, Dict, Optional
 from database import DatabaseManager
-from learn_mode import UserManager, LearningSession, ProgressTracker
+from session_manager import SessionManager
 
 # Try to import PIL for better image handling
 try:
@@ -27,6 +28,8 @@ class PracticeConfig:
         self.ignore_breathings = tk.BooleanVar(value=False)
         self.prefill_stems = tk.BooleanVar(value=False)
         self.randomize_next = tk.BooleanVar(value=False)
+        self.lock_current_type = tk.BooleanVar(value=False)
+        self.auto_advance = tk.BooleanVar(value=False)
         # Future toggles can be added here
         # self.ignore_accents = tk.BooleanVar(value=False)
         # self.show_hints = tk.BooleanVar(value=True)
@@ -46,8 +49,52 @@ class PracticeConfig:
         self.ignore_breathings.set(False)
         self.prefill_stems.set(False)
         self.randomize_next.set(False)
+        self.lock_current_type.set(False)
 
 class BellerophonGrammarApp:
+    def check_and_auto_advance(self):
+        auto_advance_enabled = False
+        if hasattr(self, 'config') and hasattr(self.config, 'auto_advance'):
+            auto_advance_enabled = self.config.auto_advance.get() if hasattr(self.config.auto_advance, 'get') else self.config.auto_advance
+        elif hasattr(self, 'auto_advance'):
+            auto_advance_enabled = self.auto_advance.get() if hasattr(self.auto_advance, 'get') else self.auto_advance
+
+        all_correct = all(str(entry.cget('state')) == 'readonly' for entry in self.entries.values())
+        if all_correct and auto_advance_enabled and len(self.entries) > 0:
+            # Check which side we're on (Greek or Latin) and call appropriate next function
+            # Greek side uses type_var, Latin side uses latin_type_var
+            if hasattr(self, 'latin_type_var') and hasattr(self, 'latin_entries') and len(self.latin_entries) > 0:
+                # We're on Latin side
+                if hasattr(self, 'next_latin_word') and callable(self.next_latin_word):
+                    self.next_latin_word()
+                    # Focus on first Latin entry after table loads
+                    self.root.after(50, self.focus_first_latin_entry)
+            elif hasattr(self, 'type_var'):
+                # We're on Greek side
+                if self.config.randomize_next.get():
+                    if hasattr(self, 'random_next') and callable(self.random_next):
+                        self.random_next()
+                else:
+                    if hasattr(self, 'next_answer') and callable(self.next_answer):
+                        self.next_answer()
+                # Focus on first Greek entry after table loads
+                self.root.after(50, self.focus_first_greek_entry)
+    
+    def focus_first_latin_entry(self):
+        """Focus on the first editable entry in the Latin table."""
+        if hasattr(self, 'latin_entries') and self.latin_entries:
+            for entry in self.latin_entries.values():
+                if str(entry.cget('state')) != 'readonly':
+                    entry.focus()
+                    return
+    
+    def focus_first_greek_entry(self):
+        """Focus on the first editable entry in the Greek table."""
+        if hasattr(self, 'entries') and self.entries:
+            for entry in self.entries.values():
+                if str(entry.cget('state')) != 'readonly':
+                    entry.focus()
+                    return
     def get_effective_type_from_item_key(self, item_key):
         """Extracts the type (Noun, Verb, etc.) from a starred item key."""
         return item_key.split(":", 1)[0] if item_key and ":" in item_key else None
@@ -428,25 +475,35 @@ class BellerophonGrammarApp:
 
     def __init__(self, root):
         self.root = root
+        self.root.configure(bg='#F8F6F1')  # White Marble background for root window
         # --- BEGIN: moved UI setup and initialization code into __init__ ---
         self.incorrect_entries = set()  # Track which entries were incorrect
-        self.learn_mode_enabled = tk.BooleanVar(value=False)
-        # Initialize Learn Mode components
-        self.db_manager = DatabaseManager()
-        self.user_manager = UserManager(self.db_manager)
-        self.current_user = None
-        self.attempt_start_time = None
-        self.progress_tracker = None  # Will be initialized after main_frame
+        self.has_revealed = False  # Track if answers have been revealed
         # Initialize practice configuration
         self.config = PracticeConfig()
-        # Initialize starred items system
+        # Initialize session manager
+        self.session_manager = SessionManager()
+        self.current_session_id = None
+        self.current_session_tables = []
+        self.current_table_index = 0
+        # Initialize recent word history (track last 10 words to avoid repetition)
+        from collections import deque
+        self.recent_word_history = deque(maxlen=10)
+        # Initialize starred items system (Greek side)
         self.starred_items = set()  # Set of starred items in format "type:mode"
         self.starred_file = "starred_items.json"
         self.star_button = None  # Will be created in setup_ui
         # Load starred items from file
         self.load_starred_items()
+        # Initialize Latin starred items system (separate from Greek)
+        self.latin_starred_items = set()  # Set of starred Latin items
+        self.latin_starred_file = "latin_starred_items.json"
+        self.latin_star_button = None  # Will be created in show_latin_view
+        # Load Latin starred items from file
+        self.load_latin_starred_items()
         # Initialize header logo and app icon before any UI code that checks them
         self.header_logo = self.load_header_logo()
+        self.latin_header_logo = self.load_latin_header_logo()  # Latin-specific logo
         self.app_icon = self.load_app_icon()
         # Initialize table_frame to None to avoid AttributeError before first use
         self.table_frame = None
@@ -466,57 +523,18 @@ class BellerophonGrammarApp:
         self.root.state('zoomed')  # Start maximized
         self.root.minsize(1000, 700)  # Set minimum size to prevent content from being cut off
         
-        # Main container that will expand to fill the window
-        self.main_frame = ttk.Frame(self.root)
+        # Main container that will expand to fill the window (use tk.Frame for proper background)
+        self.main_frame = tk.Frame(self.root, bg='#F8F6F1')
         self.main_frame.grid(row=0, column=0, sticky='nsew')
         
         # Configure grid weights for proper expansion
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
         
-        # Configure main_frame rows to expand properly
-        self.main_frame.grid_rowconfigure(0, weight=0)  # Title - fixed
-        self.main_frame.grid_rowconfigure(1, weight=0)  # Type selector - fixed
-        self.main_frame.grid_rowconfigure(2, weight=0)  # Mode selector - fixed
-        self.main_frame.grid_rowconfigure(3, weight=1)  # Table area - expands
-        self.main_frame.grid_rowconfigure(4, weight=0)  # Buttons - fixed
-        self.main_frame.grid_columnconfigure(0, weight=1)  # Center everything horizontally
+        # Configure main_frame to expand
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
         
-        # Configure main_frame grid weights for responsive layout
-        self.main_frame.grid_rowconfigure(0, weight=0)  # Title row - fixed
-        self.main_frame.grid_rowconfigure(1, weight=0)  # Mode row - fixed
-        self.main_frame.grid_rowconfigure(2, weight=0)  # Selector row - fixed
-        self.main_frame.grid_rowconfigure(3, weight=1)  # Table row - expandable
-        self.main_frame.grid_rowconfigure(4, weight=0)  # Button row - fixed
-        for i in range(3):
-            self.main_frame.grid_columnconfigure(i, weight=1)
-
-        # Initialize progress tracker now that main_frame exists
-        self.progress_tracker = ProgressTracker(self.main_frame, self.db_manager)
-
-        # Title and Instructions
-        title_frame = ttk.Frame(self.main_frame)
-        title_frame.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky='ew')
-        title_frame.grid_columnconfigure(0, weight=1)  # Allow title to expand
-        title_frame.grid_columnconfigure(1, weight=0)  # Practice options column
-        title_frame.grid_columnconfigure(2, weight=0)  # Help button column
-        
-        # Logo or title
-        if self.header_logo:
-            # Use header logo (long logo)
-            logo_label = ttk.Label(title_frame, image=self.header_logo)
-            logo_label.grid(row=0, column=0, sticky='w')
-            # Keep a reference to prevent garbage collection
-            logo_label.image = self.header_logo
-        else:
-            # Fallback to text title
-            title_label = ttk.Label(
-                title_frame, 
-                text="Bellerophon Grammar Study",
-                style='Title.TLabel'
-            )
-            title_label.grid(row=0, column=0, sticky='w')
-            
         # Set window icon (small icon)
         if self.app_icon:
             try:
@@ -524,8 +542,3150 @@ class BellerophonGrammarApp:
             except Exception as e:
                 print(f"Could not set window icon: {e}")
         
+        # Load paradigms early so they're available for session mode
+        try:
+            with open('paradigms.json', 'r', encoding='utf-8') as f:
+                self.paradigms = json.load(f)
+        except FileNotFoundError:
+            messagebox.showerror("Error", "Could not find paradigms.json file")
+            self.root.destroy()
+            return
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Could not parse paradigms.json file")
+            self.root.destroy()
+            return
+        
+        # Show tables view directly (startup page and session mode are shelved for now)
+        self.show_tables_view()
+        # To re-enable startup page, change above line to: self.show_startup_page()
+    
+    # ============================================================================
+    # SHELVED FEATURES: Startup Page and Session Mode
+    # ============================================================================
+    # The following methods are shelved but preserved for future development:
+    # - show_startup_page() - Startup screen with logo and buttons
+    # - show_session_options_page() - Session configuration screen
+    # - show_session_mode() - Active session with progress tracking
+    # - show_session_review() - Session results and statistics
+    # - All session table creation and management methods
+    # To re-enable, change show_tables_view() to show_startup_page() in __init__
+    # ============================================================================
+    
+    def show_startup_page(self):
+        """Display the startup page with logo and navigation buttons."""
+        # Clear main frame
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        
+        # Clear all previous grid configurations
+        for i in range(10):
+            self.main_frame.grid_rowconfigure(i, weight=0)
+            self.main_frame.grid_columnconfigure(i, weight=0)
+        
+        # Configure main_frame for centered content
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        
+        # Create centered container
+        center_container = ttk.Frame(self.main_frame)
+        center_container.grid(row=0, column=0)
+        
+        # Load and display the Bellerophon small logo
+        try:
+            logo_path = os.path.join(os.path.dirname(__file__), "assets", "Bellerphon small.png")
+            logo_image = Image.open(logo_path)
+            # Resize to 360x300 pixels
+            logo_image = logo_image.resize((360, 300), Image.Resampling.LANCZOS)
+            self.startup_logo = ImageTk.PhotoImage(logo_image)
+            
+            logo_label = ttk.Label(center_container, image=self.startup_logo)
+            logo_label.grid(row=0, column=0, pady=(0, 40))
+            # Keep reference to prevent garbage collection
+            logo_label.image = self.startup_logo
+        except Exception as e:
+            print(f"Could not load startup logo: {e}")
+            # Fallback text
+            fallback_label = ttk.Label(
+                center_container,
+                text="BELLEROPHON\nGRAMMAR",
+                font=('Arial', 36, 'bold'),
+                justify='center'
+            )
+            fallback_label.grid(row=0, column=0, pady=(0, 40))
+        
+        # Welcome text
+        welcome_label = ttk.Label(
+            center_container,
+            text="Welcome to Bellerophon Grammar",
+            font=('Arial', 18),
+            justify='center'
+        )
+        welcome_label.grid(row=1, column=0, pady=(0, 30))
+        
+        # Button container
+        button_container = ttk.Frame(center_container)
+        button_container.grid(row=2, column=0)
+        
+        # Configure button style
+        button_style = ttk.Style()
+        button_style.configure('Startup.TButton',
+                             font=('Arial', 14),
+                             padding=(30, 15))
+        
+        # Create three buttons in a horizontal row
+        tables_button = ttk.Button(
+            button_container,
+            text="Tables",
+            command=self.show_tables_view,
+            style='Startup.TButton',
+            width=20
+        )
+        tables_button.grid(row=0, column=0, padx=10)
+        
+        session_button = ttk.Button(
+            button_container,
+            text="Start new session",
+            command=self.start_new_session,
+            style='Startup.TButton',
+            width=20,
+            state='normal'  # Now enabled
+        )
+        session_button.grid(row=0, column=1, padx=10)
+        
+        stats_button = ttk.Button(
+            button_container,
+            text="Statistics",
+            command=self.show_statistics,
+            style='Startup.TButton',
+            width=20,
+            state='disabled'  # Disabled for now
+        )
+        stats_button.grid(row=0, column=2, padx=10)
+    
+    def start_new_session(self):
+        """Show the session options page."""
+        self.show_session_options_page()
+    
+    def show_session_options_page(self):
+        """Display the session configuration page."""
+        # Clear main frame
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        
+        # Clear all previous grid configurations
+        for i in range(10):
+            self.main_frame.grid_rowconfigure(i, weight=0)
+            self.main_frame.grid_columnconfigure(i, weight=0)
+        
+        # Configure main_frame for centered content
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        
+        # Create centered container
+        center_container = ttk.Frame(self.main_frame)
+        center_container.grid(row=0, column=0)
+        
+        # Title
+        title_label = ttk.Label(
+            center_container,
+            text="Configure Your Study Session",
+            font=('Arial', 24, 'bold')
+        )
+        title_label.grid(row=0, column=0, pady=(0, 30), sticky='w')
+        
+        # Options frame
+        options_frame = ttk.Frame(center_container)
+        options_frame.grid(row=1, column=0, sticky='ew')
+        
+        current_row = 0
+        
+        # 1. Number of tables
+        num_tables_label = ttk.Label(
+            options_frame,
+            text="Number of tables:",
+            font=('Arial', 14, 'bold')
+        )
+        num_tables_label.grid(row=current_row, column=0, sticky='w', pady=(0, 10))
+        
+        self.num_tables_var = tk.IntVar(value=10)
+        num_tables_frame = ttk.Frame(options_frame)
+        num_tables_frame.grid(row=current_row, column=1, sticky='w', padx=(20, 0), pady=(0, 10))
+        
+        for num in [5, 10, 15]:
+            rb = ttk.Radiobutton(
+                num_tables_frame,
+                text=str(num),
+                variable=self.num_tables_var,
+                value=num
+            )
+            rb.pack(side='left', padx=5)
+        
+        current_row += 1
+        
+        # 2. Word types
+        word_types_label = ttk.Label(
+            options_frame,
+            text="Word types:",
+            font=('Arial', 14, 'bold')
+        )
+        word_types_label.grid(row=current_row, column=0, sticky='w', pady=(10, 10))
+        
+        word_types_frame = ttk.Frame(options_frame)
+        word_types_frame.grid(row=current_row, column=1, sticky='w', padx=(20, 0), pady=(10, 10))
+        
+        self.word_type_vars = {}
+        word_types = ['Nouns', 'Verbs', 'Adjectives', 'Pronouns', 'Starred']
+        for i, wtype in enumerate(word_types):
+            var = tk.BooleanVar(value=True if wtype != 'Starred' else False)
+            self.word_type_vars[wtype] = var
+            cb = ttk.Checkbutton(
+                word_types_frame,
+                text=wtype,
+                variable=var
+            )
+            cb.grid(row=0, column=i, padx=5, sticky='w')
+        
+        # Add "Mixed" option
+        var = tk.BooleanVar(value=False)
+        self.word_type_vars['Mixed'] = var
+        cb = ttk.Checkbutton(
+            word_types_frame,
+            text="Mixed (All types)",
+            variable=var,
+            command=self.toggle_mixed_mode
+        )
+        cb.grid(row=1, column=0, columnspan=3, padx=5, pady=(5, 0), sticky='w')
+        
+        current_row += 1
+        
+        # 3. Focus area
+        focus_label = ttk.Label(
+            options_frame,
+            text="Focus area:",
+            font=('Arial', 14, 'bold')
+        )
+        focus_label.grid(row=current_row, column=0, sticky='w', pady=(10, 10))
+        
+        self.focus_area_var = tk.StringVar(value="General")
+        focus_frame = ttk.Frame(options_frame)
+        focus_frame.grid(row=current_row, column=1, sticky='w', padx=(20, 0), pady=(10, 10))
+        
+        focus_options = [
+            ("General Practice", "General"),
+            ("Weak Tables (Low mastery)", "Weak"),
+            ("Untested Tables", "Untested")
+        ]
+        
+        for i, (text, value) in enumerate(focus_options):
+            rb = ttk.Radiobutton(
+                focus_frame,
+                text=text,
+                variable=self.focus_area_var,
+                value=value
+            )
+            rb.grid(row=i, column=0, sticky='w', pady=2)
+        
+        current_row += 1
+        
+        # 4. Spaced repetition toggle
+        spaced_rep_label = ttk.Label(
+            options_frame,
+            text="Advanced:",
+            font=('Arial', 14, 'bold')
+        )
+        spaced_rep_label.grid(row=current_row, column=0, sticky='w', pady=(10, 10))
+        
+        self.spaced_repetition_var = tk.BooleanVar(value=False)
+        spaced_rep_cb = ttk.Checkbutton(
+            options_frame,
+            text="Spaced Repetition (avoid recently practiced tables)",
+            variable=self.spaced_repetition_var
+        )
+        spaced_rep_cb.grid(row=current_row, column=1, sticky='w', padx=(20, 0), pady=(10, 10))
+        
+        current_row += 1
+        
+        # Button frame
+        button_frame = ttk.Frame(center_container)
+        button_frame.grid(row=2, column=0, pady=(30, 0))
+        
+        # Back button
+        back_button = ttk.Button(
+            button_frame,
+            text="← Back",
+            command=self.show_startup_page,
+            width=15
+        )
+        back_button.pack(side='left', padx=5)
+        
+        # Start session button
+        start_button = ttk.Button(
+            button_frame,
+            text="Start Session",
+            command=self.start_study_session,
+            width=15,
+            style='Accent.TButton'
+        )
+        start_button.pack(side='left', padx=5)
+        
+        # Configure accent button style
+        style = ttk.Style()
+        style.configure('Accent.TButton', font=('Arial', 12, 'bold'))
+    
+    def toggle_mixed_mode(self):
+        """When Mixed is selected, deselect all other word types."""
+        if self.word_type_vars['Mixed'].get():
+            for key in self.word_type_vars:
+                if key != 'Mixed':
+                    self.word_type_vars[key].set(False)
+    
+    def get_all_table_identifiers(self, word_types: List[str]) -> List[dict]:
+        """
+        Get all possible table identifiers for the selected word types.
+        
+        Returns:
+            List of dicts with keys: table_id, word_type, word, subtype
+        """
+        import random
+        tables = []
+        
+        for paradigm_key, paradigm_data in self.paradigms.items():
+            word_type = paradigm_data.get('type', '').lower()
+            word = paradigm_data.get('word', '')
+            
+            # Check if this word type is selected
+            type_match = False
+            if 'Mixed' in word_types:
+                type_match = True
+            elif word_type == 'noun' and 'Nouns' in word_types:
+                type_match = True
+            elif word_type == 'verb' and 'Verbs' in word_types:
+                type_match = True
+            elif word_type == 'adjective' and 'Adjectives' in word_types:
+                type_match = True
+            elif word_type == 'pronoun' and 'Pronouns' in word_types:
+                type_match = True
+            
+            if not type_match:
+                continue
+            
+            # For verbs, create separate entries for each tense/mood/voice combination
+            if word_type == 'verb':
+                for tense in paradigm_data.get('tenses', {}).keys():
+                    for mood in paradigm_data['tenses'][tense].get('moods', {}).keys():
+                        for voice in paradigm_data['tenses'][tense]['moods'][mood].get('voices', {}).keys():
+                            subtype = f"{tense}:{mood}:{voice}"
+                            table_id = self.session_manager.get_table_id(word_type, word, subtype)
+                            tables.append({
+                                'table_id': table_id,
+                                'word_type': word_type,
+                                'word': word,
+                                'subtype': subtype,
+                                'tense': tense,
+                                'mood': mood,
+                                'voice': voice
+                            })
+            # For nouns, adjectives, pronouns - one table per word
+            else:
+                table_id = self.session_manager.get_table_id(word_type, word)
+                tables.append({
+                    'table_id': table_id,
+                    'word_type': word_type,
+                    'word': word,
+                    'subtype': None
+                })
+        
+        # Handle starred items if requested
+        if 'Starred' in word_types:
+            for starred_key in self.starred_items:
+                # Parse starred key format: "type:word" or "type:word:subtype"
+                parts = starred_key.split(':')
+                if len(parts) >= 2:
+                    word_type = parts[0].lower()
+                    word = parts[1]
+                    subtype = ':'.join(parts[2:]) if len(parts) > 2 else None
+                    
+                    table_id = self.session_manager.get_table_id(word_type, word, subtype)
+                    
+                    # Check if not already in list
+                    if not any(t['table_id'] == table_id for t in tables):
+                        table_info = {
+                            'table_id': table_id,
+                            'word_type': word_type,
+                            'word': word,
+                            'subtype': subtype
+                        }
+                        if subtype and ':' in subtype:
+                            verb_parts = subtype.split(':')
+                            if len(verb_parts) == 3:
+                                table_info['tense'] = verb_parts[0]
+                                table_info['mood'] = verb_parts[1]
+                                table_info['voice'] = verb_parts[2]
+                        tables.append(table_info)
+        
+        return tables
+    
+    def start_study_session(self):
+        """Start a study session with the selected options."""
+        # Get selected word types
+        selected_types = [key for key, var in self.word_type_vars.items() if var.get()]
+        
+        if not selected_types:
+            messagebox.showwarning("No Word Types", "Please select at least one word type.")
+            return
+        
+        # Get number of tables
+        num_tables = self.num_tables_var.get()
+        
+        # Get focus area
+        focus_area = self.focus_area_var.get()
+        
+        # Get spaced repetition setting
+        use_spaced_rep = self.spaced_repetition_var.get()
+        
+        # Get all available tables for selected types
+        all_tables = self.get_all_table_identifiers(selected_types)
+        
+        if not all_tables:
+            messagebox.showerror("No Tables", "No tables found for the selected word types.")
+            return
+        
+        # Select tables based on focus area
+        import random
+        selected_tables = []
+        
+        if focus_area == "Weak":
+            # Get weak tables
+            all_table_ids = [t['table_id'] for t in all_tables]
+            weak_table_ids = self.session_manager.get_weak_tables(limit=num_tables * 2)
+            
+            # Filter to only include tables from selected types
+            weak_tables = [t for t in all_tables if t['table_id'] in weak_table_ids]
+            
+            if len(weak_tables) < num_tables:
+                messagebox.showinfo(
+                    "Limited Weak Tables",
+                    f"Only {len(weak_tables)} weak tables found. Adding random tables to reach {num_tables}."
+                )
+                selected_tables = weak_tables
+                remaining = num_tables - len(weak_tables)
+                available = [t for t in all_tables if t['table_id'] not in weak_table_ids]
+                random.shuffle(available)
+                selected_tables.extend(available[:remaining])
+            else:
+                random.shuffle(weak_tables)
+                selected_tables = weak_tables[:num_tables]
+        
+        elif focus_area == "Untested":
+            # Get untested tables
+            all_table_ids = [t['table_id'] for t in all_tables]
+            untested_table_ids = self.session_manager.get_untested_tables(all_table_ids, limit=num_tables * 2)
+            
+            untested_tables = [t for t in all_tables if t['table_id'] in untested_table_ids]
+            
+            if len(untested_tables) < num_tables:
+                messagebox.showinfo(
+                    "Limited Untested Tables",
+                    f"Only {len(untested_tables)} untested tables found. Adding other tables to reach {num_tables}."
+                )
+                selected_tables = untested_tables
+                remaining = num_tables - len(untested_tables)
+                available = [t for t in all_tables if t['table_id'] not in untested_table_ids]
+                random.shuffle(available)
+                selected_tables.extend(available[:remaining])
+            else:
+                random.shuffle(untested_tables)
+                selected_tables = untested_tables[:num_tables]
+        
+        else:  # General practice
+            if use_spaced_rep:
+                all_table_ids = [t['table_id'] for t in all_tables]
+                spaced_table_ids = self.session_manager.get_tables_for_spaced_repetition(
+                    all_table_ids, days_threshold=2, limit=num_tables * 2
+                )
+                spaced_tables = [t for t in all_tables if t['table_id'] in spaced_table_ids]
+                
+                if len(spaced_tables) >= num_tables:
+                    random.shuffle(spaced_tables)
+                    selected_tables = spaced_tables[:num_tables]
+                else:
+                    selected_tables = spaced_tables
+                    remaining = num_tables - len(spaced_tables)
+                    available = [t for t in all_tables if t['table_id'] not in spaced_table_ids]
+                    random.shuffle(available)
+                    selected_tables.extend(available[:remaining])
+            else:
+                random.shuffle(all_tables)
+                selected_tables = all_tables[:num_tables]
+        
+        if not selected_tables:
+            messagebox.showerror("No Tables", "Could not select any tables for the session.")
+            return
+        
+        # Create session in database
+        self.current_session_id = self.session_manager.create_session(
+            num_tables=len(selected_tables),
+            word_types=selected_types,
+            focus_area=focus_area
+        )
+        
+        # Add tables to session
+        for i, table_info in enumerate(selected_tables):
+            self.session_manager.add_session_table(
+                self.current_session_id,
+                table_info['table_id'],
+                i
+            )
+        
+        # Store session tables and reset index
+        self.current_session_tables = selected_tables
+        self.current_table_index = 0
+        self.session_table_attempts = {}  # Track attempts per table
+        
+        # Start the session
+        self.show_session_mode()
+    
+    def show_session_mode(self):
+        """Display the session mode with one table at a time."""
+        # Clear main frame
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        
+        # Clear all previous grid configurations
+        for i in range(10):
+            self.main_frame.grid_rowconfigure(i, weight=0)
+            self.main_frame.grid_columnconfigure(i, weight=0)
+        
+        # Configure main_frame for session layout
+        self.main_frame.grid_rowconfigure(0, weight=0)  # Progress bar - fixed
+        self.main_frame.grid_rowconfigure(1, weight=0)  # Title - fixed
+        self.main_frame.grid_rowconfigure(2, weight=1)  # Table area - expandable
+        self.main_frame.grid_rowconfigure(3, weight=0)  # Buttons - fixed
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        
+        # Get current table info
+        if self.current_table_index >= len(self.current_session_tables):
+            # Session complete
+            self.show_session_review()
+            return
+        
+        current_table = self.current_session_tables[self.current_table_index]
+        table_id = current_table['table_id']
+        
+        # Initialize attempts tracking for this table
+        if table_id not in self.session_table_attempts:
+            self.session_table_attempts[table_id] = {
+                'attempts': 0,
+                'total_cells': 0,
+                'correct_cells': 0
+            }
+        
+        # Progress tracker frame
+        progress_frame = ttk.Frame(self.main_frame)
+        progress_frame.grid(row=0, column=0, sticky='ew', padx=20, pady=(10, 10))
+        
+        # Progress text
+        progress_text = f"Table {self.current_table_index + 1} of {len(self.current_session_tables)}"
+        progress_label = ttk.Label(
+            progress_frame,
+            text=progress_text,
+            font=('Arial', 16, 'bold')
+        )
+        progress_label.pack(side='left')
+        
+        # Progress bar
+        progress_percentage = (self.current_table_index / len(self.current_session_tables)) * 100
+        progress_bar = ttk.Progressbar(
+            progress_frame,
+            length=300,
+            mode='determinate',
+            value=progress_percentage
+        )
+        progress_bar.pack(side='right', padx=(20, 0))
+        
+        # Exit session button
+        exit_button = ttk.Button(
+            progress_frame,
+            text="Exit Session",
+            command=self.exit_session,
+            width=12
+        )
+        exit_button.pack(side='right', padx=(10, 10))
+        
+        # Table title frame
+        title_frame = ttk.Frame(self.main_frame)
+        title_frame.grid(row=1, column=0, pady=(10, 20))
+        
+        # Build title text
+        word = current_table['word']
+        word_type = current_table['word_type'].capitalize()
+        
+        if current_table['word_type'] == 'verb':
+            tense = current_table.get('tense', '')
+            mood = current_table.get('mood', '')
+            voice = current_table.get('voice', '')
+            title_text = f"{word} - {word_type} ({tense} {mood} {voice})"
+        else:
+            title_text = f"{word} - {word_type}"
+        
+        title_label = ttk.Label(
+            title_frame,
+            text=title_text,
+            font=('Arial', 20, 'bold')
+        )
+        title_label.pack()
+        
+        # Table container (scrollable)
+        table_container = ttk.Frame(self.main_frame)
+        table_container.grid(row=2, column=0, sticky='nsew', padx=20, pady=10)
+        table_container.grid_rowconfigure(0, weight=1)
+        table_container.grid_columnconfigure(0, weight=1)
+        
+        # Create the table based on word type
+        self.create_session_table(table_container, current_table)
+        
+        # Buttons frame
+        button_frame = ttk.Frame(self.main_frame)
+        button_frame.grid(row=3, column=0, pady=20)
+        
+        # Reveal button
+        self.session_reveal_button = ttk.Button(
+            button_frame,
+            text="Reveal Answers",
+            command=self.reveal_session_answers,
+            width=18
+        )
+        self.session_reveal_button.pack(side='left', padx=5)
+        
+        # Retry button
+        self.session_retry_button = ttk.Button(
+            button_frame,
+            text="Retry Incorrect",
+            command=self.retry_session_incorrect,
+            width=18,
+            state='disabled'
+        )
+        self.session_retry_button.pack(side='left', padx=5)
+        
+        # Next table button (initially disabled)
+        self.session_next_button = ttk.Button(
+            button_frame,
+            text="Next Table →",
+            command=self.next_session_table,
+            width=18,
+            state='disabled',
+            style='Accent.TButton'
+        )
+        self.session_next_button.pack(side='left', padx=5)
+    
+    def create_session_table(self, container, table_info):
+        """Create the appropriate table based on word type."""
+        word_type = table_info['word_type']
+        word = table_info['word']
+        
+        # Store current session state for table creation
+        self.session_current_word = word
+        self.session_current_type = word_type
+        
+        if word_type == 'verb':
+            # Set verb-specific state
+            self.session_current_tense = table_info.get('tense')
+            self.session_current_mood = table_info.get('mood')
+            self.session_current_voice = table_info.get('voice')
+            # Create verb table (will use existing methods)
+            self.create_verb_table_for_session(container)
+        elif word_type == 'noun':
+            self.create_noun_table_for_session(container)
+        elif word_type == 'adjective':
+            self.create_adjective_table_for_session(container)
+        elif word_type == 'pronoun':
+            self.create_pronoun_table_for_session(container)
+    
+    def exit_session(self):
+        """Exit the current session and return to startup."""
+        if messagebox.askyesno("Exit Session", "Are you sure you want to exit? Progress will be saved."):
+            # Save current state
+            # (session is already being tracked in database)
+            self.show_startup_page()
+    
+    def reveal_session_answers(self):
+        """Reveal answers in session mode."""
+        # Increment attempt counter
+        current_table = self.current_session_tables[self.current_table_index]
+        table_id = current_table['table_id']
+        self.session_table_attempts[table_id]['attempts'] += 1
+        
+        # Use existing reveal logic but track correctness
+        correct_count = 0
+        total_count = 0
+        
+        for key, entry in self.entries.items():
+            try:
+                user_answer = entry.get().strip()
+                correct_answer = self.get_correct_answer_for_session(key, current_table)
+                
+                total_count += 1
+                
+                if correct_answer:
+                    is_correct = self.is_answer_correct(user_answer, correct_answer)
+                    
+                    if is_correct:
+                        entry.configure(state='readonly', readonlybackground='#90EE90')  # Light green
+                        correct_count += 1
+                    else:
+                        entry.configure(state='readonly', readonlybackground='#FFB6C6')  # Light red
+                        entry.delete(0, tk.END)
+                        entry.insert(0, correct_answer)
+            except tk.TclError:
+                pass
+        
+        # Store stats
+        self.session_table_attempts[table_id]['total_cells'] = total_count
+        self.session_table_attempts[table_id]['correct_cells'] = correct_count
+        
+        # Check if all correct
+        if correct_count == total_count and total_count > 0:
+            self.session_next_button.configure(state='normal')
+            self.session_retry_button.configure(state='disabled')
+            messagebox.showinfo("Perfect!", "All answers correct! You can proceed to the next table.")
+        else:
+            self.session_retry_button.configure(state='normal')
+            accuracy = (correct_count / total_count * 100) if total_count > 0 else 0
+            messagebox.showinfo(
+                "Review Needed",
+                f"Accuracy: {accuracy:.1f}% ({correct_count}/{total_count} correct)\n\nPlease retry the incorrect answers."
+            )
+        
+        # Disable reveal button
+        self.session_reveal_button.configure(state='disabled')
+    
+    def retry_session_incorrect(self):
+        """Allow retry of incorrect answers in session mode."""
+        for key, entry in self.entries.items():
+            try:
+                # Get background color
+                bg_color = entry.cget('readonlybackground')
+                if bg_color and '#FFB6C6' in str(bg_color):  # Light red = incorrect
+                    entry.configure(state='normal', bg='white')
+                    entry.delete(0, tk.END)
+            except tk.TclError:
+                pass
+        
+        # Re-enable reveal, disable retry
+        self.session_reveal_button.configure(state='normal')
+        self.session_retry_button.configure(state='disabled')
+    
+    def next_session_table(self):
+        """Move to the next table in the session."""
+        # Record results for current table
+        current_table = self.current_session_tables[self.current_table_index]
+        table_id = current_table['table_id']
+        
+        stats = self.session_table_attempts[table_id]
+        accuracy = (stats['correct_cells'] / stats['total_cells']) if stats['total_cells'] > 0 else 0
+        needs_review = accuracy < 0.9
+        
+        # Update session database
+        self.session_manager.update_session_table(
+            self.current_session_id,
+            table_id,
+            stats['attempts'],
+            accuracy,
+            needs_review
+        )
+        
+        # Update mastery tracking
+        self.session_manager.record_table_attempt(
+            table_id,
+            current_table['word_type'],
+            current_table['word'],
+            accuracy,
+            current_table.get('subtype')
+        )
+        
+        # Move to next table
+        self.current_table_index += 1
+        
+        # Clear entries for next table
+        self.entries = {}
+        self.error_labels = {}
+        
+        # Show next table or review
+        self.show_session_mode()
+    
+    def get_correct_answer_for_session(self, key, table_info):
+        """Get the correct answer for a specific cell in session mode."""
+        word_type = table_info['word_type']
+        word = table_info['word']
+        
+        # Get the paradigm for this word
+        paradigm_key = None
+        for pkey, pdata in self.paradigms.items():
+            if pdata.get('word') == word and pdata.get('type', '').lower() == word_type:
+                paradigm_key = pkey
+                break
+        
+        if not paradigm_key:
+            return None
+        
+        paradigm = self.paradigms[paradigm_key]
+        
+        # Parse the key to get the correct answer based on word type
+        if word_type == 'noun':
+            # Key format: "Case_number" (e.g., "Nominative_sg")
+            parts = key.split('_')
+            if len(parts) == 2:
+                case, number = parts
+                return paradigm.get('forms', {}).get(case.lower(), {}).get(number, '')
+        
+        elif word_type == 'adjective':
+            # Key format: "Case_Gender_Number" (e.g., "Nominative_M_sg")
+            parts = key.split('_')
+            if len(parts) == 3:
+                case, gender, number = parts
+                return paradigm.get('forms', {}).get(case.lower(), {}).get(gender.lower(), {}).get(number, '')
+        
+        elif word_type == 'pronoun':
+            # Similar to adjective structure
+            parts = key.split('_')
+            if len(parts) >= 2:
+                case = parts[0]
+                rest = '_'.join(parts[1:])
+                return paradigm.get('forms', {}).get(case.lower(), {}).get(rest, '')
+        
+        elif word_type == 'verb':
+            # Key format: "Person_Number" (e.g., "1_sg")
+            tense = table_info.get('tense')
+            mood = table_info.get('mood')
+            voice = table_info.get('voice')
+            
+            parts = key.split('_')
+            if len(parts) == 2:
+                person, number = parts
+                try:
+                    forms = paradigm.get('tenses', {}).get(tense, {}).get('moods', {}).get(mood, {}).get('voices', {}).get(voice, {})
+                    return forms.get(number, {}).get(person, '')
+                except (KeyError, AttributeError):
+                    return None
+        
+        return None
+    
+    def create_verb_table_for_session(self, container):
+        """Create verb table for session mode."""
+        word = self.session_current_word
+        tense = self.session_current_tense
+        mood = self.session_current_mood
+        voice = self.session_current_voice
+        
+        # Find the paradigm
+        paradigm = None
+        for pkey, pdata in self.paradigms.items():
+            if pdata.get('word') == word and pdata.get('type', '').lower() == 'verb':
+                paradigm = pdata
+                break
+        
+        if not paradigm:
+            return
+        
+        # Get the forms for this tense/mood/voice
+        try:
+            forms = paradigm.get('tenses', {}).get(tense, {}).get('moods', {}).get(mood, {}).get('voices', {}).get(voice, {})
+        except (KeyError, AttributeError):
+            return
+        
+        # Create the table frame
+        self.table_frame = ttk.Frame(container)
+        self.table_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Create table structure similar to create_verb_table
+        # Configure columns
+        self.table_frame.grid_columnconfigure(0, weight=0, minsize=100)
+        self.table_frame.grid_columnconfigure(1, weight=1, minsize=120)
+        self.table_frame.grid_columnconfigure(2, weight=1, minsize=120)
+        
+        # Headers
+        ttk.Label(self.table_frame, text="Person", font=('Arial', 14, 'bold')).grid(row=0, column=0, padx=10, pady=(5,10), sticky='e')
+        ttk.Label(self.table_frame, text="Singular", font=('Arial', 14, 'bold')).grid(row=0, column=1, padx=10, pady=(5,10))
+        ttk.Label(self.table_frame, text="Plural", font=('Arial', 14, 'bold')).grid(row=0, column=2, padx=10, pady=(5,10))
+        
+        # Create entries for each person
+        persons = ["1", "2", "3"]
+        person_labels = ["1st", "2nd", "3rd"]
+        
+        for i, (person, label) in enumerate(zip(persons, person_labels), 1):
+            ttk.Label(self.table_frame, text=label, font=('Arial', 12, 'bold')).grid(row=i, column=0, padx=10, pady=6, sticky='e')
+            
+            # Singular
+            entry_sg = tk.Entry(self.table_frame, width=15, font=('Times New Roman', 14), relief='solid', borderwidth=1)
+            entry_sg.grid(row=i, column=1, padx=5, pady=6, sticky='ew')
+            self.entries[f"{person}_sg"] = entry_sg
+            
+            # Plural
+            entry_pl = tk.Entry(self.table_frame, width=15, font=('Times New Roman', 14), relief='solid', borderwidth=1)
+            entry_pl.grid(row=i, column=2, padx=5, pady=6, sticky='ew')
+            self.entries[f"{person}_pl"] = entry_pl
+    
+    def create_noun_table_for_session(self, container):
+        """Create noun table for session mode."""
+        word = self.session_current_word
+        
+        # Find the paradigm
+        paradigm = None
+        for pkey, pdata in self.paradigms.items():
+            if pdata.get('word') == word and pdata.get('type', '').lower() == 'noun':
+                paradigm = pdata
+                break
+        
+        if not paradigm:
+            return
+        
+        # Create the table frame
+        self.table_frame = ttk.Frame(container)
+        self.table_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Configure columns
+        self.table_frame.grid_columnconfigure(0, weight=0, minsize=100)
+        self.table_frame.grid_columnconfigure(1, weight=1, minsize=120)
+        self.table_frame.grid_columnconfigure(2, weight=1, minsize=120)
+        
+        # Headers
+        ttk.Label(self.table_frame, text="Case", font=('Arial', 14, 'bold')).grid(row=0, column=0, padx=10, pady=(5,10), sticky='e')
+        ttk.Label(self.table_frame, text="Singular", font=('Arial', 14, 'bold')).grid(row=0, column=1, padx=10, pady=(5,10))
+        ttk.Label(self.table_frame, text="Plural", font=('Arial', 14, 'bold')).grid(row=0, column=2, padx=10, pady=(5,10))
+        
+        # Create entries for each case
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+        
+        for i, case in enumerate(cases, 1):
+            ttk.Label(self.table_frame, text=case, font=('Arial', 12, 'bold')).grid(row=i, column=0, padx=10, pady=6, sticky='e')
+            
+            # Singular
+            entry_sg = tk.Entry(self.table_frame, width=15, font=('Times New Roman', 14), relief='solid', borderwidth=1)
+            entry_sg.grid(row=i, column=1, padx=5, pady=6, sticky='ew')
+            self.entries[f"{case}_sg"] = entry_sg
+            
+            # Plural
+            entry_pl = tk.Entry(self.table_frame, width=15, font=('Times New Roman', 14), relief='solid', borderwidth=1)
+            entry_pl.grid(row=i, column=2, padx=5, pady=6, sticky='ew')
+            self.entries[f"{case}_pl"] = entry_pl
+    
+    def create_adjective_table_for_session(self, container):
+        """Create adjective table for session mode."""
+        word = self.session_current_word
+        
+        # Find the paradigm
+        paradigm = None
+        for pkey, pdata in self.paradigms.items():
+            if pdata.get('word') == word and pdata.get('type', '').lower() == 'adjective':
+                paradigm = pdata
+                break
+        
+        if not paradigm:
+            return
+        
+        # Create the table frame
+        self.table_frame = ttk.Frame(container)
+        self.table_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Configure columns for 3 genders x 2 numbers = 6 columns + 1 for case labels
+        self.table_frame.grid_columnconfigure(0, weight=0, minsize=100)
+        for col in range(1, 7):
+            self.table_frame.grid_columnconfigure(col, weight=1, minsize=100)
+        
+        # Headers - row 0
+        ttk.Label(self.table_frame, text="Case", font=('Arial', 14, 'bold')).grid(row=0, column=0, padx=10, pady=(5,10), sticky='e')
+        
+        # Gender headers with colspan
+        ttk.Label(self.table_frame, text="Masculine", font=('Arial', 14, 'bold')).grid(row=0, column=1, columnspan=2, pady=(5,10))
+        ttk.Label(self.table_frame, text="Feminine", font=('Arial', 14, 'bold')).grid(row=0, column=3, columnspan=2, pady=(5,10))
+        ttk.Label(self.table_frame, text="Neuter", font=('Arial', 14, 'bold')).grid(row=0, column=5, columnspan=2, pady=(5,10))
+        
+        # Number sub-headers - row 1
+        for col_offset in [1, 3, 5]:
+            ttk.Label(self.table_frame, text="Sg", font=('Arial', 12)).grid(row=1, column=col_offset, pady=5)
+            ttk.Label(self.table_frame, text="Pl", font=('Arial', 12)).grid(row=1, column=col_offset+1, pady=5)
+        
+        # Create entries for each case
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+        genders = ["M", "F", "N"]
+        
+        for i, case in enumerate(cases, 2):
+            ttk.Label(self.table_frame, text=case, font=('Arial', 12, 'bold')).grid(row=i, column=0, padx=10, pady=6, sticky='e')
+            
+            col = 1
+            for gender in genders:
+                # Singular
+                entry_sg = tk.Entry(self.table_frame, width=12, font=('Times New Roman', 14), relief='solid', borderwidth=1)
+                entry_sg.grid(row=i, column=col, padx=2, pady=6, sticky='ew')
+                self.entries[f"{case}_{gender}_sg"] = entry_sg
+                col += 1
+                
+                # Plural
+                entry_pl = tk.Entry(self.table_frame, width=12, font=('Times New Roman', 14), relief='solid', borderwidth=1)
+                entry_pl.grid(row=i, column=col, padx=2, pady=6, sticky='ew')
+                self.entries[f"{case}_{gender}_pl"] = entry_pl
+                col += 1
+    
+    def create_pronoun_table_for_session(self, container):
+        """Create pronoun table for session mode."""
+        word = self.session_current_word
+        
+        # Find the paradigm
+        paradigm = None
+        for pkey, pdata in self.paradigms.items():
+            if pdata.get('word') == word and pdata.get('type', '').lower() == 'pronoun':
+                paradigm = pdata
+                break
+        
+        if not paradigm:
+            return
+        
+        # Create a simple table similar to nouns
+        self.table_frame = ttk.Frame(container)
+        self.table_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Get the forms to determine structure
+        forms = paradigm.get('forms', {})
+        if not forms:
+            return
+        
+        # Determine columns from first case
+        first_case_forms = list(forms.values())[0] if forms else {}
+        columns = list(first_case_forms.keys())
+        
+        # Configure grid
+        self.table_frame.grid_columnconfigure(0, weight=0, minsize=100)
+        for i in range(len(columns)):
+            self.table_frame.grid_columnconfigure(i+1, weight=1, minsize=100)
+        
+        # Headers
+        ttk.Label(self.table_frame, text="Case", font=('Arial', 14, 'bold')).grid(row=0, column=0, padx=10, pady=(5,10), sticky='e')
+        for i, col_name in enumerate(columns, 1):
+            ttk.Label(self.table_frame, text=col_name.replace('_', ' ').title(), font=('Arial', 14, 'bold')).grid(row=0, column=i, padx=10, pady=(5,10))
+        
+        # Create entries for each case
+        cases = list(forms.keys())
+        for i, case in enumerate(cases, 1):
+            ttk.Label(self.table_frame, text=case.title(), font=('Arial', 12, 'bold')).grid(row=i, column=0, padx=10, pady=6, sticky='e')
+            
+            for j, col_name in enumerate(columns, 1):
+                entry = tk.Entry(self.table_frame, width=15, font=('Times New Roman', 14), relief='solid', borderwidth=1)
+                entry.grid(row=i, column=j, padx=5, pady=6, sticky='ew')
+                self.entries[f"{case.title()}_{col_name}"] = entry
+    
+    def show_session_review(self):
+        """Show the session review/results page."""
+        # Clear main frame
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        
+        # Clear all previous grid configurations
+        for i in range(10):
+            self.main_frame.grid_rowconfigure(i, weight=0)
+            self.main_frame.grid_columnconfigure(i, weight=0)
+        
+        # Configure for centered content
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        
+        # Create centered container
+        center_container = ttk.Frame(self.main_frame)
+        center_container.grid(row=0, column=0)
+        
+        # Title
+        title_label = ttk.Label(
+            center_container,
+            text="Session Complete!",
+            font=('Arial', 28, 'bold')
+        )
+        title_label.pack(pady=(0, 30))
+        
+        # Calculate overall statistics
+        total_tables = len(self.current_session_tables)
+        total_correct = 0
+        total_cells = 0
+        
+        for table_id, stats in self.session_table_attempts.items():
+            total_correct += stats['correct_cells']
+            total_cells += stats['total_cells']
+        
+        overall_accuracy = (total_correct / total_cells * 100) if total_cells > 0 else 0
+        
+        # Update session in database
+        self.session_manager.complete_session(
+            self.current_session_id,
+            overall_accuracy / 100  # Store as 0-1 fraction
+        )
+        
+        # Overall stats frame
+        stats_frame = ttk.Frame(center_container)
+        stats_frame.pack(pady=20)
+        
+        ttk.Label(
+            stats_frame,
+            text=f"Overall Accuracy: {overall_accuracy:.1f}%",
+            font=('Arial', 20, 'bold')
+        ).pack()
+        
+        ttk.Label(
+            stats_frame,
+            text=f"Tables Completed: {total_tables}",
+            font=('Arial', 14)
+        ).pack(pady=5)
+        
+        ttk.Label(
+            stats_frame,
+            text=f"Total Cells: {total_correct}/{total_cells} correct",
+            font=('Arial', 14)
+        ).pack(pady=5)
+        
+        # Tables needing review
+        tables_need_review = []
+        for table_info in self.current_session_tables:
+            table_id = table_info['table_id']
+            if table_id in self.session_table_attempts:
+                stats = self.session_table_attempts[table_id]
+                accuracy = (stats['correct_cells'] / stats['total_cells']) if stats['total_cells'] > 0 else 0
+                if accuracy < 0.9:
+                    tables_need_review.append({
+                        'word': table_info['word'],
+                        'type': table_info['word_type'],
+                        'accuracy': accuracy * 100,
+                        'attempts': stats['attempts']
+                    })
+        
+        if tables_need_review:
+            review_label = ttk.Label(
+                center_container,
+                text="Tables Needing Review:",
+                font=('Arial', 16, 'bold')
+            )
+            review_label.pack(pady=(20, 10))
+            
+            # Create scrollable list
+            review_frame = ttk.Frame(center_container)
+            review_frame.pack(fill='both', expand=True, pady=10)
+            
+            for table in tables_need_review:
+                subtype_text = f" ({table.get('subtype', '')})" if table.get('subtype') else ""
+                review_text = f"• {table['word']} ({table['type']}{subtype_text}) - {table['accuracy']:.1f}% - {table['attempts']} attempts"
+                ttk.Label(
+                    review_frame,
+                    text=review_text,
+                    font=('Arial', 12)
+                ).pack(anchor='w', pady=2)
+        
+        # Buttons
+        button_frame = ttk.Frame(center_container)
+        button_frame.pack(pady=30)
+        
+        ttk.Button(
+            button_frame,
+            text="Start New Session",
+            command=self.show_session_options_page,
+            width=20
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Return to Home",
+            command=self.show_startup_page,
+            width=20
+        ).pack(side='left', padx=5)
+    
+    def show_statistics(self):
+        """Placeholder for showing statistics."""
+        pass
+    
+    def show_latin_view(self):
+        """Show the Latin grammar tables interface."""
+        # Clear main frame
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        
+        # Clear all previous grid configurations
+        for i in range(10):
+            self.main_frame.grid_rowconfigure(i, weight=0)
+            self.main_frame.grid_columnconfigure(i, weight=0)
+        
+        # Create a red background wrapper frame (use tk.Frame for proper background color)
+        red_wrapper = tk.Frame(self.main_frame, bg='#8B0000')
+        red_wrapper.grid(row=0, column=0, sticky='nsew')
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        
+        # Configure red_wrapper rows to expand properly
+        red_wrapper.grid_rowconfigure(0, weight=0)  # Title - fixed
+        red_wrapper.grid_rowconfigure(1, weight=0)  # Type selector - fixed
+        red_wrapper.grid_rowconfigure(2, weight=0)  # Word display - fixed
+        red_wrapper.grid_rowconfigure(3, weight=0)  # Verb controls - fixed
+        red_wrapper.grid_rowconfigure(4, weight=1)  # Table area - expands
+        red_wrapper.grid_rowconfigure(5, weight=0)  # Buttons - fixed
+        red_wrapper.grid_columnconfigure(0, weight=1)  # Center everything horizontally
+        
+        # Load Latin paradigms
+        try:
+            with open('latin_paradigms.json', 'r', encoding='utf-8') as f:
+                self.latin_paradigms = json.load(f)
+        except FileNotFoundError:
+            messagebox.showerror("Error", "Could not find latin_paradigms.json file")
+            self.show_tables_view()  # Return to Greek view
+            return
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Could not parse latin_paradigms.json file")
+            self.show_tables_view()  # Return to Greek view
+            return
+        
+        # Title frame with logo and back button
+        title_frame = tk.Frame(red_wrapper, bg='#8B0000')
+        title_frame.grid(row=0, column=0, pady=(20, 20), sticky='ew', padx=20)
+        title_frame.grid_columnconfigure(0, weight=1)
+        title_frame.grid_columnconfigure(1, weight=0)
+        title_frame.grid_columnconfigure(2, weight=0)
+        
+        # Logo (Latin-specific logo)
+        if self.latin_header_logo:
+            # Use Latin header logo
+            logo_label = tk.Label(title_frame, image=self.latin_header_logo, bg='#8B0000', cursor='hand2')
+            logo_label.grid(row=0, column=0, sticky='w')
+            # Keep a reference to prevent garbage collection
+            logo_label.image = self.latin_header_logo
+            # Bind click event to return to startup page
+            logo_label.bind('<Button-1>', lambda e: self.show_startup_page())
+        else:
+            # Fallback to text title
+            title_label = tk.Label(
+                title_frame, 
+                text="Bellerophon Grammar Study - Latin",
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 24, 'bold')
+            )
+            title_label.grid(row=0, column=0, sticky='w')
+        
+        # Practice options frame
+        practice_options_frame = tk.Frame(title_frame, bg='#8B0000')
+        practice_options_frame.grid(row=0, column=1, sticky='ne', padx=(10, 10))
+        
+        # Prefill stems checkbox
+        prefill_stems_cb = ttk.Checkbutton(
+            practice_options_frame,
+            text="Prefill stems",
+            variable=self.config.prefill_stems,
+            command=self.on_latin_prefill_stems_toggle
+        )
+        prefill_stems_cb.grid(row=0, column=0, sticky='e', padx=(0, 10))
+
+        # Randomize next checkbox
+        randomize_next_cb = ttk.Checkbutton(
+            practice_options_frame,
+            text="Randomize next",
+            variable=self.config.randomize_next,
+            command=self.on_randomize_toggle
+        )
+        randomize_next_cb.grid(row=0, column=1, sticky='e')
+
+        # Auto advance checkbox
+        auto_advance_cb = ttk.Checkbutton(
+            practice_options_frame,
+            text="Auto advance",
+            variable=self.config.auto_advance
+        )
+        auto_advance_cb.grid(row=0, column=2, sticky='e', padx=(10, 0))
+        
+        # Back to Greek button
+        back_button = ttk.Button(
+            title_frame,
+            text="← Back to Greek",
+            command=self.show_tables_view,
+            width=15
+        )
+        back_button.grid(row=0, column=2, sticky='ne')
+        
+        # Type and word selection frame (matching Greek layout)
+        mode_frame = tk.Frame(red_wrapper, bg='#8B0000')
+        mode_frame.grid(row=1, column=0, pady=(0, 20), sticky='ew', padx=20)
+        mode_frame.columnconfigure(1, weight=0, minsize=250)  # Type dropdown column
+        mode_frame.columnconfigure(2, weight=0, minsize=100)  # Label column
+        mode_frame.columnconfigure(3, weight=1)  # Dropdown column - expandable
+        
+        # Type selector label
+        tk.Label(
+            mode_frame,
+            text="Type:",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 11)
+        ).grid(row=0, column=0, padx=(0, 10))
+        
+        # Initialize Latin type variable
+        self.latin_type_var = tk.StringVar(value="Noun")
+        
+        # Type dropdown - will be dynamically updated based on starred items
+        self.latin_type_dropdown = ttk.Combobox(
+            mode_frame,
+            textvariable=self.latin_type_var,
+            values=self.get_available_latin_types(),
+            font=('Times New Roman', 12),
+            width=12,
+            state='readonly'
+        )
+        self.latin_type_dropdown.grid(row=0, column=1, sticky='w')
+        self.latin_type_dropdown.bind('<<ComboboxSelected>>', self.on_latin_type_change)
+        
+        # Lock current type checkbox (only visible when randomize is enabled)
+        self.latin_lock_type_cb = ttk.Checkbutton(
+            mode_frame,
+            text="Lock current type",
+            variable=self.config.lock_current_type
+        )
+        self.latin_lock_type_cb.grid(row=0, column=1, sticky='w', padx=(120, 0))
+        # Show/hide based on current randomize state
+        if self.config.randomize_next.get():
+            self.latin_lock_type_cb.grid()
+        else:
+            self.latin_lock_type_cb.grid_remove()  # Hidden by default
+        
+        # Select word label
+        tk.Label(
+            mode_frame,
+            text="Select word:",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 11)
+        ).grid(row=0, column=2, sticky='w', padx=(20, 10))
+        
+        # Initialize Latin mode variables
+        self.latin_word_var = tk.StringVar(value="femina (woman)")
+        
+        # Create word dropdown - only show nouns initially since Type defaults to "Noun"
+        latin_words = []
+        seen_nouns = set()
+        for word_key, word_data in self.latin_paradigms.items():
+            # Only show nouns on initial load (matching the default Type selection)
+            if word_data.get('type') == 'noun':
+                word_value = word_data.get('word', word_key)
+                if word_value not in seen_nouns:
+                    seen_nouns.add(word_value)
+                    english = word_data.get('english', '')
+                    display_text = f"{word_value} ({english})"
+                    latin_words.append(display_text)
+        
+        word_dropdown = ttk.Combobox(
+            mode_frame,
+            textvariable=self.latin_word_var,
+            values=latin_words,
+            state='readonly',
+            font=('Times New Roman', 12),
+            width=46
+        )
+        word_dropdown.grid(row=0, column=3, sticky='w')
+        word_dropdown.bind('<<ComboboxSelected>>', self.on_latin_word_change)
+        
+        # Store reference to the dropdown for later use
+        self.latin_word_dropdown = word_dropdown
+        
+        # Verb-specific controls (Tense, Voice, Mood) - initially hidden
+        # Initialize Latin verb variables
+        self.latin_tense_var = tk.StringVar(value="present")
+        self.latin_voice_var = tk.StringVar(value="active")
+        self.latin_mood_var = tk.StringVar(value="indicative")
+        
+        # Word display frame (matching Greek layout)
+        word_frame = tk.Frame(red_wrapper, bg='#8B0000')
+        word_frame.grid(row=2, column=0, pady=(5, 3))
+        
+        # Instruction label (will update based on type)
+        self.latin_instruction_label = tk.Label(
+            word_frame,
+            text="Decline the word:",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        )
+        self.latin_instruction_label.grid(row=0, column=0, padx=(0, 10))
+        
+        # Word display
+        self.latin_word_label = tk.Label(
+            word_frame,
+            text="femina",
+            bg='#8B0000',
+            fg='white',
+            font=('Times New Roman', 16, 'bold')
+        )
+        self.latin_word_label.grid(row=0, column=1)
+        
+        # Star button for favoriting tables (next to word label, like Greek side)
+        self.latin_star_button = tk.Button(
+            word_frame,
+            text="☆",
+            font=('Arial', 16),
+            foreground="white",
+            background='#8B0000',
+            activeforeground="gold",
+            activebackground="#6B0000",
+            relief="flat",
+            borderwidth=0,
+            command=self.toggle_latin_star,
+            cursor="hand2"
+        )
+        self.latin_star_button.bind("<Enter>", self.on_latin_star_hover_enter)
+        self.latin_star_button.bind("<Leave>", self.on_latin_star_hover_leave)
+        self.latin_star_button.grid(row=0, column=2, padx=(10, 0))
+        
+        # Initialize star button state
+        self.update_latin_star_button()
+        
+        # Create separate verb controls frame (below word display)
+        self.latin_verb_controls_frame = tk.Frame(red_wrapper, bg='#8B0000')
+        self.latin_verb_controls_frame.grid(row=3, column=0, pady=(3, 10))
+        
+        # Tense label and dropdown
+        self.latin_tense_label = tk.Label(
+            self.latin_verb_controls_frame,
+            text="Tense:",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 11)
+        )
+        self.latin_tense_label.grid(row=0, column=0, padx=(0, 5), sticky='e')
+        
+        self.latin_tense_dropdown = ttk.Combobox(
+            self.latin_verb_controls_frame,
+            textvariable=self.latin_tense_var,
+            values=["present", "imperfect", "future", "perfect", "pluperfect", "future perfect"],
+            font=('Times New Roman', 12),
+            width=15,
+            state='readonly'
+        )
+        self.latin_tense_dropdown.grid(row=0, column=1, padx=5)
+        self.latin_tense_dropdown.bind('<<ComboboxSelected>>', self.on_latin_verb_change)
+        
+        # Voice label and dropdown
+        self.latin_voice_label = tk.Label(
+            self.latin_verb_controls_frame,
+            text="Voice:",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 11)
+        )
+        self.latin_voice_label.grid(row=0, column=2, padx=(10, 5), sticky='e')
+        
+        self.latin_voice_dropdown = ttk.Combobox(
+            self.latin_verb_controls_frame,
+            textvariable=self.latin_voice_var,
+            values=["active", "passive"],
+            font=('Times New Roman', 12),
+            width=12,
+            state='readonly'
+        )
+        self.latin_voice_dropdown.grid(row=0, column=3, padx=5)
+        self.latin_voice_dropdown.bind('<<ComboboxSelected>>', self.on_latin_verb_change)
+        
+        # Mood label and dropdown
+        self.latin_mood_label = tk.Label(
+            self.latin_verb_controls_frame,
+            text="Mood:",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 11)
+        )
+        self.latin_mood_label.grid(row=0, column=4, padx=(10, 5), sticky='e')
+        
+        self.latin_mood_dropdown = ttk.Combobox(
+            self.latin_verb_controls_frame,
+            textvariable=self.latin_mood_var,
+            values=["indicative", "subjunctive", "imperative"],
+            font=('Times New Roman', 12),
+            width=12,
+            state='readonly'
+        )
+        self.latin_mood_dropdown.grid(row=0, column=5, padx=5)
+        self.latin_mood_dropdown.bind('<<ComboboxSelected>>', self.on_latin_verb_change)
+        
+        # Initially hide verb controls (will show when verb is selected)
+        self.latin_verb_controls_frame.grid_remove()
+        
+        # Table container
+        table_container = tk.Frame(red_wrapper, bg='#8B0000')
+        table_container.grid(row=4, column=0, sticky='nsew', padx=20, pady=(10, 0))
+        table_container.grid_columnconfigure(0, weight=1)  # Left padding
+        table_container.grid_columnconfigure(1, weight=0)  # Table content
+        table_container.grid_columnconfigure(2, weight=1)  # Right padding
+        table_container.grid_rowconfigure(0, weight=1)
+        
+        # Create the table frame with red background
+        self.latin_table_frame = tk.Frame(table_container, bg='#8B0000')
+        self.latin_table_frame.grid(row=0, column=1, sticky='n', padx=10, pady=0)
+        
+        # Initialize entries dictionary and tracking for Latin
+        self.latin_entries = {}
+        self.latin_incorrect_entries = set()  # Track which Latin entries were incorrect
+        self.latin_has_revealed = False  # Track if Latin answers have been revealed
+        
+        # Create the appropriate Latin table based on initial word
+        # Get the first word to determine type
+        initial_word = self.latin_word_var.get().split(' (')[0]
+        initial_paradigm = None
+        for key, data in self.latin_paradigms.items():
+            word_value = data.get('word') or data.get('lemma')
+            if word_value == initial_word:
+                initial_paradigm = data
+                break
+        
+        # Create table based on type
+        if initial_paradigm and initial_paradigm.get('type') == 'verb':
+            self.create_latin_verb_table()
+        else:
+            self.create_latin_noun_table()
+        
+        # Button frame
+        button_frame = tk.Frame(red_wrapper, bg='#8B0000')
+        button_frame.grid(row=5, column=0, pady=(15, 20))
+        
+        # Reveal button
+        self.latin_reveal_button = ttk.Button(
+            button_frame,
+            text="Reveal Answers",
+            command=self.reveal_latin_answers,
+            width=15
+        )
+        self.latin_reveal_button.pack(side='left', padx=5)
+        
+        # Combined Reset/Retry button
+        self.latin_reset_retry_button = ttk.Button(
+            button_frame,
+            text="Reset",
+            command=self.smart_latin_reset_retry,
+            width=15
+        )
+        self.latin_reset_retry_button.pack(side='left', padx=5)
+        
+        # Next button
+        latin_next_button = ttk.Button(
+            button_frame,
+            text="Next",
+            command=self.next_latin_word,
+            width=15
+        )
+        latin_next_button.pack(side='left', padx=5)
+    
+    def create_latin_noun_table(self):
+        """Create table for Latin noun declensions."""
+        # Clear any existing widgets in the table frame
+        for widget in self.latin_table_frame.winfo_children():
+            widget.destroy()
+        
+        self.latin_entries.clear()
+        
+        # Get current word
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]  # Extract just the word
+        
+        # Find paradigm - search through all paradigms for matching noun
+        paradigm = None
+        for key, data in self.latin_paradigms.items():
+            if data.get('type') == 'noun' and data.get('word') == word:
+                paradigm = data
+                break
+        
+        if not paradigm:
+            return
+        
+        # Reset all column configurations first (clear any leftover from adjective table)
+        for col in range(10):
+            self.latin_table_frame.grid_columnconfigure(col, weight=0, minsize=0)
+        
+        # Configure grid weights for 3 columns only
+        self.latin_table_frame.grid_columnconfigure(0, weight=0, minsize=100)
+        self.latin_table_frame.grid_columnconfigure(1, weight=1, minsize=120)
+        self.latin_table_frame.grid_columnconfigure(2, weight=1, minsize=120)
+        
+        # Headers
+        tk.Label(
+            self.latin_table_frame,
+            text="Case",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 14, 'bold')
+        ).grid(row=0, column=0, padx=10, pady=(5,10), sticky='e')
+        tk.Label(
+            self.latin_table_frame,
+            text="Singular",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 14, 'bold')
+        ).grid(row=0, column=1, padx=10, pady=(5,10))
+        tk.Label(
+            self.latin_table_frame,
+            text="Plural",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 14, 'bold')
+        ).grid(row=0, column=2, padx=10, pady=(5,10))
+        
+        # Create input fields for each case (Latin has 6 cases including Ablative)
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+        for i, case in enumerate(cases, 1):
+            # Case label
+            case_label = tk.Label(
+                self.latin_table_frame,
+                text=case,
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 12, 'bold')
+            )
+            case_label.grid(row=i, column=0, padx=10, pady=6, sticky='e')
+            
+            # Singular entry
+            entry_sg = tk.Entry(
+                self.latin_table_frame,
+                width=15,
+                font=('Times New Roman', 14),
+                relief='solid',
+                borderwidth=1
+            )
+            entry_sg.grid(row=i, column=1, padx=5, pady=6, sticky='ew')
+            self.latin_entries[f"{case}_sg"] = entry_sg
+            entry_sg.bind('<Return>', lambda e, c=case: self.check_latin_single_entry(f"{c}_sg"))
+            
+            # Plural entry
+            entry_pl = tk.Entry(
+                self.latin_table_frame,
+                width=15,
+                font=('Times New Roman', 14),
+                relief='solid',
+                borderwidth=1
+            )
+            entry_pl.grid(row=i, column=2, padx=5, pady=6, sticky='ew')
+            self.latin_entries[f"{case}_pl"] = entry_pl
+            entry_pl.bind('<Return>', lambda e, c=case: self.check_latin_single_entry(f"{c}_pl"))
+        
+        # Apply prefill stems if enabled
+        if self.config.prefill_stems.get():
+            self.apply_latin_prefill_stems()
+    
+    def create_latin_adjective_table(self):
+        """Create table for Latin adjective declensions (masculine, feminine, neuter)."""
+        # Clear any existing widgets in the table frame
+        for widget in self.latin_table_frame.winfo_children():
+            widget.destroy()
+        
+        self.latin_entries.clear()
+        
+        # Get current word
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]  # Extract just the word
+        
+        # Find paradigm - search through all paradigms for matching adjective
+        paradigm = None
+        for key, data in self.latin_paradigms.items():
+            if data.get('type') == 'adjective' and data.get('word') == word:
+                paradigm = data
+                break
+        
+        if not paradigm:
+            return
+        
+        # Configure grid weights for 4 columns (case + 3 genders x 2 numbers = 7 cols total)
+        self.latin_table_frame.grid_columnconfigure(0, weight=0, minsize=100)
+        for col in range(1, 7):
+            self.latin_table_frame.grid_columnconfigure(col, weight=1, minsize=100)
+        
+        # Top headers for genders
+        tk.Label(
+            self.latin_table_frame,
+            text="",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=0, padx=5, pady=(5,2))
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Masculine",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=1, columnspan=2, padx=5, pady=(5,2))
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Feminine",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=3, columnspan=2, padx=5, pady=(5,2))
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Neuter",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=5, columnspan=2, padx=5, pady=(5,2))
+        
+        # Sub-headers for singular/plural
+        tk.Label(
+            self.latin_table_frame,
+            text="Case",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 11, 'bold')
+        ).grid(row=1, column=0, padx=5, pady=(2,10), sticky='e')
+        
+        for col_offset, gender in enumerate(['Masculine', 'Feminine', 'Neuter']):
+            base_col = 1 + (col_offset * 2)
+            tk.Label(
+                self.latin_table_frame,
+                text="Sg",
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 10)
+            ).grid(row=1, column=base_col, padx=3, pady=(2,10))
+            
+            tk.Label(
+                self.latin_table_frame,
+                text="Pl",
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 10)
+            ).grid(row=1, column=base_col+1, padx=3, pady=(2,10))
+        
+        # Create input fields for each case
+        cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+        case_labels = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+        
+        for i, (case, label) in enumerate(zip(cases, case_labels), 2):
+            # Case label
+            tk.Label(
+                self.latin_table_frame,
+                text=label,
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 11, 'bold')
+            ).grid(row=i, column=0, padx=10, pady=4, sticky='e')
+            
+            # Create entries for each gender (masculine, feminine, neuter) and number (sg, pl)
+            for gender_idx, gender in enumerate(['masculine', 'feminine', 'neuter']):
+                base_col = 1 + (gender_idx * 2)
+                
+                # Singular entry
+                entry_sg = tk.Entry(
+                    self.latin_table_frame,
+                    width=12,
+                    font=('Times New Roman', 12),
+                    relief='solid',
+                    borderwidth=1
+                )
+                entry_sg.grid(row=i, column=base_col, padx=2, pady=4, sticky='ew')
+                key_sg = f"{case}_{gender}_sg"
+                self.latin_entries[key_sg] = entry_sg
+                entry_sg.bind('<Return>', lambda e, k=key_sg: self.check_latin_single_entry(k))
+                
+                # Plural entry
+                entry_pl = tk.Entry(
+                    self.latin_table_frame,
+                    width=12,
+                    font=('Times New Roman', 12),
+                    relief='solid',
+                    borderwidth=1
+                )
+                entry_pl.grid(row=i, column=base_col+1, padx=2, pady=4, sticky='ew')
+                key_pl = f"{case}_{gender}_pl"
+                self.latin_entries[key_pl] = entry_pl
+                entry_pl.bind('<Return>', lambda e, k=key_pl: self.check_latin_single_entry(k))
+    
+    def create_latin_verb_table(self):
+        """Create the Latin verb conjugation table."""
+        # Clear existing table
+        for widget in self.latin_table_frame.winfo_children():
+            widget.destroy()
+        
+        # Clear entries
+        self.latin_entries.clear()
+        
+        # Get the selected verb and tense/voice/mood
+        word_display = self.latin_word_var.get()
+        lemma = word_display.split(' (')[0]
+        tense = self.latin_tense_var.get()
+        voice = self.latin_voice_var.get()
+        mood = self.latin_mood_var.get()
+        
+        # Find the matching verb paradigm with specific tense/voice/mood
+        paradigm = None
+        for key, data in self.latin_paradigms.items():
+            if (data.get('type') == 'verb' and 
+                data.get('lemma') == lemma and
+                data.get('tense') == tense and
+                data.get('voice') == voice and
+                data.get('mood') == mood):
+                paradigm = data
+                break
+        
+        if not paradigm:
+            # Show message that this combination doesn't exist yet
+            tk.Label(
+                self.latin_table_frame,
+                text=f"The {tense} {mood} {voice} form is not yet available.",
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 12)
+            ).grid(row=0, column=0, pady=20)
+            return
+        
+        # Reset all column configurations first (clear any leftover from adjective table)
+        for col in range(10):
+            self.latin_table_frame.grid_columnconfigure(col, weight=0, minsize=0)
+        
+        # Configure grid columns for verb table (3 columns only)
+        self.latin_table_frame.grid_columnconfigure(0, weight=1)  # Person column
+        self.latin_table_frame.grid_columnconfigure(1, weight=1)  # Singular column
+        self.latin_table_frame.grid_columnconfigure(2, weight=1)  # Plural column
+        
+        # Create table headers
+        tk.Label(
+            self.latin_table_frame,
+            text="Person",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=0, padx=10, pady=10, sticky='e')
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Singular",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=1, padx=10, pady=10)
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Plural",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=2, padx=10, pady=10)
+        
+        # Create rows for each person (1st, 2nd, 3rd)
+        persons = ["1st", "2nd", "3rd"]
+        
+        for i, person in enumerate(persons, start=1):
+            # Person label
+            person_label = tk.Label(
+                self.latin_table_frame,
+                text=person,
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 12, 'bold')
+            )
+            person_label.grid(row=i, column=0, padx=10, pady=6, sticky='e')
+            
+            # Singular entry
+            entry_sg = tk.Entry(
+                self.latin_table_frame,
+                width=15,
+                font=('Times New Roman', 14),
+                relief='solid',
+                borderwidth=1
+            )
+            entry_sg.grid(row=i, column=1, padx=5, pady=6, sticky='ew')
+            self.latin_entries[f"{person}_sg"] = entry_sg
+            entry_sg.bind('<Return>', lambda e, p=person: self.check_latin_single_entry(f"{p}_sg"))
+            
+            # Plural entry
+            entry_pl = tk.Entry(
+                self.latin_table_frame,
+                width=15,
+                font=('Times New Roman', 14),
+                relief='solid',
+                borderwidth=1
+            )
+            entry_pl.grid(row=i, column=2, padx=5, pady=6, sticky='ew')
+            self.latin_entries[f"{person}_pl"] = entry_pl
+            entry_pl.bind('<Return>', lambda e, p=person: self.check_latin_single_entry(f"{p}_pl"))
+        
+        # Apply prefill stems if enabled
+        if self.config.prefill_stems.get():
+            self.apply_latin_prefill_stems()
+    
+    def on_latin_word_change(self, event=None):
+        """Handle Latin word selection change."""
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]
+        self.latin_word_label.config(text=word)
+        
+        # Update star button
+        self.update_latin_star_button()
+        
+        # Reset tracking variables when changing words
+        self.latin_has_revealed = False
+        self.latin_incorrect_entries.clear()
+        
+        # Re-enable reveal button
+        if hasattr(self, 'latin_reveal_button'):
+            self.latin_reveal_button.configure(state='normal')
+        
+        # Update Reset/Retry button
+        if hasattr(self, 'latin_reset_retry_button'):
+            self.update_latin_reset_retry_button()
+        
+        # Check if we're in Starred mode - parse the display differently
+        latin_type = self.latin_type_var.get()
+        if latin_type == "Starred":
+            # Parse starred item format
+            # For verbs: "word (voice tense mood)"
+            # For nouns: "word (english)"
+            if '(' in word_display:
+                params = word_display.split('(')[1].rstrip(')').strip()
+                param_parts = params.split()
+                
+                if len(param_parts) == 3:
+                    # It's a verb with voice/tense/mood - lock to this conjugation
+                    voice, tense, mood = param_parts
+                    self.latin_voice_var.set(voice)
+                    self.latin_tense_var.set(tense)
+                    self.latin_mood_var.set(mood)
+                    self.latin_instruction_label.config(text="Conjugate the verb:")
+                    self.show_latin_verb_controls()
+                    # Disable the dropdowns so user can't change them in Starred mode
+                    if hasattr(self, 'latin_tense_dropdown'):
+                        self.latin_tense_dropdown.configure(state='disabled')
+                    if hasattr(self, 'latin_voice_dropdown'):
+                        self.latin_voice_dropdown.configure(state='disabled')
+                    if hasattr(self, 'latin_mood_dropdown'):
+                        self.latin_mood_dropdown.configure(state='disabled')
+                    self.create_latin_verb_table()
+                    return
+                else:
+                    # It's a noun
+                    self.latin_instruction_label.config(text="Decline the word:")
+                    self.hide_latin_verb_controls()
+                    self.create_latin_noun_table()
+                    return
+        else:
+            # Not in Starred mode - enable the verb dropdowns
+            if hasattr(self, 'latin_tense_dropdown'):
+                self.latin_tense_dropdown.configure(state='readonly')
+            if hasattr(self, 'latin_voice_dropdown'):
+                self.latin_voice_dropdown.configure(state='readonly')
+            if hasattr(self, 'latin_mood_dropdown'):
+                self.latin_mood_dropdown.configure(state='readonly')
+        
+        # Regular (non-starred) word change
+        # Find paradigm to determine type
+        paradigm = None
+        for key, data in self.latin_paradigms.items():
+            word_value = data.get('word') or data.get('lemma')
+            if word_value == word:
+                paradigm = data
+                break
+        
+        # Update instruction label and show/hide verb controls based on type
+        if paradigm and paradigm.get('type') == 'verb':
+            self.latin_instruction_label.config(text="Conjugate the verb:")
+            self.show_latin_verb_controls()
+            # Update dropdown options based on available forms for this verb
+            self.update_latin_verb_dropdown_options(word)
+            self.create_latin_verb_table()
+        elif paradigm and paradigm.get('type') == 'adjective':
+            self.latin_instruction_label.config(text="Decline the adjective:")
+            self.hide_latin_verb_controls()
+            self.create_latin_adjective_table()
+        else:
+            self.latin_instruction_label.config(text="Decline the word:")
+            self.hide_latin_verb_controls()
+            self.create_latin_noun_table()
+    
+    def show_latin_verb_controls(self):
+        """Show the Latin verb tense/voice/mood controls."""
+        self.latin_verb_controls_frame.grid()
+    
+    def hide_latin_verb_controls(self):
+        """Hide the Latin verb tense/voice/mood controls."""
+        self.latin_verb_controls_frame.grid_remove()
+    
+    def update_latin_verb_dropdown_options(self, lemma):
+        """Update the verb dropdown options to only show forms that exist for this lemma."""
+        # Find all forms that exist for this lemma
+        available_tenses = set()
+        available_voices = set()
+        available_moods = set()
+        
+        for key, data in self.latin_paradigms.items():
+            if data.get('type') == 'verb' and data.get('lemma') == lemma:
+                tense = data.get('tense')
+                voice = data.get('voice')
+                mood = data.get('mood')
+                if tense:
+                    available_tenses.add(tense)
+                if voice:
+                    available_voices.add(voice)
+                if mood:
+                    available_moods.add(mood)
+        
+        # Define the preferred order for dropdowns
+        tense_order = ["present", "imperfect", "future", "perfect", "pluperfect", "future perfect"]
+        voice_order = ["active", "passive"]
+        mood_order = ["indicative", "subjunctive", "imperative"]
+        
+        # Sort the available values according to the preferred order
+        sorted_tenses = [t for t in tense_order if t in available_tenses]
+        sorted_voices = [v for v in voice_order if v in available_voices]
+        sorted_moods = [m for m in mood_order if m in available_moods]
+        
+        # Update the dropdown values
+        if hasattr(self, 'latin_tense_dropdown'):
+            self.latin_tense_dropdown['values'] = sorted_tenses
+            # Reset to first available if current selection is not available
+            current_tense = self.latin_tense_var.get()
+            if current_tense not in sorted_tenses and sorted_tenses:
+                self.latin_tense_var.set(sorted_tenses[0])
+        
+        if hasattr(self, 'latin_voice_dropdown'):
+            self.latin_voice_dropdown['values'] = sorted_voices
+            current_voice = self.latin_voice_var.get()
+            if current_voice not in sorted_voices and sorted_voices:
+                self.latin_voice_var.set(sorted_voices[0])
+        
+        if hasattr(self, 'latin_mood_dropdown'):
+            self.latin_mood_dropdown['values'] = sorted_moods
+            current_mood = self.latin_mood_var.get()
+            if current_mood not in sorted_moods and sorted_moods:
+                self.latin_mood_var.set(sorted_moods[0])
+    
+    def on_latin_verb_change(self, event=None):
+        """Handle Latin verb tense/voice/mood selection change."""
+        # Reset tracking variables when changing verb forms
+        self.latin_has_revealed = False
+        self.latin_incorrect_entries.clear()
+        
+        # Re-enable reveal button
+        if hasattr(self, 'latin_reveal_button'):
+            self.latin_reveal_button.configure(state='normal')
+        
+        # Update Reset/Retry button
+        if hasattr(self, 'latin_reset_retry_button'):
+            self.update_latin_reset_retry_button()
+        
+        # Update available options based on current selections
+        word_display = self.latin_word_var.get()
+        lemma = word_display.split(' (')[0]
+        self.update_latin_verb_dropdown_options_filtered(lemma)
+        
+        # Recreate the verb table with new tense/voice/mood
+        self.create_latin_verb_table()
+        
+        # Update star button
+        self.update_latin_star_button()
+    
+    def update_latin_verb_dropdown_options_filtered(self, lemma):
+        """Update dropdown options based on current selections to show only valid combinations."""
+        # Get current selections
+        current_tense = self.latin_tense_var.get()
+        current_voice = self.latin_voice_var.get()
+        current_mood = self.latin_mood_var.get()
+        
+        # Find all forms that exist for this lemma with at least one current constraint
+        available_tenses = set()
+        available_voices = set()
+        available_moods = set()
+        
+        for key, data in self.latin_paradigms.items():
+            if data.get('type') == 'verb' and data.get('lemma') == lemma:
+                tense = data.get('tense')
+                voice = data.get('voice')
+                mood = data.get('mood')
+                
+                # Collect options that work with current selections
+                # For tenses: show tenses that exist with current voice and mood
+                if voice == current_voice and mood == current_mood and tense:
+                    available_tenses.add(tense)
+                
+                # For voices: show voices that exist with current tense and mood
+                if tense == current_tense and mood == current_mood and voice:
+                    available_voices.add(voice)
+                
+                # For moods: show moods that exist with current tense and voice
+                if tense == current_tense and voice == current_voice and mood:
+                    available_moods.add(mood)
+        
+        # Define the preferred order for dropdowns
+        tense_order = ["present", "imperfect", "future", "perfect", "pluperfect", "future perfect"]
+        voice_order = ["active", "passive"]
+        mood_order = ["indicative", "subjunctive", "imperative"]
+        
+        # Sort the available values according to the preferred order
+        sorted_tenses = [t for t in tense_order if t in available_tenses]
+        sorted_voices = [v for v in voice_order if v in available_voices]
+        sorted_moods = [m for m in mood_order if m in available_moods]
+        
+        # Update the dropdown values (only if not empty - keep previous values if filtering results in empty)
+        if hasattr(self, 'latin_tense_dropdown') and sorted_tenses:
+            self.latin_tense_dropdown['values'] = sorted_tenses
+        
+        if hasattr(self, 'latin_voice_dropdown') and sorted_voices:
+            self.latin_voice_dropdown['values'] = sorted_voices
+        
+        if hasattr(self, 'latin_mood_dropdown') and sorted_moods:
+            self.latin_mood_dropdown['values'] = sorted_moods
+    
+    def on_latin_type_change(self, event=None):
+        """Handle Latin type selection change."""
+        latin_type = self.latin_type_var.get()
+        
+        # Update word dropdown based on type
+        latin_words = []
+        seen_verbs = set()  # Track unique verb lemmas
+        seen_nouns = set()  # Track unique nouns
+        seen_adjectives = set()  # Track unique adjectives
+        
+        if latin_type == "Starred":
+            # Show starred Latin items
+            for item_key in self.latin_starred_items:
+                parts = item_key.split(':')
+                if len(parts) >= 3 and parts[0] == "Latin":
+                    word_type = parts[1]
+                    word = parts[2]
+                    
+                    if word_type == "Verb" and len(parts) >= 6:
+                        # Format: Latin:Verb:word:voice:tense:mood
+                        voice = parts[3]
+                        tense = parts[4]
+                        mood = parts[5]
+                        display = f"{word} ({voice} {tense} {mood})"
+                        latin_words.append(display)
+                    elif word_type == "Noun":
+                        # Find English translation
+                        english = ""
+                        for key, data in self.latin_paradigms.items():
+                            word_value = data.get('word', '')
+                            if word_value == word and data.get('type') == 'noun':
+                                english = data.get('english', '')
+                                break
+                        display = f"{word} ({english})" if english else word
+                        latin_words.append(display)
+                    elif word_type == "Adjective":
+                        # Find English translation
+                        english = ""
+                        for key, data in self.latin_paradigms.items():
+                            word_value = data.get('word', '')
+                            if word_value == word and data.get('type') == 'adjective':
+                                english = data.get('english', '')
+                                break
+                        display = f"{word} ({english})" if english else word
+                        latin_words.append(display)
+        else:
+            # Regular type selection
+            for word_key, word_data in self.latin_paradigms.items():
+                if latin_type == "Noun" and word_data.get('type') == 'noun':
+                    word_value = word_data.get('word', word_key)
+                    # Only add unique nouns (avoid duplicates)
+                    if word_value not in seen_nouns:
+                        seen_nouns.add(word_value)
+                        english = word_data.get('english', '')
+                        display_text = f"{word_value} ({english})"
+                        latin_words.append(display_text)
+                elif latin_type == "Verb" and word_data.get('type') == 'verb':
+                    lemma = word_data.get('lemma', word_key)
+                    # Only add unique lemmas (not every tense/voice/mood combination)
+                    if lemma not in seen_verbs:
+                        seen_verbs.add(lemma)
+                        english = word_data.get('english', '')
+                        display_text = f"{lemma} ({english})"
+                        latin_words.append(display_text)
+                elif latin_type == "Adjective" and word_data.get('type') == 'adjective':
+                    word_value = word_data.get('word', word_key)
+                    # Only add unique adjectives
+                    if word_value not in seen_adjectives:
+                        seen_adjectives.add(word_value)
+                        english = word_data.get('english', '')
+                        display_text = f"{word_value} ({english})"
+                        latin_words.append(display_text)
+        
+        if latin_words:
+            # Find the word dropdown and update it
+            for widget in self.main_frame.winfo_children():
+                if isinstance(widget, tk.Frame):
+                    for child in widget.winfo_children():
+                        if isinstance(child, tk.Frame):
+                            for grandchild in child.winfo_children():
+                                if isinstance(grandchild, ttk.Combobox) and grandchild.cget('textvariable') == str(self.latin_word_var):
+                                    grandchild['values'] = latin_words
+                                    if latin_words:
+                                        self.latin_word_var.set(latin_words[0])
+                                        self.on_latin_word_change()
+                                    break
+    
+    def on_latin_prefill_stems_toggle(self):
+        """Handle the Latin prefill stems toggle change"""
+        if self.config.prefill_stems.get():
+            # Prefill stems are now enabled, apply to current table
+            self.apply_latin_prefill_stems()
+        else:
+            # Prefill stems disabled, clear the prefilled content
+            self.clear_latin_prefill_stems()
+    
+    def apply_latin_prefill_stems(self):
+        """Apply prefill stems to the current Latin table"""
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]
+        
+        # Find paradigm
+        paradigm = None
+        for key, data in self.latin_paradigms.items():
+            if data.get('type') == 'noun' and data.get('word') == word:
+                paradigm = data
+                break
+            elif data.get('type') == 'verb' and data.get('lemma') == word:
+                # For verbs, match current tense/voice/mood
+                if (data.get('tense') == self.latin_tense_var.get() and
+                    data.get('voice') == self.latin_voice_var.get() and
+                    data.get('mood') == self.latin_mood_var.get()):
+                    paradigm = data
+                    break
+        
+        if not paradigm:
+            return
+        
+        if paradigm.get('type') == 'noun':
+            # Apply noun stems
+            stem = paradigm.get('stem', '')
+            stem_nom_sg = paradigm.get('stem_nom_sg', stem)  # Some nouns have different nominative singular stem
+            
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+            
+            for case in cases:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{case}_{number}"
+                    if entry_key in self.latin_entries:
+                        entry = self.latin_entries[entry_key]
+                        # Use special nom sg stem if it's nominative singular, otherwise regular stem
+                        if case == "Nominative" and number == "sg":
+                            entry.delete(0, tk.END)
+                            entry.insert(0, stem_nom_sg)
+                        else:
+                            entry.delete(0, tk.END)
+                            entry.insert(0, stem)
+                        # Don't change text color - keep it black for readability
+        
+        elif paradigm.get('type') == 'verb':
+            # Hardcoded verb stems for accuracy
+            lemma = paradigm.get('lemma')
+            tense = paradigm.get('tense')
+            voice = paradigm.get('voice')
+            
+            # Define hardcoded stems for each verb
+            verb_stems = {
+                'amo': {
+                    'present': 'am',
+                    'imperfect': 'am',
+                    'future': 'am',
+                    'perfect_active': 'amav',
+                    'pluperfect_active': 'amav',
+                    'future_perfect_active': 'amav',
+                    'perfect_passive': 'amat',
+                    'pluperfect_passive': 'amat',
+                    'future_perfect_passive': 'amat'
+                },
+                'audio': {
+                    'present': 'audi',
+                    'imperfect': 'audi',
+                    'future': 'audi',
+                    'perfect_active': 'audiv',
+                    'pluperfect_active': 'audiv',
+                    'future_perfect_active': 'audiv',
+                    'perfect_passive': 'audit',
+                    'pluperfect_passive': 'audit',
+                    'future_perfect_passive': 'audit'
+                },
+                'rego': {
+                    'present': 'reg',
+                    'imperfect': 'reg',
+                    'future': 'reg',
+                    'perfect_active': 'rex',
+                    'pluperfect_active': 'rex',
+                    'future_perfect_active': 'rex',
+                    'perfect_passive': 'rect',
+                    'pluperfect_passive': 'rect',
+                    'future_perfect_passive': 'rect'
+                },
+                'moneo': {
+                    'present': 'mone',
+                    'imperfect': 'mone',
+                    'future': 'mone',
+                    'perfect_active': 'monu',
+                    'pluperfect_active': 'monu',
+                    'future_perfect_active': 'monu',
+                    'perfect_passive': 'monit',
+                    'pluperfect_passive': 'monit',
+                    'future_perfect_passive': 'monit'
+                },
+                'sum': {
+                    # sum has no stems - will be empty string
+                }
+            }
+            
+            stem = ''
+            if lemma in verb_stems:
+                stems = verb_stems[lemma]
+                
+                # Determine which stem to use based on tense and voice
+                if tense in ['present', 'imperfect', 'future']:
+                    stem = stems.get(tense, '')
+                elif tense in ['perfect', 'pluperfect', 'future perfect']:
+                    if voice == 'passive':
+                        stem = stems.get(f'{tense.replace(" ", "_")}_passive', '')
+                    else:
+                        stem = stems.get(f'{tense.replace(" ", "_")}_active', '')
+            
+            # Apply stem to all entries (only if stem is not empty)
+            if stem:
+                persons = ["1st", "2nd", "3rd"]
+                for person in persons:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{person}_{number}"
+                        if entry_key in self.latin_entries:
+                            entry = self.latin_entries[entry_key]
+                            entry.delete(0, tk.END)
+                            entry.insert(0, stem)
+                            # Don't change text color - keep it black for readability
+    
+    def clear_latin_prefill_stems(self):
+        """Clear only the user-entered endings, preserve the prefilled stems."""
+        if not self.config.prefill_stems.get():
+            return
+            
+        # Get the current paradigm to determine stems
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]
+        
+        # Find paradigm
+        paradigm = None
+        for key, data in self.latin_paradigms.items():
+            if data.get('type') == 'noun' and data.get('word') == word:
+                paradigm = data
+                break
+            elif data.get('type') == 'verb' and data.get('lemma') == word:
+                # For verbs, match current tense/voice/mood
+                if (data.get('tense') == self.latin_tense_var.get() and
+                    data.get('voice') == self.latin_voice_var.get() and
+                    data.get('mood') == self.latin_mood_var.get()):
+                    paradigm = data
+                    break
+        
+        if not paradigm:
+            return
+            
+        if paradigm.get('type') == 'noun':
+            # Get the stems
+            stem = paradigm.get('stem', '')
+            stem_nom_sg = paradigm.get('stem_nom_sg', stem)
+            
+            # Reset to just the stems
+            cases = ["Nominative", "Genitive", "Dative", "Accusative", "Ablative", "Vocative"]
+            for case in cases:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{case}_{number}"
+                    if entry_key in self.latin_entries:
+                        entry = self.latin_entries[entry_key]
+                        entry.delete(0, tk.END)
+                        # Use special nom sg stem if it's nominative singular, otherwise regular stem
+                        if case == "Nominative" and number == "sg":
+                            entry.insert(0, stem_nom_sg)
+                        else:
+                            entry.insert(0, stem)
+                        
+        elif paradigm.get('type') == 'verb':
+            # Hardcoded verb stems for accuracy (same as apply_latin_prefill_stems)
+            lemma = paradigm.get('lemma')
+            tense = paradigm.get('tense')
+            voice = paradigm.get('voice')
+            
+            # Define hardcoded stems for each verb
+            verb_stems = {
+                'amo': {
+                    'present': 'am',
+                    'imperfect': 'am',
+                    'future': 'am',
+                    'perfect_active': 'amav',
+                    'pluperfect_active': 'amav',
+                    'future_perfect_active': 'amav',
+                    'perfect_passive': 'amat',
+                    'pluperfect_passive': 'amat',
+                    'future_perfect_passive': 'amat'
+                },
+                'audio': {
+                    'present': 'audi',
+                    'imperfect': 'audi',
+                    'future': 'audi',
+                    'perfect_active': 'audiv',
+                    'pluperfect_active': 'audiv',
+                    'future_perfect_active': 'audiv',
+                    'perfect_passive': 'audit',
+                    'pluperfect_passive': 'audit',
+                    'future_perfect_passive': 'audit'
+                },
+                'rego': {
+                    'present': 'reg',
+                    'imperfect': 'reg',
+                    'future': 'reg',
+                    'perfect_active': 'rex',
+                    'pluperfect_active': 'rex',
+                    'future_perfect_active': 'rex',
+                    'perfect_passive': 'rect',
+                    'pluperfect_passive': 'rect',
+                    'future_perfect_passive': 'rect'
+                },
+                'moneo': {
+                    'present': 'mone',
+                    'imperfect': 'mone',
+                    'future': 'mone',
+                    'perfect_active': 'monu',
+                    'pluperfect_active': 'monu',
+                    'future_perfect_active': 'monu',
+                    'perfect_passive': 'monit',
+                    'pluperfect_passive': 'monit',
+                    'future_perfect_passive': 'monit'
+                },
+                'sum': {
+                    # sum has no stems - will be empty string
+                }
+            }
+            
+            stem = ''
+            if lemma in verb_stems:
+                stems = verb_stems[lemma]
+                
+                # Determine which stem to use based on tense and voice
+                if tense in ['present', 'imperfect', 'future']:
+                    stem = stems.get(tense, '')
+                elif tense in ['perfect', 'pluperfect', 'future perfect']:
+                    if voice == 'passive':
+                        stem = stems.get(f'{tense.replace(" ", "_")}_passive', '')
+                    else:
+                        stem = stems.get(f'{tense.replace(" ", "_")}_active', '')
+            
+            # Reset to just the stems (only if stem is not empty)
+            if stem:
+                persons = ["1st", "2nd", "3rd"]
+                for person in persons:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{person}_{number}"
+                        if entry_key in self.latin_entries:
+                            entry = self.latin_entries[entry_key]
+                            entry.delete(0, tk.END)
+                            entry.insert(0, stem)
+    
+    def reveal_latin_answers(self):
+        """Reveal answers for Latin table and track incorrect ones."""
+        # Prevent revealing twice in a row
+        if self.latin_has_revealed:
+            return
+        
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]
+        
+        # Find paradigm - could be noun, adjective, or verb
+        paradigm = None
+        for key, data in self.latin_paradigms.items():
+            if data.get('type') == 'noun' and data.get('word') == word:
+                paradigm = data
+                break
+            elif data.get('type') == 'adjective' and data.get('word') == word:
+                paradigm = data
+                break
+            elif data.get('type') == 'verb' and data.get('lemma') == word:
+                # For verbs, also match tense/voice/mood
+                if (data.get('tense') == self.latin_tense_var.get() and
+                    data.get('voice') == self.latin_voice_var.get() and
+                    data.get('mood') == self.latin_mood_var.get()):
+                    paradigm = data
+                    break
+        
+        if not paradigm:
+            return
+        
+        # Clear previous incorrect entries tracking
+        self.latin_incorrect_entries.clear()
+        
+        if paradigm.get('type') == 'adjective':
+            # Handle adjective declension (all 3 genders)
+            cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+            genders = ["masculine", "feminine", "neuter"]
+            
+            for case in cases:
+                for gender in genders:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{gender}_{number}"
+                        if entry_key in self.latin_entries:
+                            entry = self.latin_entries[entry_key]
+                            user_answer = entry.get().strip()
+                            correct_answer = paradigm['forms'][gender][case][number]
+                            
+                            if user_answer.lower() == correct_answer.lower():
+                                entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
+                            else:
+                                # Track as incorrect
+                                self.latin_incorrect_entries.add(entry_key)
+                                # First delete and insert the correct answer
+                                entry.delete(0, tk.END)
+                                entry.insert(0, correct_answer)
+                                # Then set to readonly with red background
+                                entry.configure(state='readonly', readonlybackground='#FFB6C6')  # Light red
+        
+        elif paradigm.get('type') == 'noun':
+            # Handle noun declension
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+            
+            for case in cases:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{case}_{number}"
+                    if entry_key in self.latin_entries:
+                        entry = self.latin_entries[entry_key]
+                        user_answer = entry.get().strip()
+                        correct_answer = paradigm['forms'][case.lower()][number]
+                        
+                        if user_answer.lower() == correct_answer.lower():
+                            entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
+                        else:
+                            # Track as incorrect
+                            self.latin_incorrect_entries.add(entry_key)
+                            # First delete and insert the correct answer
+                            entry.delete(0, tk.END)
+                            entry.insert(0, correct_answer)
+                            # Then set to readonly with red background
+                            entry.configure(state='readonly', readonlybackground='#FFB6C6')  # Light red
+        
+        elif paradigm.get('type') == 'verb':
+            # Handle verb conjugation
+            persons = ["1st", "2nd", "3rd"]
+            
+            for person in persons:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{person}_{number}"
+                    if entry_key in self.latin_entries:
+                        entry = self.latin_entries[entry_key]
+                        user_answer = entry.get().strip()
+                        correct_answer = paradigm.get(entry_key, '')
+                        
+                        if user_answer.lower() == correct_answer.lower():
+                            entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
+                        else:
+                            # Track as incorrect
+                            self.latin_incorrect_entries.add(entry_key)
+                            # First delete and insert the correct answer
+                            entry.delete(0, tk.END)
+                            entry.insert(0, correct_answer)
+                            # Then set to readonly with red background
+                            entry.configure(state='readonly', readonlybackground='#FFB6C6')  # Light red
+        
+        # Mark as revealed and disable reveal button
+        self.latin_has_revealed = True
+        self.latin_reveal_button.configure(state='disabled')
+        
+        # Update the Reset/Retry button
+        self.update_latin_reset_retry_button()
+    
+    def reset_latin_table(self):
+        """Reset the Latin table."""
+        # Reset tracking variables first
+        self.latin_has_revealed = False
+        self.latin_incorrect_entries.clear()
+        
+        # Re-enable reveal button
+        self.latin_reveal_button.configure(state='normal')
+        
+        # Reset all entries to normal state
+        for entry in self.latin_entries.values():
+            entry.configure(state='normal', bg='white')
+            entry.delete(0, tk.END)
+        
+        # If prefill stems is enabled, reapply stems
+        if self.config.prefill_stems.get():
+            self.apply_latin_prefill_stems()
+        
+        # Update Reset/Retry button
+        self.update_latin_reset_retry_button()
+    
+    def retry_latin_incorrect_answers(self):
+        """Clear only the incorrect/missing answers for retry, keeping correct ones locked."""
+        if not self.latin_has_revealed:
+            return  # Should not happen since button is disabled before reveal
+
+        # Get paradigm info for stem preservation
+        paradigm = self.get_current_paradigm()
+        prefill_enabled = self.config.prefill_stems.get()
+
+        # Clear only the incorrect entries
+        for entry_key in self.latin_incorrect_entries:
+            if entry_key in self.latin_entries:
+                entry = self.latin_entries[entry_key]
+                entry.configure(state='normal')
+                entry.configure(bg='white')  # Reset to normal background
+
+                # If prefill is enabled, preserve the stem
+                if prefill_enabled and paradigm:
+                    if paradigm.get('type') == 'noun':
+                        stem = paradigm.get('stem', '')
+                        stem_nom_sg = paradigm.get('stem_nom_sg', stem)
+
+                        # Parse entry_key to determine if it's nominative singular
+                        if entry_key == "Nominative_sg":
+                            entry.delete(0, tk.END)
+                            entry.insert(0, stem_nom_sg)
+                        else:
+                            entry.delete(0, tk.END)
+                            entry.insert(0, stem)
+
+                    elif paradigm.get('type') == 'verb':
+                        pp = paradigm.get('principal_parts', {})
+                        tense = paradigm.get('tense')
+                        voice = paradigm.get('voice')
+
+                        stem = ''
+                        if tense in ['present', 'imperfect', 'future']:
+                            stem = pp.get('present_stem', '')
+                        elif tense in ['perfect', 'pluperfect', 'future perfect']:
+                            if voice == 'active':
+                                stem = pp.get('perfect_stem', '')
+                            else:
+                                stem = pp.get('perfect_passive_stem', '')
+
+                        entry.delete(0, tk.END)
+                        entry.insert(0, stem)
+                else:
+                    # Full clear if prefill is disabled
+                    entry.delete(0, tk.END)
+
+        # After clearing, re-apply prefill stems if enabled (robust, like Greek)
+        if prefill_enabled:
+            self.apply_latin_prefill_stems()
+
+        # Reset tracking
+        self.latin_has_revealed = False
+
+        # Re-enable the reveal button
+        self.latin_reveal_button.configure(state='normal')
+
+        # Update Reset/Retry button
+        self.update_latin_reset_retry_button()
+    
+    def smart_latin_reset_retry(self):
+        """Smart button that acts as Reset before reveal, Retry after reveal."""
+        if self.latin_has_revealed and self.latin_incorrect_entries:
+            # After reveal with incorrect entries - act as Retry
+            self.retry_latin_incorrect_answers()
+        else:
+            # Before reveal or no incorrect entries - act as Reset
+            self.reset_latin_table()
+    
+    def update_latin_reset_retry_button(self):
+        """Update the Latin Reset/Retry button text and state based on current context."""
+        if not hasattr(self, 'latin_reset_retry_button'):
+            return
+            
+        if self.latin_has_revealed and self.latin_incorrect_entries:
+            # After reveal with incorrect entries - show as Retry
+            self.latin_reset_retry_button.configure(text="Retry", state='normal')
+        else:
+            # Before reveal or no incorrect entries - show as Reset
+            self.latin_reset_retry_button.configure(text="Reset", state='normal')
+    
+    def next_latin_word(self):
+        """Navigate to the next Latin word/verb combination in the dropdown list."""
+        current_type = self.latin_type_var.get()
+        
+        # Special handling for Starred mode - just go to next starred item
+        if current_type == "Starred":
+            self.next_latin_starred_item()
+            return
+        
+        # Check if randomize is enabled - use full random logic
+        if self.config.randomize_next.get():
+            self.random_latin_next()
+            return
+        
+        # Check if we're dealing with a verb
+        current_word = self.latin_word_var.get().split(' (')[0]
+        
+        # Find if current word is a verb
+        is_verb = False
+        for key, data in self.latin_paradigms.items():
+            if data.get('lemma') == current_word and data.get('type') == 'verb':
+                is_verb = True
+                break
+        
+        if is_verb:
+            # For verbs, cycle through tense → voice → mood → next verb
+            self.next_latin_verb_combination()
+        else:
+            # For nouns, just go to next word
+            self.next_latin_noun()
+    
+    def next_latin_starred_item(self):
+        """Navigate to the next starred Latin item in the list."""
+        current_values = list(self.latin_word_dropdown['values'])
+        if not current_values:
+            return
+        
+        current_word = self.latin_word_var.get()
+        
+        try:
+            current_index = current_values.index(current_word)
+            next_index = (current_index + 1) % len(current_values)
+            self.latin_word_var.set(current_values[next_index])
+            self.on_latin_word_change(None)
+        except ValueError:
+            # Current word not in list, just select first
+            self.latin_word_var.set(current_values[0])
+            self.on_latin_word_change(None)
+
+    
+    def random_latin_next(self):
+        """Navigate to a completely random table (type, word, and for verbs: voice/tense/mood)."""
+        import random
+        
+        # Check if type is locked
+        current_type = self.latin_type_var.get()
+        
+        # Special handling for Starred mode - randomize within starred items
+        if current_type == "Starred":
+            current_values = list(self.latin_word_dropdown['values'])
+            if current_values:
+                random_word = random.choice(current_values)
+                self.latin_word_var.set(random_word)
+                self.on_latin_word_change(None)
+            return
+        
+        if self.config.lock_current_type.get():
+            # Keep current type, only randomize within that type
+            random_type = current_type
+        else:
+            # Randomly select a type
+            available_types = ["Noun", "Verb"]
+            random_type = random.choice(available_types)
+        
+        # Set the type (only changes if not locked)
+        if not self.config.lock_current_type.get():
+            self.latin_type_var.set(random_type)
+            self.on_latin_type_change(None)  # Update the available words
+        
+        # Randomly select a word from the available words for this type
+        current_values = list(self.latin_word_dropdown['values'])
+        if current_values:
+            random_word = random.choice(current_values)
+            self.latin_word_var.set(random_word)
+            self.on_latin_word_change(None)
+        
+        # If it's a verb, also randomize tense, voice, and mood
+        if random_type == "Verb":
+            # Get available combinations for this verb
+            current_lemma = self.latin_word_var.get().split(' (')[0]
+            
+            available_combinations = []
+            for key, data in self.latin_paradigms.items():
+                if data.get('lemma') == current_lemma and data.get('type') == 'verb':
+                    tense = data.get('tense')
+                    voice = data.get('voice')
+                    mood = data.get('mood')
+                    if tense and voice and mood:
+                        available_combinations.append((tense, voice, mood))
+            
+            if available_combinations:
+                # Randomly select a combination
+                random_combo = random.choice(available_combinations)
+                tense, voice, mood = random_combo
+                
+                # Set the random combination
+                self.latin_tense_var.set(tense)
+                self.latin_voice_var.set(voice)
+                self.latin_mood_var.set(mood)
+                self.on_latin_verb_change(None)
+    
+    def next_latin_noun(self):
+        """Navigate to the next noun in the dropdown list."""
+        # Normal sequential next
+        current_word = self.latin_word_var.get()
+        current_values = list(self.latin_word_dropdown['values'])
+        
+        if not current_values:
+            return
+        
+        try:
+            current_index = current_values.index(current_word)
+            next_index = (current_index + 1) % len(current_values)
+            next_word = current_values[next_index]
+            
+            self.latin_word_var.set(next_word)
+            self.on_latin_word_change(None)
+        except ValueError:
+            if current_values:
+                self.latin_word_var.set(current_values[0])
+                self.on_latin_word_change(None)
+    
+    def next_latin_verb_combination(self):
+        """Navigate through verb combinations: tense → voice → mood → next verb."""
+        current_lemma = self.latin_word_var.get().split(' (')[0]
+        current_tense = self.latin_tense_var.get()
+        current_voice = self.latin_voice_var.get()
+        current_mood = self.latin_mood_var.get()
+        
+        # Define ordering
+        tense_order = ["present", "imperfect", "future", "perfect", "pluperfect", "future perfect"]
+        voice_order = ["active", "passive"]
+        mood_order = ["indicative", "subjunctive", "imperative"]
+        
+        # Get all available combinations for current verb
+        available_combinations = []
+        for key, data in self.latin_paradigms.items():
+            if data.get('lemma') == current_lemma and data.get('type') == 'verb':
+                tense = data.get('tense')
+                voice = data.get('voice')
+                mood = data.get('mood')
+                if tense and voice and mood:
+                    available_combinations.append((tense, voice, mood))
+        
+        if not available_combinations:
+            return
+        
+        # Step 1: Try to advance tense within current voice/mood
+        current_combinations = [(t, v, m) for t, v, m in available_combinations 
+                               if v == current_voice and m == current_mood]
+        available_tenses = sorted(list(set([t for t, v, m in current_combinations])),
+                                key=lambda x: tense_order.index(x) if x in tense_order else 999)
+        
+        if current_tense in available_tenses:
+            current_tense_index = available_tenses.index(current_tense)
+            if current_tense_index < len(available_tenses) - 1:
+                # Move to next tense
+                next_tense = available_tenses[current_tense_index + 1]
+                self.latin_tense_var.set(next_tense)
+                self.on_latin_verb_change(None)
+                return
+        
+        # Step 2: Tense wrapped, try to advance voice within current mood
+        current_mood_combinations = [(t, v, m) for t, v, m in available_combinations if m == current_mood]
+        available_voices = sorted(list(set([v for t, v, m in current_mood_combinations])),
+                                key=lambda x: voice_order.index(x) if x in voice_order else 999)
+        
+        if current_voice in available_voices:
+            current_voice_index = available_voices.index(current_voice)
+            if current_voice_index < len(available_voices) - 1:
+                # Move to next voice, reset tense to first available
+                next_voice = available_voices[current_voice_index + 1]
+                
+                # Get first tense for this voice/mood combination
+                next_combinations = [(t, v, m) for t, v, m in available_combinations 
+                                   if v == next_voice and m == current_mood]
+                next_tenses = sorted(list(set([t for t, v, m in next_combinations])),
+                                   key=lambda x: tense_order.index(x) if x in tense_order else 999)
+                
+                if next_tenses:
+                    self.latin_voice_var.set(next_voice)
+                    self.latin_tense_var.set(next_tenses[0])
+                    self.on_latin_verb_change(None)
+                    return
+        
+        # Step 3: Voice wrapped, try to advance mood
+        available_moods = sorted(list(set([m for t, v, m in available_combinations])),
+                               key=lambda x: mood_order.index(x) if x in mood_order else 999)
+        
+        if current_mood in available_moods:
+            current_mood_index = available_moods.index(current_mood)
+            if current_mood_index < len(available_moods) - 1:
+                # Move to next mood, reset voice and tense to first available
+                next_mood = available_moods[current_mood_index + 1]
+                
+                # Get first voice for this mood
+                next_mood_combinations = [(t, v, m) for t, v, m in available_combinations if m == next_mood]
+                next_voices = sorted(list(set([v for t, v, m in next_mood_combinations])),
+                                   key=lambda x: voice_order.index(x) if x in voice_order else 999)
+                
+                if next_voices:
+                    next_voice = next_voices[0]
+                    # Get first tense for this mood/voice
+                    next_combinations = [(t, v, m) for t, v, m in available_combinations 
+                                       if m == next_mood and v == next_voice]
+                    next_tenses = sorted(list(set([t for t, v, m in next_combinations])),
+                                       key=lambda x: tense_order.index(x) if x in tense_order else 999)
+                    
+                    if next_tenses:
+                        self.latin_mood_var.set(next_mood)
+                        self.latin_voice_var.set(next_voice)
+                        self.latin_tense_var.set(next_tenses[0])
+                        self.on_latin_verb_change(None)
+                        return
+        
+        # Step 4: Everything wrapped, move to next verb
+        self.next_latin_noun()  # This will cycle to next verb in the list
+        
+        # Reset to first available combination for new verb
+        new_lemma = self.latin_word_var.get().split(' (')[0]
+        new_combinations = []
+        for key, data in self.latin_paradigms.items():
+            if data.get('lemma') == new_lemma and data.get('type') == 'verb':
+                tense = data.get('tense')
+                voice = data.get('voice')
+                mood = data.get('mood')
+                if tense and voice and mood:
+                    new_combinations.append((tense, voice, mood))
+        
+        if new_combinations:
+            # Sort to get indicative/active/present first
+            new_combinations.sort(key=lambda x: (
+                mood_order.index(x[2]) if x[2] in mood_order else 999,
+                voice_order.index(x[1]) if x[1] in voice_order else 999,
+                tense_order.index(x[0]) if x[0] in tense_order else 999
+            ))
+            first_combo = new_combinations[0]
+            self.latin_tense_var.set(first_combo[0])
+            self.latin_voice_var.set(first_combo[1])
+            self.latin_mood_var.set(first_combo[2])
+            self.on_latin_verb_change(None)
+    
+    def check_latin_single_entry(self, entry_key):
+        """Check a single Latin entry when Enter is pressed."""
+        if entry_key not in self.latin_entries:
+            return
+        
+        entry = self.latin_entries[entry_key]
+        user_answer = entry.get().strip()
+        
+        if not user_answer:
+            return
+        
+        # Get correct answer
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]
+        
+        # Find paradigm - could be noun, adjective, or verb
+        paradigm = None
+        for key, data in self.latin_paradigms.items():
+            if data.get('type') == 'noun' and data.get('word') == word:
+                paradigm = data
+                break
+            elif data.get('type') == 'adjective' and data.get('word') == word:
+                paradigm = data
+                break
+            elif data.get('type') == 'verb' and data.get('lemma') == word:
+                # For verbs, also match tense/voice/mood
+                if (data.get('tense') == self.latin_tense_var.get() and
+                    data.get('voice') == self.latin_voice_var.get() and
+                    data.get('mood') == self.latin_mood_var.get()):
+                    paradigm = data
+                    break
+        
+        if not paradigm:
+            return
+        
+        # Get correct answer based on type
+        correct_answer = None
+        
+        if paradigm.get('type') == 'adjective':
+            # Parse entry key: "case_gender_number" (e.g., "nominative_masculine_sg")
+            parts = entry_key.split('_')
+            if len(parts) == 3:
+                case, gender, number = parts
+                correct_answer = paradigm['forms'][gender][case][number]
+        elif paradigm.get('type') == 'noun':
+            # Parse entry key: "case_number" (e.g., "Nominative_sg")
+            parts = entry_key.split('_')
+            if len(parts) == 2:
+                identifier, number = parts
+                correct_answer = paradigm['forms'][identifier.lower()][number]
+        else:  # verb
+            # entry_key is like "1st_sg" or "2nd_pl"
+            correct_answer = paradigm.get(entry_key, '')
+        
+        if correct_answer is None:
+            return
+        
+        is_correct = user_answer.lower() == correct_answer.lower()
+        
+        if is_correct:
+            entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
+            
+            # Check if all entries are now readonly and auto-advance is enabled
+            auto_advance_enabled = False
+            if hasattr(self, 'config') and hasattr(self.config, 'auto_advance'):
+                auto_advance_enabled = self.config.auto_advance.get()
+            
+            all_correct = all(str(e.cget('state')) == 'readonly' for e in self.latin_entries.values())
+            
+            if all_correct and auto_advance_enabled:
+                # Auto-advance to next table
+                self.next_latin_word()
+                # Focus on first Latin entry after table loads
+                self.root.after(50, self.focus_first_latin_entry)
+            else:
+                # Move to next entry
+                self.move_to_next_latin_entry(entry_key)
+        else:
+            entry.configure(bg='#FFB6C6')  # Light red
+    
+    def move_to_next_latin_entry(self, current_key):
+        """Move focus to the next logical Latin entry."""
+        # Parse current key
+        parts = current_key.split('_')
+        
+        # Check if it's an adjective (3 parts: case_gender_number)
+        if len(parts) == 3:
+            case, gender, number = parts
+            cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+            genders = ["masculine", "feminine", "neuter"]
+            numbers = ["sg", "pl"]
+            
+            try:
+                case_idx = cases.index(case)
+                gender_idx = genders.index(gender)
+                number_idx = numbers.index(number)
+            except ValueError:
+                return
+            
+            # Navigation order: move right (sg->pl), then down (next case), then to next gender column
+            # Current order in table: masculine_sg, masculine_pl, feminine_sg, feminine_pl, neuter_sg, neuter_pl
+            
+            # Try moving to plural in same case and gender
+            if number == "sg":
+                next_key = f"{case}_{gender}_pl"
+                if next_key in self.latin_entries:
+                    next_entry = self.latin_entries[next_key]
+                    if str(next_entry.cget('state')) != 'readonly':
+                        next_entry.focus()
+                        return
+            
+            # Move to next gender's singular
+            if number == "pl" and gender_idx < len(genders) - 1:
+                next_gender = genders[gender_idx + 1]
+                next_key = f"{case}_{next_gender}_sg"
+                if next_key in self.latin_entries:
+                    next_entry = self.latin_entries[next_key]
+                    if str(next_entry.cget('state')) != 'readonly':
+                        next_entry.focus()
+                        return
+            
+            # Move to next case, first gender, singular
+            if case_idx < len(cases) - 1:
+                next_case = cases[case_idx + 1]
+                next_key = f"{next_case}_masculine_sg"
+                if next_key in self.latin_entries:
+                    next_entry = self.latin_entries[next_key]
+                    if str(next_entry.cget('state')) != 'readonly':
+                        next_entry.focus()
+                        return
+            
+            return
+        
+        # Original logic for nouns (2 parts) and verbs
+        if len(parts) != 2:
+            return
+        
+        identifier, number = parts
+        
+        # Check if we're dealing with nouns (cases) or verbs (persons)
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+        persons = ["1st", "2nd", "3rd"]
+        
+        if identifier in cases:
+            # Noun logic
+            case_idx = cases.index(identifier)
+            
+            # Try next case in same number column first (downward movement)
+            if case_idx < len(cases) - 1:
+                for i in range(case_idx + 1, len(cases)):
+                    next_key = f"{cases[i]}_{number}"
+                    if next_key in self.latin_entries:
+                        next_entry = self.latin_entries[next_key]
+                        # Only move if entry is not already marked correct (readonly)
+                        if str(next_entry.cget('state')) != 'readonly':
+                            next_entry.focus()
+                            return
+            
+            # If we've finished all cases in sg column, move to pl column
+            if number == "sg":
+                for i in range(len(cases)):
+                    next_key = f"{cases[i]}_pl"
+                    if next_key in self.latin_entries:
+                        next_entry = self.latin_entries[next_key]
+                        if str(next_entry.cget('state')) != 'readonly':
+                            next_entry.focus()
+                            return
+        
+        elif identifier in persons:
+            # Verb logic
+            person_idx = persons.index(identifier)
+            
+            # Try next person in same number column first (downward movement)
+            if person_idx < len(persons) - 1:
+                for i in range(person_idx + 1, len(persons)):
+                    next_key = f"{persons[i]}_{number}"
+                    if next_key in self.latin_entries:
+                        next_entry = self.latin_entries[next_key]
+                        # Only move if entry is not already marked correct (readonly)
+                        if str(next_entry.cget('state')) != 'readonly':
+                            next_entry.focus()
+                            return
+            
+            # If we've finished all persons in sg column, move to pl column
+            if number == "sg":
+                for i in range(len(persons)):
+                    next_key = f"{persons[i]}_pl"
+                    if next_key in self.latin_entries:
+                        next_entry = self.latin_entries[next_key]
+                        if str(next_entry.cget('state')) != 'readonly':
+                            next_entry.focus()
+                            return
+    
+    def show_tables_view(self):
+        """Show the main tables interface."""
+        # Clear main frame
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        
+        # Configure main_frame rows to expand properly
+        self.main_frame.grid_rowconfigure(0, weight=0)  # Title - fixed
+        self.main_frame.grid_rowconfigure(1, weight=0)  # Type selector - fixed
+        self.main_frame.grid_rowconfigure(2, weight=0)  # Mode selector - fixed
+        self.main_frame.grid_rowconfigure(3, weight=1)  # Table area - expands
+        self.main_frame.grid_rowconfigure(4, weight=0)  # Buttons - fixed
+        for i in range(3):
+            self.main_frame.grid_columnconfigure(i, weight=1)  # Center everything horizontally
+
+        # Title and Instructions
+        title_frame = tk.Frame(self.main_frame, bg='#F8F6F1')
+        title_frame.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky='ew')
+        title_frame.grid_columnconfigure(0, weight=1)  # Allow title to expand
+        title_frame.grid_columnconfigure(1, weight=0)  # Practice options column
+        title_frame.grid_columnconfigure(2, weight=0)  # Latin button column
+        title_frame.grid_columnconfigure(3, weight=0)  # Help button column
+        
+        # Logo or title
+        if self.header_logo:
+            # Use header logo (long logo) - make it clickable
+            logo_label = tk.Label(title_frame, image=self.header_logo, bg='#F8F6F1', cursor='hand2')
+            logo_label.grid(row=0, column=0, sticky='w')
+            # Keep a reference to prevent garbage collection
+            logo_label.image = self.header_logo
+            # Bind click event to return to startup page
+            logo_label.bind('<Button-1>', lambda e: self.show_startup_page())
+        else:
+            # Fallback to text title - also make it clickable
+            title_label = tk.Label(
+                title_frame, 
+                text="Bellerophon Grammar Study",
+                bg='#F8F6F1',
+                fg='#2C2C2C',  # Obsidian Ink
+                font=('Arial', 24, 'bold'),
+                cursor='hand2'
+            )
+            title_label.grid(row=0, column=0, sticky='w')
+            # Bind click event to return to startup page
+            title_label.bind('<Button-1>', lambda e: self.show_startup_page())
+            
         # Practice options in top corner (simplified)
-        practice_options_frame = ttk.Frame(title_frame)
+        practice_options_frame = tk.Frame(title_frame, bg='#F8F6F1')
         practice_options_frame.grid(row=0, column=1, sticky='ne', padx=(10, 10))
         
         # Prefill stems checkbox (simplified, no breathing option)
@@ -541,18 +3701,27 @@ class BellerophonGrammarApp:
         randomize_next_cb = ttk.Checkbutton(
             practice_options_frame,
             text="Randomize next",
-            variable=self.config.randomize_next
+            variable=self.config.randomize_next,
+            command=self.on_randomize_toggle
         )
         randomize_next_cb.grid(row=0, column=1, sticky='e', padx=(10, 0))
         
-        # Learn Mode checkbox
-        learn_mode_cb = ttk.Checkbutton(
+        # Auto advance checkbox
+        auto_advance_cb = ttk.Checkbutton(
             practice_options_frame,
-            text="Learn Mode",
-            variable=self.learn_mode_enabled,
-            command=self.toggle_learn_mode
+            text="Auto advance",
+            variable=self.config.auto_advance
         )
-        learn_mode_cb.grid(row=0, column=2, sticky='e', padx=(10, 0))
+        auto_advance_cb.grid(row=0, column=2, sticky='e', padx=(10, 0))
+        
+        # Latin button in top right corner
+        latin_button = ttk.Button(
+            title_frame,
+            text="Latin",
+            command=self.show_latin_view,
+            width=8
+        )
+        latin_button.grid(row=0, column=2, sticky='ne', padx=(0, 5))
         
         # Help button in top right corner
         help_button = ttk.Button(
@@ -561,20 +3730,7 @@ class BellerophonGrammarApp:
             command=self.show_help,
             width=8
         )
-        help_button.grid(row=0, column=2, sticky='ne')
-
-        # Load paradigms
-        try:
-            with open('paradigms.json', 'r', encoding='utf-8') as f:
-                self.paradigms = json.load(f)
-        except FileNotFoundError:
-            messagebox.showerror("Error", "Could not find paradigms.json file")
-            self.root.destroy()
-            return
-        except json.JSONDecodeError:
-            messagebox.showerror("Error", "Could not parse paradigms.json file")
-            self.root.destroy()
-            return
+        help_button.grid(row=0, column=3, sticky='ne')
 
         # Initialize verb navigation state for complex verb navigation
         self.verb_voice_order = ["Active", "Middle", "Passive"]
@@ -582,10 +3738,11 @@ class BellerophonGrammarApp:
         self.verb_mood_order = ["Indicative", "Subjunctive", "Optative", "Imperative"]
 
         # Create the mode selection frame
-        mode_frame = ttk.Frame(self.main_frame)
+        mode_frame = tk.Frame(self.main_frame, bg='#F8F6F1')
         mode_frame.grid(row=1, column=0, columnspan=3, pady=(0, 20), sticky='ew')
-        mode_frame.columnconfigure(1, weight=1)
-        mode_frame.columnconfigure(3, weight=1)
+        mode_frame.columnconfigure(1, weight=0, minsize=250)  # Type dropdown column - fixed width with minimum size
+        mode_frame.columnconfigure(2, weight=0, minsize=100)  # Label column - fixed width with minimum size
+        mode_frame.columnconfigure(3, weight=1)  # Dropdown column - expandable
 
         # Add type selector (Noun vs Adjective)
         ttk.Label(mode_frame, text="Type:").grid(
@@ -601,11 +3758,20 @@ class BellerophonGrammarApp:
             width=12,
             state='readonly'
         )
-        self.type_dropdown.grid(row=0, column=1, sticky='w', padx=(0, 20))
+        self.type_dropdown.grid(row=0, column=1, sticky='w', padx=(0, 0))
         self.type_dropdown.bind('<<ComboboxSelected>>', self.on_type_change)
+        
+        # Lock current type checkbox (only visible when randomize is enabled)
+        self.lock_type_cb = ttk.Checkbutton(
+            mode_frame,
+            text="Lock current type",
+            variable=self.config.lock_current_type
+        )
+        self.lock_type_cb.grid(row=0, column=1, sticky='w', padx=(120, 0))
+        self.lock_type_cb.grid_remove()  # Hidden by default
 
-        ttk.Label(mode_frame, text="Select Study Mode:").grid(
-            row=0, column=2, padx=(0, 10)
+        ttk.Label(mode_frame, text="Select word:").grid(
+            row=0, column=2, sticky='w', padx=(20, 0)
         )
 
         # Setup mode selector
@@ -676,28 +3842,31 @@ class BellerophonGrammarApp:
             textvariable=self.mode_var,
             values=self.modes,
             font=('Times New Roman', 12),
-            width=40
+            width=46
         )
-        self.mode_dropdown.grid(row=0, column=3, sticky='ew', padx=10)
+        self.mode_dropdown.grid(row=0, column=3, sticky='w', padx=(0, 0))
         self.mode_dropdown.state(['readonly'])
         self.mode_dropdown.bind('<<ComboboxSelected>>', self.on_mode_change)
 
-        # Word display frame - simplified to remove white patches
-        word_frame = ttk.Frame(self.main_frame)
+        # Word display frame
+        word_frame = tk.Frame(self.main_frame, bg='#F8F6F1')
         word_frame.grid(row=2, column=0, columnspan=3, pady=(10, 20))
         
-        self.instruction_label = ttk.Label(
+        self.instruction_label = tk.Label(
             word_frame,
             text="Decline the word:",
+            bg='#F8F6F1',
+            fg='#2C2C2C',  # Obsidian Ink
             font=('Arial', 12, 'bold')
         )
         self.instruction_label.grid(row=0, column=0, padx=(0, 10))
         
-        self.word_label = ttk.Label(
+        self.word_label = tk.Label(
             word_frame,
             text="—",
-            font=('Times New Roman', 16, 'bold'),
-            foreground='#2c3e50'
+            bg='#F8F6F1',
+            fg='#2C2C2C',  # Obsidian Ink
+            font=('Times New Roman', 16, 'bold')
         )
         self.word_label.grid(row=0, column=1)
 
@@ -707,7 +3876,7 @@ class BellerophonGrammarApp:
             text="☆",
             font=('Arial', 16),
             foreground="black",
-            background="white",
+            background='#F8F6F1',  # Match background
             activeforeground="gold",
             activebackground="#f0f0f0",
             relief="flat",
@@ -750,37 +3919,35 @@ class BellerophonGrammarApp:
                     delattr(entry, '_full_answer')
                 # Clear the field
                 entry.delete(0, tk.END)
-
-    def toggle_learn_mode(self):
-        """Toggle Learn Mode on/off"""
-        if self.learn_mode_enabled.get():
-            # Enable Learn Mode
-            user = self.user_manager.show_user_selection(self.root)
-            if user:
-                self.current_user = user
-                self.current_session = LearningSession(self.db_manager, user['user_id'])
-                self.progress_tracker.set_user(user)
-                self.progress_tracker.create_progress_display()
-                self.attempt_start_time = None
-                messagebox.showinfo("Learn Mode", f"Learn Mode enabled for {user['username']}")
-            else:
-                # User cancelled, disable Learn Mode
-                self.learn_mode_enabled.set(False)
+    
+    def on_randomize_toggle(self):
+        """Handle randomize next toggle - show/hide lock type checkbox"""
+        if self.config.randomize_next.get():
+            # Show lock type checkbox when randomize is enabled
+            if hasattr(self, 'lock_type_cb'):
+                try:
+                    self.lock_type_cb.grid()
+                except tk.TclError:
+                    pass  # Widget may not be visible/active
+            if hasattr(self, 'latin_lock_type_cb'):
+                try:
+                    self.latin_lock_type_cb.grid()
+                except tk.TclError:
+                    pass  # Widget may not be visible/active
         else:
-            # Disable Learn Mode
-            if self.current_session:
-                summary = self.current_session.end_session()
-                if summary and summary['total_attempts'] > 0:
-                    messagebox.showinfo("Session Complete", 
-                        f"Session Summary:\n"
-                        f"Total Attempts: {summary['total_attempts']}\n"
-                        f"Accuracy: {summary['accuracy']:.1f}%\n"
-                        f"Duration: {summary['duration_seconds']//60}m {summary['duration_seconds']%60}s\n"
-                        f"Paradigms Practiced: {len(summary['paradigms_practiced'])}")
-            
-            self.current_user = None
-            self.current_session = None
-            self.progress_tracker.hide_progress_display()
+            # Hide lock type checkbox when randomize is disabled
+            if hasattr(self, 'lock_type_cb'):
+                try:
+                    self.lock_type_cb.grid_remove()
+                except tk.TclError:
+                    pass  # Widget may not be visible/active
+            if hasattr(self, 'latin_lock_type_cb'):
+                try:
+                    self.latin_lock_type_cb.grid_remove()
+                except tk.TclError:
+                    pass  # Widget may not be visible/active
+            # Also uncheck it when hiding
+            self.config.lock_current_type.set(False)
 
     def update_word_display(self):
         """Update the word display by extracting the word from the mode name."""
@@ -805,10 +3972,6 @@ class BellerophonGrammarApp:
                 # Use the centralized instruction update so wording is consistent
                 self.update_instruction_text()
                 self.update_star_button()
-                if self.learn_mode_enabled.get() and self.current_user:
-                    paradigm_type = current_type
-                    paradigm_name = mode
-                    self.progress_tracker.update_current_paradigm(paradigm_type, paradigm_name)
                 return
             # Not a verb, fallback to noun/adjective/pronoun logic
             if "(" in mode and ")" in mode:
@@ -835,17 +3998,12 @@ class BellerophonGrammarApp:
                 word = "—"
 
         # Update the word label and instruction text
-        self.word_label.config(text=word)
+        if hasattr(self, 'word_label') and self.word_label.winfo_exists():
+            self.word_label.config(text=word)
         self.update_instruction_text()
 
         # Update star button state
         self.update_star_button()
-
-        # Update progress tracker if in Learn Mode
-        if self.learn_mode_enabled.get() and self.current_user:
-            paradigm_type = current_type
-            paradigm_name = mode
-            self.progress_tracker.update_current_paradigm(paradigm_type, paradigm_name)
 
     def save_current_state(self, force=False):
         """Save the current table state to history."""
@@ -933,6 +4091,18 @@ class BellerophonGrammarApp:
                 # Current mode not found in list, stay at current mode
                 pass
 
+    def get_current_word_identifier(self):
+        """Get a unique identifier for the current word state."""
+        current_type = self.type_var.get()
+        current_mode = self.mode_var.get()
+        
+        if current_type == "Verb":
+            # For verbs, include tense, mood, and voice
+            return f"{current_type}:{current_mode}:{self.tense_var.get()}:{self.mood_var.get()}:{self.voice_var.get()}"
+        else:
+            # For nouns, adjectives, pronouns, and starred items
+            return f"{current_type}:{current_mode}"
+    
     def random_next(self):
         """Navigate to a completely random table (type, mode, and for verbs: voice/tense/mood)."""
         import random
@@ -946,24 +4116,57 @@ class BellerophonGrammarApp:
             # If we're in starred mode, randomize within starred items only
             available_modes = self.modes
             if available_modes and available_modes != ["No starred items"]:
-                random_mode = random.choice(available_modes)
+                # Filter out recently seen words
+                max_history_size = min(len(available_modes) - 1, 10) if len(available_modes) > 1 else 0
+                filtered_modes = [mode for mode in available_modes 
+                                 if f"Starred:{mode}" not in list(self.recent_word_history)[:max_history_size]]
+                
+                # If all modes are in history (unlikely but possible), use all modes
+                if not filtered_modes:
+                    filtered_modes = available_modes
+                
+                random_mode = random.choice(filtered_modes)
                 self.mode_var.set(random_mode)
                 self.on_mode_change(None)
+                # Add to history
+                self.recent_word_history.append(f"Starred:{random_mode}")
             return
         
-        # For non-starred types, use normal random logic
-        # Randomly select a type
-        available_types = ["Noun", "Adjective", "Pronoun", "Verb"]
-        random_type = random.choice(available_types)
+        # Check if type is locked
+        if self.config.lock_current_type.get():
+            # Keep current type, only randomize within that type
+            random_type = current_type
+        else:
+            # For non-locked types, use normal random logic
+            # Randomly select a type
+            available_types = ["Noun", "Adjective", "Pronoun", "Verb"]
+            random_type = random.choice(available_types)
         
-        # Set the type
-        self.type_var.set(random_type)
-        self.on_type_change(None)  # Update the available modes
+        # Set the type (only changes if not locked)
+        if not self.config.lock_current_type.get():
+            self.type_var.set(random_type)
+            self.on_type_change(None)  # Update the available modes
         
         # Randomly select a mode from the available modes for this type
         available_modes = self.modes
         if available_modes:
-            random_mode = random.choice(available_modes)
+            # For non-verb types, filter out recently seen words
+            if random_type != "Verb":
+                max_history_size = min(len(available_modes) - 1, 10) if len(available_modes) > 1 else 0
+                filtered_modes = [mode for mode in available_modes 
+                                 if f"{random_type}:{mode}" not in list(self.recent_word_history)[:max_history_size]]
+                
+                # If all modes are in history, use all modes
+                if not filtered_modes:
+                    filtered_modes = available_modes
+                    
+                random_mode = random.choice(filtered_modes)
+                # Add to history for non-verb types
+                self.recent_word_history.append(f"{random_type}:{random_mode}")
+            else:
+                # For verbs, we'll filter after getting combinations
+                random_mode = random.choice(available_modes)
+                
             self.mode_var.set(random_mode)
             self.on_mode_change(None)
         
@@ -978,8 +4181,18 @@ class BellerophonGrammarApp:
             if lemma:
                 available_combinations = self.get_available_combinations_for_verb(lemma)
                 if available_combinations:
+                    # Filter out recently seen verb combinations
+                    max_history_size = min(len(available_combinations) - 1, 10) if len(available_combinations) > 1 else 0
+                    filtered_combinations = [combo for combo in available_combinations
+                                           if f"Verb:{random_mode}:{combo[0]}:{combo[1]}:{combo[2]}" 
+                                           not in list(self.recent_word_history)[:max_history_size]]
+                    
+                    # If all combinations are in history, use all combinations
+                    if not filtered_combinations:
+                        filtered_combinations = available_combinations
+                    
                     # Randomly select a combination
-                    random_combo = random.choice(available_combinations)
+                    random_combo = random.choice(filtered_combinations)
                     tense, mood, voice = random_combo
                     
                     # Set the random combination
@@ -989,6 +4202,9 @@ class BellerophonGrammarApp:
                     self.update_tense_mood_constraints()
                     # Recreate the table to handle infinitive vs finite verb layouts
                     self.reset_table()
+                    
+                    # Add to history for verbs (including tense/mood/voice)
+                    self.recent_word_history.append(f"Verb:{random_mode}:{tense}:{mood}:{voice}")
         
         # Clear all entries and apply prefill stems if enabled
         self.clear_all_entries()
@@ -1283,6 +4499,30 @@ class BellerophonGrammarApp:
         # Apply stem prefilling if enabled
         self.apply_prefill_stems_to_all_entries()
 
+    def update_pronoun_table_content(self):
+        """Update pronoun table content without rebuilding the structure."""
+        # Clear all existing entries and reset their state
+        for entry in self.entries.values():
+            if entry and entry.winfo_exists():
+                entry.delete(0, tk.END)
+                entry.configure(bg='white')  # Reset background color
+        
+        # Clear and hide all error labels
+        for error_label in self.error_labels.values():
+            if error_label and error_label.winfo_exists():
+                error_label.config(text="")
+                error_label.grid_remove()  # Hide the error label
+        
+        # Clear incorrect entries tracking
+        if hasattr(self, 'incorrect_entries'):
+            self.incorrect_entries.clear()
+        
+        # Update word display for the new paradigm
+        self.update_word_display()
+        
+        # Apply stem prefilling if enabled
+        self.apply_prefill_stems_to_all_entries()
+
     def should_rebuild_table(self):
         """Check if we need to rebuild the table or can just clear entries."""
         new_signature = self.get_table_signature()
@@ -1343,16 +4583,44 @@ class BellerophonGrammarApp:
             self.update_noun_table_content()
             return
         
+        # Optimize for pronouns: pronouns of the same subtype use consistent structure
+        # Check if pronoun subtype hasn't changed (Personal vs Gender)
+        if (current_type == "Pronoun" and 
+            hasattr(self, 'table_frame') and self.table_frame and 
+            hasattr(self, '_last_table_type') and self._last_table_type == "Pronoun" and
+            hasattr(self, '_last_pronoun_subtype') and
+            len(self.entries) > 0 and
+            not getattr(self, '_in_starred_context', False) and
+            self.table_frame.winfo_exists()):
+            
+            # Check if pronoun subtype is the same
+            mode = self.mode_var.get()
+            current_subtype = "Personal" if ("Personal I" in mode or "Personal You" in mode) else "Gender"
+            
+            if self._last_pronoun_subtype == current_subtype:
+                # Same table structure, just update the content
+                self.update_pronoun_table_content()
+                return
+        
         # Store the current table type for future optimization
         self._last_table_type = current_type
+        
+        # Store pronoun subtype if applicable
+        if current_type == "Pronoun":
+            mode = self.mode_var.get()
+            self._last_pronoun_subtype = "Personal" if ("Personal I" in mode or "Personal You" in mode) else "Gender"
             
         # Need to rebuild the table
         if self.table_frame:
             self.table_frame.destroy()
+        
+        # Clear the entries and error_labels dictionaries when rebuilding
+        self.entries.clear()
+        self.error_labels.clear()
             
         # Create a container frame that can expand and center content
         # Table can now use full space since buttons are floating
-        table_container = ttk.Frame(self.main_frame)
+        table_container = tk.Frame(self.main_frame, bg='#F8F6F1')
         table_container.grid(row=3, column=0, columnspan=3, rowspan=2, sticky='nsew')
         table_container.grid_columnconfigure(0, weight=1)  # Left padding
         table_container.grid_columnconfigure(1, weight=0)  # Table content
@@ -1360,7 +4628,7 @@ class BellerophonGrammarApp:
         table_container.grid_rowconfigure(0, weight=1)
         
         # Create the table frame in the center column - add bottom padding for floating buttons
-        self.table_frame = ttk.Frame(table_container)
+        self.table_frame = tk.Frame(table_container, bg='#F8F6F1')
         self.table_frame.grid(row=0, column=1, sticky='nsew', padx=20, pady=(0, 80))
         
         # Configure grid weights for responsive design
@@ -2869,7 +6137,12 @@ class BellerophonGrammarApp:
         # Update instruction text
         self.update_instruction_text()
 
+        # Reset optimization trackers to force full table rebuild when switching types
+        self._last_table_type = None
+        self._last_pronoun_subtype = None
+
         # Recreate the table for the new type
+        # Note: reset_table() will handle cleanup, then create_declension_table() will rebuild
         self.reset_table()
         self.update_word_display()
 
@@ -3348,7 +6621,14 @@ class BellerophonGrammarApp:
         }
         
         paradigm_key = paradigm_map.get(original_mode)
-        return self.paradigms.get(paradigm_key) if paradigm_key else None
+        if not paradigm_key:
+            # Debug: print what mode we're looking for
+            print(f"Warning: Could not find paradigm mapping for mode: '{original_mode}'")
+            print(f"Current type: {current_type}, Original type: {original_type}")
+            if current_type == "Starred":
+                print(f"Mode from dropdown: '{mode}'")
+            return None
+        return self.paradigms.get(paradigm_key)
 
     def strip_breathing_marks(self, text):
         """Remove breathing marks from Greek text for comparison when ignore_breathings is enabled"""
@@ -4525,18 +7805,37 @@ class BellerophonGrammarApp:
 
     def reveal_answers(self):
         """Show the correct answers in all fields and track incorrect ones."""
+        # Prevent revealing twice in a row
+        if self.has_revealed:
+            return
+        
+        # Disable the reveal button immediately to prevent double-clicking
+        if hasattr(self, 'reveal_button'):
+            self.reveal_button.configure(state='disabled')
+        
         current_paradigm = self.get_current_paradigm()
         if not current_paradigm:
+            # Re-enable reveal button if paradigm not found
+            if hasattr(self, 'reveal_button'):
+                self.reveal_button.configure(state='normal')
             return
         
         # Capture user answers BEFORE revealing
         user_answers_before_reveal = {}
         for entry_key, entry in self.entries.items():
-            user_answers_before_reveal[entry_key] = entry.get().strip()
+            try:
+                user_answers_before_reveal[entry_key] = entry.get().strip()
+            except tk.TclError:
+                # Widget has been destroyed, skip it
+                continue
         
         # Clear error indicators
         for error_label in self.error_labels.values():
-            error_label.grid_remove()
+            try:
+                error_label.grid_remove()
+            except tk.TclError:
+                # Widget has been destroyed, skip it
+                continue
         
         # Clear previous incorrect entries tracking
         self.incorrect_entries.clear()
@@ -4564,22 +7863,27 @@ class BellerophonGrammarApp:
                             if answer_key in current_paradigm[gender]:
                                 entry = self.entries[entry_key]
                                 correct_answer = current_paradigm[gender][answer_key]
-                                user_answer = entry.get().strip()
                                 
-                                # Check if answer is correct
-                                is_correct = self.check_answer_correctness(user_answer, correct_answer)
-                                
-                                entry.configure(state='normal')
-                                entry.delete(0, tk.END)
-                                entry.insert(0, correct_answer)
-                                
-                                if is_correct:
-                                    # Correct answer - make it gold and readonly
-                                    entry.configure(state='readonly', bg='#FFD700')  # Gold color
-                                else:
-                                    # Incorrect or missing answer - make it red and track it
-                                    entry.configure(bg='#FFB6B6')  # Light red color
-                                    self.incorrect_entries.add(entry_key)
+                                try:
+                                    user_answer = entry.get().strip()
+                                    
+                                    # Check if answer is correct
+                                    is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                                    
+                                    entry.configure(state='normal')
+                                    entry.delete(0, tk.END)
+                                    entry.insert(0, correct_answer)
+                                    
+                                    if is_correct:
+                                        # Correct answer - make it Olive Laurel and readonly
+                                        entry.configure(state='readonly', readonlybackground='#7C8C4E')  # Olive Laurel
+                                    else:
+                                        # Incorrect or missing answer - make it Terracotta Red and readonly
+                                        entry.configure(state='readonly', readonlybackground='#B6523C')  # Terracotta Red
+                                        self.incorrect_entries.add(entry_key)
+                                except tk.TclError:
+                                    # Widget has been destroyed, skip it
+                                    continue
         elif current_type == "Pronoun":
             # Check and fill pronoun answers (no vocative)
             pronoun_cases = ["Nominative", "Accusative", "Genitive", "Dative"]
@@ -4594,22 +7898,27 @@ class BellerophonGrammarApp:
                         if entry_key in self.entries and entry_key in current_paradigm:
                             entry = self.entries[entry_key]
                             correct_answer = current_paradigm[entry_key]
-                            user_answer = entry.get().strip()
                             
-                            # Check if answer is correct
-                            is_correct = self.check_answer_correctness(user_answer, correct_answer)
-                            
-                            entry.configure(state='normal')
-                            entry.delete(0, tk.END)
-                            entry.insert(0, correct_answer)
-                            
-                            if is_correct:
-                                # Correct answer - make it gold and readonly
-                                entry.configure(state='readonly', bg='#FFD700')  # Gold color
-                            else:
-                                # Incorrect or missing answer - make it red and track it
-                                entry.configure(bg='#FFB6B6')  # Light red color
-                                self.incorrect_entries.add(entry_key)
+                            try:
+                                user_answer = entry.get().strip()
+                                
+                                # Check if answer is correct
+                                is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                                
+                                entry.configure(state='normal')
+                                entry.delete(0, tk.END)
+                                entry.insert(0, correct_answer)
+                                
+                                if is_correct:
+                                    # Correct answer - make it gold and readonly
+                                    entry.configure(state='readonly', readonlybackground='#7C8C4E')  # Gold color
+                                else:
+                                    # Incorrect or missing answer - make it red and readonly
+                                    entry.configure(state='readonly', readonlybackground='#B6523C')  # Light red color
+                                    self.incorrect_entries.add(entry_key)
+                            except tk.TclError:
+                                # Widget has been destroyed, skip it
+                                continue
             else:
                 # Gender pronouns use structure like adjectives
                 genders = ["masculine", "feminine", "neuter"]
@@ -4624,22 +7933,27 @@ class BellerophonGrammarApp:
                                 if answer_key in current_paradigm[gender]:
                                     entry = self.entries[entry_key]
                                     correct_answer = current_paradigm[gender][answer_key]
-                                    user_answer = entry.get().strip()
                                     
-                                    # Check if answer is correct
-                                    is_correct = self.check_answer_correctness(user_answer, correct_answer)
-                                    
-                                    entry.configure(state='normal')
-                                    entry.delete(0, tk.END)
-                                    entry.insert(0, correct_answer)
-                                    
-                                    if is_correct:
-                                        # Correct answer - make it gold and readonly
-                                        entry.configure(state='readonly', bg='#FFD700')  # Gold color
-                                    else:
-                                        # Incorrect or missing answer - make it red and track it
-                                        entry.configure(bg='#FFB6B6')  # Light red color
-                                        self.incorrect_entries.add(entry_key)
+                                    try:
+                                        user_answer = entry.get().strip()
+                                        
+                                        # Check if answer is correct
+                                        is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                                        
+                                        entry.configure(state='normal')
+                                        entry.delete(0, tk.END)
+                                        entry.insert(0, correct_answer)
+                                        
+                                        if is_correct:
+                                            # Correct answer - make it gold and readonly
+                                            entry.configure(state='readonly', readonlybackground='#7C8C4E')  # Gold color
+                                        else:
+                                            # Incorrect or missing answer - make it red and readonly
+                                            entry.configure(state='readonly', readonlybackground='#B6523C')  # Light red color
+                                            self.incorrect_entries.add(entry_key)
+                                    except tk.TclError:
+                                        # Widget has been destroyed, skip it
+                                        continue
         elif current_type == "Verb":
             # Check if we're dealing with infinitives or finite verbs
             current_mood = self.mood_var.get()
@@ -4653,32 +7967,8 @@ class BellerophonGrammarApp:
                     if entry_key in self.entries and entry_key in current_paradigm:
                         entry = self.entries[entry_key]
                         correct_answer = current_paradigm[entry_key]
-                        user_answer = entry.get().strip()
                         
-                        # Check if answer is correct
-                        is_correct = self.check_answer_correctness(user_answer, correct_answer)
-                        
-                        entry.configure(state='normal')
-                        entry.delete(0, tk.END)
-                        entry.insert(0, correct_answer)
-                        
-                        if is_correct:
-                            # Correct answer - make it gold and readonly
-                            entry.configure(state='readonly', bg='#FFD700')  # Gold color
-                        else:
-                            # Incorrect or missing answer - make it red and track it
-                            entry.configure(bg='#FFB6B6')  # Light red color
-                            self.incorrect_entries.add(entry_key)
-            else:
-                # Check and fill finite verb answers (person/number structure)
-                persons = ["1st", "2nd", "3rd"]
-                for person in persons:
-                    for number in ["sg", "pl"]:
-                        entry_key = f"{person}_{number}"
-                        
-                        if entry_key in self.entries and entry_key in current_paradigm:
-                            entry = self.entries[entry_key]
-                            correct_answer = current_paradigm[entry_key]
+                        try:
                             user_answer = entry.get().strip()
                             
                             # Check if answer is correct
@@ -4690,11 +7980,45 @@ class BellerophonGrammarApp:
                             
                             if is_correct:
                                 # Correct answer - make it gold and readonly
-                                entry.configure(state='readonly', bg='#FFD700')  # Gold color
+                                entry.configure(state='readonly', readonlybackground='#7C8C4E')  # Gold color
                             else:
-                                # Incorrect or missing answer - make it red and track it
-                                entry.configure(bg='#FFB6B6')  # Light red color
+                                # Incorrect or missing answer - make it red and readonly
+                                entry.configure(state='readonly', readonlybackground='#B6523C')  # Light red color
                                 self.incorrect_entries.add(entry_key)
+                        except tk.TclError:
+                            # Widget has been destroyed, skip it
+                            continue
+            else:
+                # Check and fill finite verb answers (person/number structure)
+                persons = ["1st", "2nd", "3rd"]
+                for person in persons:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{person}_{number}"
+                        
+                        if entry_key in self.entries and entry_key in current_paradigm:
+                            entry = self.entries[entry_key]
+                            correct_answer = current_paradigm[entry_key]
+                            
+                            try:
+                                user_answer = entry.get().strip()
+                                
+                                # Check if answer is correct
+                                is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                                
+                                entry.configure(state='normal')
+                                entry.delete(0, tk.END)
+                                entry.insert(0, correct_answer)
+                                
+                                if is_correct:
+                                    # Correct answer - make it gold and readonly
+                                    entry.configure(state='readonly', readonlybackground='#7C8C4E')  # Gold color
+                                else:
+                                    # Incorrect or missing answer - make it red and readonly
+                                    entry.configure(state='readonly', readonlybackground='#B6523C')  # Light red color
+                                    self.incorrect_entries.add(entry_key)
+                            except tk.TclError:
+                                # Widget has been destroyed, skip it
+                                continue
         else:
             # Check and fill noun answers (simple structure)
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
@@ -4705,136 +8029,31 @@ class BellerophonGrammarApp:
                     if entry_key in self.entries and entry_key in current_paradigm:
                         entry = self.entries[entry_key]
                         correct_answer = current_paradigm[entry_key]
-                        user_answer = entry.get().strip()
                         
-                        # Check if answer is correct
-                        is_correct = self.check_answer_correctness(user_answer, correct_answer)
-                        
-                        entry.configure(state='normal')
-                        entry.delete(0, tk.END)
-                        entry.insert(0, correct_answer)
-                        
-                        if is_correct:
-                            # Correct answer - make it gold and readonly
-                            entry.configure(state='readonly', bg='#FFD700')  # Gold color
-                        else:
-                            # Incorrect or missing answer - make it red and track it
-                            entry.configure(bg='#FFB6B6')  # Light red color
-                            self.incorrect_entries.add(entry_key)
-        
-        # Record attempt in Learn Mode BEFORE revealing answers
-        if self.learn_mode_enabled.get() and self.current_session:
-            self.record_learn_mode_attempt(user_answers_before_reveal)
+                        try:
+                            user_answer = entry.get().strip()
+                            
+                            # Check if answer is correct
+                            is_correct = self.check_answer_correctness(user_answer, correct_answer)
+                            
+                            entry.configure(state='normal')
+                            entry.delete(0, tk.END)
+                            entry.insert(0, correct_answer)
+                            
+                            if is_correct:
+                                # Correct answer - make it gold and readonly
+                                entry.configure(state='readonly', readonlybackground='#7C8C4E')  # Gold color
+                            else:
+                                # Incorrect or missing answer - make it red and readonly
+                                entry.configure(state='readonly', readonlybackground='#B6523C')  # Light red color
+                                self.incorrect_entries.add(entry_key)
+                        except tk.TclError:
+                            # Widget has been destroyed, skip it
+                            continue
         
         # Mark that answers have been revealed and update button
         self.has_revealed = True
         self.update_reset_retry_button()
-
-    def record_learn_mode_attempt(self, user_answers_before_reveal=None):
-        """Record the current table attempt in Learn Mode"""
-        if not self.current_session or not self.entries:
-            return
-        
-        # Get current paradigm info
-        paradigm_type = self.type_var.get()
-        paradigm_name = self.mode_var.get()
-        
-        # Use provided user answers or collect current ones (fallback)
-        if user_answers_before_reveal is not None:
-            user_answers = user_answers_before_reveal
-        else:
-            user_answers = {}
-            for entry_key, entry in self.entries.items():
-                user_answers[entry_key] = entry.get().strip()
-        
-        # Get correct answers
-        correct_answers = {}
-        current_paradigm = self.get_current_paradigm()
-        if not current_paradigm:
-            return
-        
-        current_type = self.type_var.get()
-        
-        if current_type == "Adjective":
-            # Handle adjective answers
-            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
-            is_two_termination = current_paradigm.get("type") == "adjective_2termination"
-            genders = ["masculine", "neuter"] if is_two_termination else ["masculine", "feminine", "neuter"]
-            
-            for case in cases:
-                for gender in genders:
-                    for number in ["sg", "pl"]:
-                        entry_key = f"{case}_{gender}_{number}"
-                        if entry_key in self.entries and gender in current_paradigm:
-                            answer_key = f"{case}_{number}"
-                            if answer_key in current_paradigm[gender]:
-                                correct_answers[entry_key] = current_paradigm[gender][answer_key]
-        
-        elif current_type == "Pronoun":
-            # Handle pronoun answers
-            pronoun_cases = ["Nominative", "Accusative", "Genitive", "Dative"]
-            mode = self.mode_var.get()
-            
-            if "Personal I" in mode or "Personal You" in mode:
-                for case in pronoun_cases:
-                    for number in ["sg", "pl"]:
-                        entry_key = f"{case}_{number}"
-                        if entry_key in self.entries and entry_key in current_paradigm:
-                            correct_answers[entry_key] = current_paradigm[entry_key]
-            else:
-                genders = ["masculine", "feminine", "neuter"]
-                for case in pronoun_cases:
-                    for gender in genders:
-                        for number in ["sg", "pl"]:
-                            entry_key = f"{case}_{gender}_{number}"
-                            if entry_key in self.entries and gender in current_paradigm:
-                                answer_key = f"{case}_{number}"
-                                if answer_key in current_paradigm[gender]:
-                                    correct_answers[entry_key] = current_paradigm[gender][answer_key]
-        
-        elif current_type == "Verb":
-            # Handle verb answers
-            current_mood = self.mood_var.get()
-            
-            if current_mood == "Infinitive":
-                voices = ["active", "middle", "passive"]
-                for voice in voices:
-                    entry_key = f"inf_{voice}"
-                    if entry_key in self.entries and entry_key in current_paradigm:
-                        correct_answers[entry_key] = current_paradigm[entry_key]
-            else:
-                persons = ["1st", "2nd", "3rd"]
-                for person in persons:
-                    for number in ["sg", "pl"]:
-                        entry_key = f"{person}_{number}"
-                        if entry_key in self.entries and entry_key in current_paradigm:
-                            correct_answers[entry_key] = current_paradigm[entry_key]
-        
-        else:
-            # Handle noun answers
-            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
-            for case in cases:
-                for number in ["sg", "pl"]:
-                    entry_key = f"{case}_{number}"
-                    if entry_key in self.entries and entry_key in current_paradigm:
-                        correct_answers[entry_key] = current_paradigm[entry_key]
-        
-        # Calculate time taken if we tracked start time
-        time_taken = None
-        if self.attempt_start_time:
-            time_taken = int((datetime.now() - self.attempt_start_time).total_seconds())
-        
-        # Record the attempt
-        accuracy = self.current_session.record_table_attempt(
-            paradigm_type, paradigm_name, user_answers, correct_answers, time_taken
-        )
-        
-        # Update progress display
-        session_stats = self.current_session.get_session_stats()
-        self.progress_tracker.update_session_stats(session_stats)
-        
-        print(f"Learn Mode: Recorded attempt for {paradigm_type} - {paradigm_name}, "
-              f"Accuracy: {accuracy:.1f}%, Session total: {session_stats['total_attempts']} attempts")
 
     def check_answer_correctness(self, user_answer, correct_answer):
         """Check if user's answer matches the correct answer, ignoring accents and breathing marks."""
@@ -4903,6 +8122,11 @@ class BellerophonGrammarApp:
         
         # Disable retry button again until next reveal
         self.has_revealed = False
+        
+        # Re-enable the reveal button
+        if hasattr(self, 'reveal_button'):
+            self.reveal_button.configure(state='normal')
+        
         self.update_reset_retry_button()
 
     def smart_reset_retry(self):
@@ -4949,11 +8173,12 @@ class BellerophonGrammarApp:
         # Reset reveal/retry state
         self.has_revealed = False
         self.incorrect_entries.clear()
-        self.update_reset_retry_button()
         
-        # Start timing for Learn Mode
-        if self.learn_mode_enabled.get():
-            self.attempt_start_time = datetime.now()
+        # Re-enable the reveal button
+        if hasattr(self, 'reveal_button'):
+            self.reveal_button.configure(state='normal')
+        
+        self.update_reset_retry_button()
 
     def reset_table(self):
         """Clear all entries and error indicators."""
@@ -4978,23 +8203,40 @@ class BellerophonGrammarApp:
         # Reset reveal/retry state
         self.has_revealed = False
         self.incorrect_entries.clear()
-        self.update_reset_retry_button()
         
-        # Start timing for Learn Mode
-        if self.learn_mode_enabled.get():
-            self.attempt_start_time = datetime.now()
+        # Re-enable the reveal button
+        if hasattr(self, 'reveal_button'):
+            self.reveal_button.configure(state='normal')
+        
+        self.update_reset_retry_button()
         
         # DON'T clear dictionaries if we're about to use optimization
         # Only clear them if we need to rebuild from scratch
         current_type = self.get_effective_type()
-        will_use_optimization = (current_type == "Noun" and 
-                                hasattr(self, 'table_frame') and self.table_frame and 
-                                hasattr(self, '_last_table_type') and self._last_table_type == "Noun" and
-                                len(self.entries) > 0 and
-                                not getattr(self, '_in_starred_context', False) and
-                                self.table_frame.winfo_exists())
         
-        if not will_use_optimization:
+        # Check if noun optimization will be used
+        will_use_noun_optimization = (current_type == "Noun" and 
+                                     hasattr(self, 'table_frame') and self.table_frame and 
+                                     hasattr(self, '_last_table_type') and self._last_table_type == "Noun" and
+                                     len(self.entries) > 0 and
+                                     not getattr(self, '_in_starred_context', False) and
+                                     self.table_frame.winfo_exists())
+        
+        # Check if pronoun optimization will be used
+        will_use_pronoun_optimization = False
+        if (current_type == "Pronoun" and 
+            hasattr(self, 'table_frame') and self.table_frame and 
+            hasattr(self, '_last_table_type') and self._last_table_type == "Pronoun" and
+            hasattr(self, '_last_pronoun_subtype') and
+            len(self.entries) > 0 and
+            not getattr(self, '_in_starred_context', False) and
+            self.table_frame.winfo_exists()):
+            
+            mode = self.mode_var.get()
+            current_subtype = "Personal" if ("Personal I" in mode or "Personal You" in mode) else "Gender"
+            will_use_pronoun_optimization = (self._last_pronoun_subtype == current_subtype)
+        
+        if not will_use_noun_optimization and not will_use_pronoun_optimization:
             # Clear dictionaries and recreate the table based on type
             self.entries.clear()
             self.error_labels.clear()
@@ -5155,7 +8397,18 @@ Tips:
 
         # Check if this entry is correct before moving to next
         if self.check_single_entry(current_key):
-            self.move_to_next_entry(current_key)
+            self.check_and_auto_advance()
+            # Only move to next entry if not auto-advanced
+            # (If auto-advance happened, the table will have changed)
+            # So, only move if not all correct or auto-advance is off
+            auto_advance_enabled = False
+            if hasattr(self, 'config') and hasattr(self.config, 'auto_advance'):
+                auto_advance_enabled = self.config.auto_advance.get() if hasattr(self.config.auto_advance, 'get') else self.config.auto_advance
+            elif hasattr(self, 'auto_advance'):
+                auto_advance_enabled = self.auto_advance.get() if hasattr(self.auto_advance, 'get') else self.auto_advance
+            all_correct = all(str(entry.cget('state')) == 'readonly' for entry in self.entries.values())
+            if not (all_correct and auto_advance_enabled):
+                self.move_to_next_entry(current_key)
 
         return "break"
 
@@ -5219,13 +8472,14 @@ Tips:
 
             if is_correct:
                 # Mark as correct with visual feedback
-                entry.configure(bg='gold')
-                entry.configure(state='readonly')
+                entry.configure(state='readonly', readonlybackground='#7C8C4E')  # Gold color
                 if error_label:
                     error_label.grid_remove()
+                # Check auto-advance after setting readonly
+                self.check_and_auto_advance()
             else:
                 # Mark as incorrect - turn red like reveal button, no red cross
-                entry.configure(bg='#FFB6B6')  # Light red color, same as reveal
+                entry.configure(bg='#B6523C')  # Light red color, same as reveal
                 entry.configure(state='normal')
                 if error_label:
                     error_label.grid_remove()  # Hide red cross
@@ -5659,6 +8913,55 @@ Tips:
         except Exception as e:
             print(f"Error saving starred items: {e}")
 
+    def load_latin_starred_items(self):
+        """Load Latin starred items from file."""
+        try:
+            import os
+            if os.path.exists(self.latin_starred_file):
+                import json
+                with open(self.latin_starred_file, 'r', encoding='utf-8') as f:
+                    starred_list = json.load(f)
+                    self.latin_starred_items = set(starred_list)
+        except Exception as e:
+            print(f"Error loading Latin starred items: {e}")
+            self.latin_starred_items = set()
+
+    def save_latin_starred_items(self):
+        """Save Latin starred items to file."""
+        try:
+            import json
+            with open(self.latin_starred_file, 'w', encoding='utf-8') as f:
+                json.dump(list(self.latin_starred_items), f, ensure_ascii=False, indent=2)
+            print(f"Saved {len(self.latin_starred_items)} Latin starred items")
+        except Exception as e:
+            print(f"Error saving Latin starred items: {e}")
+
+    def get_available_latin_types(self):
+        """Get the list of available Latin types based on whether starred items exist."""
+        base_types = ["Noun", "Verb", "Adjective"]
+        
+        # Check if there are any starred items
+        if self.latin_starred_items:
+            # If starred items exist, add "Starred" at the end
+            return base_types + ["Starred"]
+        else:
+            # If no starred items, just return base types
+            return base_types
+    
+    def update_latin_type_dropdown(self):
+        """Update the Latin type dropdown values based on current starred items."""
+        available_types = self.get_available_latin_types()
+        
+        # Update the dropdown values
+        if hasattr(self, 'latin_type_dropdown'):
+            current_value = self.latin_type_var.get()
+            self.latin_type_dropdown['values'] = available_types
+            
+            # If current selection is "Starred" but no starred items exist, switch to "Noun"
+            if current_value == "Starred" and "Starred" not in available_types:
+                self.latin_type_var.set("Noun")
+                self.on_latin_type_change(None)
+
     def load_pronoun_modes_from_json(self):
         """Dynamically load pronoun modes from the JSON paradigms file."""
         pronoun_modes = []
@@ -5802,6 +9105,71 @@ Tips:
         print("No header logo found. Searched paths:", logo_paths)
         return None
 
+    def load_latin_header_logo(self):
+        """Load and resize the Latin logo for the app header."""
+        logo_paths = [
+            os.path.join('assets', 'b grammar latin large logo gold.png'),
+            os.path.join('assets', 'b grammar latin large logo gold.jpg'),
+            os.path.join('assets', 'b grammar latin large logo gold.jpeg'),
+            'b grammar latin large logo gold.png',
+            'b grammar latin large logo gold.jpg',
+            'b grammar latin large logo gold.jpeg'
+        ]
+        
+        for logo_path in logo_paths:
+            if os.path.exists(logo_path):
+                try:
+                    if PIL_AVAILABLE:
+                        # Use PIL for better resizing
+                        image = Image.open(logo_path)
+                        # Resize long logo to fit nicely in header
+                        image = image.convert("RGBA")
+                        original_width, original_height = image.size
+                        
+                        # Calculate new size maintaining aspect ratio
+                        # Target height for header logo (120px for better visibility)
+                        max_height = 120
+                        max_width = 600  # Allow wider for long logo
+                        
+                        # Calculate scaling factor
+                        height_ratio = max_height / original_height
+                        width_ratio = max_width / original_width
+                        ratio = min(height_ratio, width_ratio, 1.0)  # Don't upscale
+                        
+                        if ratio < 1.0:  # Only resize if needed
+                            new_width = int(original_width * ratio)
+                            new_height = int(original_height * ratio)
+                            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                        
+                        return ImageTk.PhotoImage(image)
+                    else:
+                        # Fallback: tkinter PhotoImage with subsample for size reduction
+                        if logo_path.lower().endswith('.png'):
+                            original_image = tk.PhotoImage(file=logo_path)
+                            
+                            # Get original dimensions
+                            original_width = original_image.width()
+                            original_height = original_image.height()
+                            
+                            # Calculate subsample factor to reduce size
+                            # Target height ~100px for header logo
+                            target_height = 100
+                            if original_height > target_height:
+                                subsample_factor = max(1, original_height // target_height)
+                                return original_image.subsample(subsample_factor, subsample_factor)
+                            else:
+                                return original_image
+                        else:
+                            print(f"PIL not available. Cannot load {logo_path}. Please use PNG format or install PIL.")
+                            continue
+                            
+                except Exception as e:
+                    print(f"Error loading Latin header logo from {logo_path}: {e}")
+                    continue
+        
+        print("No Latin header logo found. Searched paths:", logo_paths)
+        return None
+
     def load_app_icon(self):
         """Load the small icon for the app window."""
         icon_paths = [
@@ -5883,10 +9251,37 @@ Tips:
                 return f"Verb:{current_mode}"
         else:
             return f"{current_type}:{current_mode}"
+    
+    def get_current_latin_item_key(self):
+        """Get the current Latin table's key for starring."""
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]
+        
+        # Find the paradigm to get type
+        paradigm_type = None
+        for key, data in self.latin_paradigms.items():
+            word_value = data.get('word') or data.get('lemma')
+            if word_value == word:
+                paradigm_type = data.get('type')
+                if paradigm_type == 'verb':
+                    # For verbs, match tense/voice/mood
+                    if (data.get('tense') == self.latin_tense_var.get() and
+                        data.get('voice') == self.latin_voice_var.get() and
+                        data.get('mood') == self.latin_mood_var.get()):
+                        return f"Latin:Verb:{word}:{self.latin_voice_var.get()}:{self.latin_tense_var.get()}:{self.latin_mood_var.get()}"
+                else:
+                    # For nouns, just use type and word
+                    return f"Latin:Noun:{word}"
+        
+        return ""
 
     def is_current_item_starred(self):
         """Check if the current table is starred."""
         return self.get_current_item_key() in self.starred_items
+    
+    def is_current_latin_item_starred(self):
+        """Check if the current Latin table is starred."""
+        return self.get_current_latin_item_key() in self.latin_starred_items
 
     def toggle_star(self):
         """Toggle star status of current table."""
@@ -5978,6 +9373,115 @@ Tips:
             # Reset to normal appearance
             self.star_button.config(background="white")
             self.update_star_button()  # Restore normal state
+    
+    def toggle_latin_star(self):
+        """Toggle star status of current Latin table."""
+        current_type = self.latin_type_var.get()
+        item_key = self.get_current_latin_item_key()
+        
+        if item_key in self.latin_starred_items:
+            # Unstar the item
+            self.latin_starred_items.remove(item_key)
+            self.save_latin_starred_items()
+            
+            # Update type dropdown (might remove "Starred" if no items left)
+            self.update_latin_type_dropdown()
+            
+            # Special handling if we're in the Starred tab
+            if current_type == "Starred":
+                # Get remaining starred items
+                remaining_words = []
+                for starred_key in self.latin_starred_items:
+                    parts = starred_key.split(':')
+                    if len(parts) >= 3 and parts[0] == "Latin":
+                        word_type = parts[1]
+                        word = parts[2]
+                        
+                        if word_type == "Verb" and len(parts) >= 6:
+                            # Format: Latin:Verb:word:voice:tense:mood
+                            voice = parts[3]
+                            tense = parts[4]
+                            mood = parts[5]
+                            display = f"{word} ({voice} {tense} {mood})"
+                            remaining_words.append(display)
+                        elif word_type == "Noun":
+                            # Find English translation
+                            english = ""
+                            for key, data in self.latin_paradigms.items():
+                                word_value = data.get('word', '')
+                                if word_value == word and data.get('type') == 'noun':
+                                    english = data.get('english', '')
+                                    break
+                            display = f"{word} ({english})" if english else word
+                            remaining_words.append(display)
+                
+                if remaining_words:
+                    # Update dropdown with remaining items
+                    if hasattr(self, 'latin_word_dropdown'):
+                        self.latin_word_dropdown['values'] = remaining_words
+                        
+                        # Select the first remaining item
+                        self.latin_word_var.set(remaining_words[0])
+                        
+                        # Trigger word change to display the next item properly
+                        self.on_latin_word_change(None)
+                else:
+                    # No starred items left - type dropdown already updated above
+                    # Switch to Noun and display first noun
+                    self.latin_type_var.set("Noun")
+                    self.on_latin_type_change(None)
+            else:
+                # We're in a regular tab - just update the star button
+                self.update_latin_star_button()
+            
+            return  # Exit early after unstarring
+        
+        elif current_type != "Starred":
+            # Star the item (only allowed in normal tabs, not in Starred tab)
+            self.latin_starred_items.add(item_key)
+            self.save_latin_starred_items()
+            print(f"Starred Latin: {item_key}")
+            
+            # Update type dropdown (might add "Starred" if first item)
+            self.update_latin_type_dropdown()
+        else:
+            # In starred mode, only allow unstarring
+            print("Cannot star items while in Starred mode - only unstarring is allowed")
+            return
+        
+        # Update star button appearance
+        self.update_latin_star_button()
+    
+    def update_latin_star_button(self):
+        """Update the Latin star button appearance based on current star status."""
+        if hasattr(self, 'latin_star_button') and self.latin_star_button:
+            current_type = self.latin_type_var.get()
+            is_starred = self.is_current_latin_item_starred()
+            
+            if current_type == "Starred":
+                # In starred mode, always show filled yellow star (can only unstar)
+                self.latin_star_button.config(text="★", foreground="gold")
+            elif is_starred:
+                # In normal mode but item is starred - filled yellow star
+                self.latin_star_button.config(text="★", foreground="gold")
+            else:
+                # In normal mode and item is not starred - outline white star
+                self.latin_star_button.config(text="☆", foreground="white")
+    
+    def on_latin_star_hover_enter(self, event):
+        """Handle mouse entering the Latin star button area."""
+        if hasattr(self, 'latin_star_button') and self.latin_star_button:
+            is_starred = self.is_current_latin_item_starred()
+            if is_starred:
+                self.latin_star_button.config(foreground="#FFD700", background="#6B0000")
+            else:
+                self.latin_star_button.config(text="★", foreground="#FFD700", background="#6B0000")
+    
+    def on_latin_star_hover_leave(self, event):
+        """Handle mouse leaving the Latin star button area."""
+        if hasattr(self, 'latin_star_button') and self.latin_star_button:
+            self.latin_star_button.config(background="#8B0000")
+            self.update_latin_star_button()
 
     def get_starred_display_items(self):
         """Get list of starred items formatted for dropdown display."""

@@ -1,0 +1,2207 @@
+{
+    "femina":  {
+                   "word":  "femina",
+                   "english":  "woman",
+                   "type":  "noun",
+                   "declension":  "1st",
+                   "gender":  "feminine",
+                   "stem":  "femin",
+                   "stem_nom_sg":  "femin",
+                   "forms":  {
+                                 "nominative":  {
+                                                    "sg":  "femina",
+                                                    "pl":  "feminae"
+                                                },
+                                 "vocative":  {
+                                                  "sg":  "femina",
+                                                  "pl":  "feminae"
+                                              },
+                                 "accusative":  {
+                                                    "sg":  "feminam",
+                                                    "pl":  "feminas"
+                                                },
+                                 "genitive":  {
+                                                  "sg":  "feminae",
+                                                  "pl":  "feminarum"
+                                              },
+                                 "dative":  {
+                                                "sg":  "feminae",
+                                                "pl":  "feminis"
+                                            },
+                                 "ablative":  {
+                                                  "sg":  "femina",
+                                                  "pl":  "feminis"
+                                              }
+                             }
+               },
+    "dominus":  {
+                    "word":  "dominus",
+                    "english":  "master, lord",
+                    "type":  "noun",
+                    "declension":  "2nd",
+                    "gender":  "masculine",
+                    "stem":  "domin",
+                    "stem_nom_sg":  "domin",
+                    "forms":  {
+                                  "nominative":  {
+                                                     "sg":  "dominus",
+                                                     "pl":  "domini"
+                                                 },
+                                  "vocative":  {
+                                                   "sg":  "domine",
+                                                   "pl":  "domini"
+                                               },
+                                  "accusative":  {
+                                                     "sg":  "dominum",
+                                                     "pl":  "dominos"
+                                                 },
+                                  "genitive":  {
+                                                   "sg":  "domini",
+                                                   "pl":  "dominorum"
+                                               },
+                                  "dative":  {
+                                                 "sg":  "domino",
+                                                 "pl":  "dominis"
+                                             },
+                                  "ablative":  {
+                                                   "sg":  "domino",
+                                                   "pl":  "dominis"
+                                               }
+                              }
+                },
+    "bellum":  {
+                   "word":  "bellum",
+                   "english":  "war",
+                   "type":  "noun",
+                   "declension":  "2nd",
+                   "gender":  "neuter",
+                   "stem":  "bell",
+                   "stem_nom_sg":  "bell",
+                   "forms":  {
+                                 "nominative":  {
+                                                    "sg":  "bellum",
+                                                    "pl":  "bella"
+                                                },
+                                 "vocative":  {
+                                                  "sg":  "bellum",
+                                                  "pl":  "bella"
+                                              },
+                                 "accusative":  {
+                                                    "sg":  "bellum",
+                                                    "pl":  "bella"
+                                                },
+                                 "genitive":  {
+                                                  "sg":  "belli",
+                                                  "pl":  "bellorum"
+                                              },
+                                 "dative":  {
+                                                "sg":  "bello",
+                                                "pl":  "bellis"
+                                            },
+                                 "ablative":  {
+                                                  "sg":  "bello",
+                                                  "pl":  "bellis"
+                                              }
+                             }
+               },
+    "rex":  {
+                "word":  "rex",
+                "english":  "king",
+                "type":  "noun",
+                "declension":  "3rd",
+                "gender":  "masculine",
+                "stem":  "reg",
+                "stem_nom_sg":  "rex",
+                "prefill_empty_nom_voc":  true,
+                "forms":  {
+                              "nominative":  {
+                                                 "sg":  "rex",
+                                                 "pl":  "reges"
+                                             },
+                              "vocative":  {
+                                               "sg":  "rex",
+                                               "pl":  "reges"
+                                           },
+                              "accusative":  {
+                                                 "sg":  "regem",
+                                                 "pl":  "reges"
+                                             },
+                              "genitive":  {
+                                               "sg":  "regis",
+                                               "pl":  "regum"
+                                           },
+                              "dative":  {
+                                             "sg":  "regi",
+                                             "pl":  "regibus"
+                                         },
+                              "ablative":  {
+                                               "sg":  "rege",
+                                               "pl":  "regibus"
+                                           }
+                          }
+            },
+    "corpus":  {
+                   "word":  "corpus",
+                   "english":  "body",
+                   "type":  "noun",
+                   "declension":  "3rd",
+                   "gender":  "neuter",
+                   "stem":  "corp",
+                   "stem_nom_sg":  "corpus",
+                   "forms":  {
+                                 "nominative":  {
+                                                    "sg":  "corpus",
+                                                    "pl":  "corpora"
+                                                },
+                                 "vocative":  {
+                                                  "sg":  "corpus",
+                                                  "pl":  "corpora"
+                                              },
+                                 "accusative":  {
+                                                    "sg":  "corpus",
+                                                    "pl":  "corpora"
+                                                },
+                                 "genitive":  {
+                                                  "sg":  "corporis",
+                                                  "pl":  "corporum"
+                                              },
+                                 "dative":  {
+                                                "sg":  "corpori",
+                                                "pl":  "corporibus"
+                                            },
+                                 "ablative":  {
+                                                  "sg":  "corpore",
+                                                  "pl":  "corporibus"
+                                              }
+                             }
+               },
+    "manus":  {
+                  "word":  "manus",
+                  "english":  "hand",
+                  "type":  "noun",
+                  "declension":  "4th",
+                  "gender":  "feminine",
+                  "stem":  "man",
+                  "stem_nom_sg":  "man",
+                  "forms":  {
+                                "nominative":  {
+                                                   "sg":  "manus",
+                                                   "pl":  "manus"
+                                               },
+                                "vocative":  {
+                                                 "sg":  "manus",
+                                                 "pl":  "manus"
+                                             },
+                                "accusative":  {
+                                                   "sg":  "manum",
+                                                   "pl":  "manus"
+                                               },
+                                "genitive":  {
+                                                 "sg":  "manus",
+                                                 "pl":  "manuum"
+                                             },
+                                "dative":  {
+                                               "sg":  "manui",
+                                               "pl":  "manibus"
+                                           },
+                                "ablative":  {
+                                                 "sg":  "manu",
+                                                 "pl":  "manibus"
+                                             }
+                            }
+              },
+    "cornu":  {
+                  "word":  "cornu",
+                  "english":  "horn",
+                  "type":  "noun",
+                  "declension":  "4th",
+                  "gender":  "neuter",
+                  "stem":  "corn",
+                  "stem_nom_sg":  "corn",
+                  "forms":  {
+                                "nominative":  {
+                                                   "sg":  "cornu",
+                                                   "pl":  "cornua"
+                                               },
+                                "vocative":  {
+                                                 "sg":  "cornu",
+                                                 "pl":  "cornua"
+                                             },
+                                "accusative":  {
+                                                   "sg":  "cornu",
+                                                   "pl":  "cornua"
+                                               },
+                                "genitive":  {
+                                                 "sg":  "cornus",
+                                                 "pl":  "cornuum"
+                                             },
+                                "dative":  {
+                                               "sg":  "cornu",
+                                               "pl":  "cornibus"
+                                           },
+                                "ablative":  {
+                                                 "sg":  "cornu",
+                                                 "pl":  "cornibus"
+                                             }
+                            }
+              },
+    "res":  {
+                "word":  "res",
+                "english":  "thing, matter",
+                "type":  "noun",
+                "declension":  "5th",
+                "gender":  "feminine",
+                "stem":  "r",
+                "stem_nom_sg":  "r",
+                "forms":  {
+                              "nominative":  {
+                                                 "sg":  "res",
+                                                 "pl":  "res"
+                                             },
+                              "vocative":  {
+                                               "sg":  "res",
+                                               "pl":  "res"
+                                           },
+                              "accusative":  {
+                                                 "sg":  "rem",
+                                                 "pl":  "res"
+                                             },
+                              "genitive":  {
+                                               "sg":  "rei",
+                                               "pl":  "rerum"
+                                           },
+                              "dative":  {
+                                             "sg":  "rei",
+                                             "pl":  "rebus"
+                                         },
+                              "ablative":  {
+                                               "sg":  "re",
+                                               "pl":  "rebus"
+                                           }
+                          }
+            },
+    "amo_pres_ind_act":  {
+                             "type":  "verb",
+                             "tense":  "present",
+                             "mood":  "indicative",
+                             "voice":  "active",
+                             "lemma":  "amo",
+                             "english":  "I love",
+                             "conjugation":  "1st",
+                             "principal_parts":  {
+                                                     "present_stem":  "am",
+                                                     "perfect_stem":  "amav",
+                                                     "perfect_passive_stem":  "amat"
+                                                 },
+                             "1st_sg":  "amo",
+                             "2nd_sg":  "amas",
+                             "3rd_sg":  "amat",
+                             "1st_pl":  "amamus",
+                             "2nd_pl":  "amatis",
+                             "3rd_pl":  "amant"
+                         },
+    "moneo_pres_ind_act":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "indicative",
+                               "voice":  "active",
+                               "lemma":  "moneo",
+                               "english":  "I warn",
+                               "conjugation":  "2nd",
+                               "principal_parts":  {
+                                                       "present_stem":  "mone",
+                                                       "perfect_stem":  "monu",
+                                                       "perfect_passive_stem":  "monit"
+                                                   },
+                               "1st_sg":  "moneo",
+                               "2nd_sg":  "mones",
+                               "3rd_sg":  "monet",
+                               "1st_pl":  "monemus",
+                               "2nd_pl":  "monetis",
+                               "3rd_pl":  "monent"
+                           },
+    "rego_pres_ind_act":  {
+                              "type":  "verb",
+                              "tense":  "present",
+                              "mood":  "indicative",
+                              "voice":  "active",
+                              "lemma":  "rego",
+                              "english":  "I rule",
+                              "conjugation":  "3rd",
+                              "principal_parts":  {
+                                                      "present_stem":  "rege",
+                                                      "perfect_stem":  "rex",
+                                                      "perfect_passive_stem":  "rect"
+                                                  },
+                              "1st_sg":  "rego",
+                              "2nd_sg":  "regis",
+                              "3rd_sg":  "regit",
+                              "1st_pl":  "regimus",
+                              "2nd_pl":  "regitis",
+                              "3rd_pl":  "regunt"
+                          },
+    "audio_pres_ind_act":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "indicative",
+                               "voice":  "active",
+                               "lemma":  "audio",
+                               "english":  "I hear",
+                               "conjugation":  "4th",
+                               "principal_parts":  {
+                                                       "present_stem":  "audi",
+                                                       "perfect_stem":  "audiv",
+                                                       "perfect_passive_stem":  "audit"
+                                                   },
+                               "1st_sg":  "audio",
+                               "2nd_sg":  "audis",
+                               "3rd_sg":  "audit",
+                               "1st_pl":  "audimus",
+                               "2nd_pl":  "auditis",
+                               "3rd_pl":  "audiunt"
+                           },
+    "sum_pres_ind_act":  {
+                             "type":  "verb",
+                             "tense":  "present",
+                             "mood":  "indicative",
+                             "voice":  "active",
+                             "lemma":  "sum",
+                             "english":  "I am",
+                             "conjugation":  "irregular",
+                             "1st_sg":  "sum",
+                             "2nd_sg":  "es",
+                             "3rd_sg":  "est",
+                             "1st_pl":  "sumus",
+                             "2nd_pl":  "estis",
+                             "3rd_pl":  "sunt"
+                         },
+    "amo_imperf_ind_act":  {
+                               "type":  "verb",
+                               "tense":  "imperfect",
+                               "mood":  "indicative",
+                               "voice":  "active",
+                               "lemma":  "amo",
+                               "english":  "I was loving",
+                               "conjugation":  "1st",
+                               "1st_sg":  "amabam",
+                               "2nd_sg":  "amabas",
+                               "3rd_sg":  "amabat",
+                               "1st_pl":  "amabamus",
+                               "2nd_pl":  "amabatis",
+                               "3rd_pl":  "amabant",
+                               "principal_parts":  {
+                                                       "present_stem":  "am",
+                                                       "perfect_stem":  "amav",
+                                                       "perfect_passive_stem":  "amat"
+                                                   }
+                           },
+    "moneo_imperf_ind_act":  {
+                                 "type":  "verb",
+                                 "tense":  "imperfect",
+                                 "mood":  "indicative",
+                                 "voice":  "active",
+                                 "lemma":  "moneo",
+                                 "english":  "I was warning",
+                                 "conjugation":  "2nd",
+                                 "1st_sg":  "monebam",
+                                 "2nd_sg":  "monebas",
+                                 "3rd_sg":  "monebat",
+                                 "1st_pl":  "monebamus",
+                                 "2nd_pl":  "monebatis",
+                                 "3rd_pl":  "monebant",
+                                 "principal_parts":  {
+                                                         "present_stem":  "mone",
+                                                         "perfect_stem":  "monu",
+                                                         "perfect_passive_stem":  "monit"
+                                                     }
+                             },
+    "rego_imperf_ind_act":  {
+                                "type":  "verb",
+                                "tense":  "imperfect",
+                                "mood":  "indicative",
+                                "voice":  "active",
+                                "lemma":  "rego",
+                                "english":  "I was ruling",
+                                "conjugation":  "3rd",
+                                "1st_sg":  "regebam",
+                                "2nd_sg":  "regebas",
+                                "3rd_sg":  "regebat",
+                                "1st_pl":  "regebamus",
+                                "2nd_pl":  "regebatis",
+                                "3rd_pl":  "regebant",
+                                "principal_parts":  {
+                                                        "present_stem":  "rege",
+                                                        "perfect_stem":  "rex",
+                                                        "perfect_passive_stem":  "rect"
+                                                    }
+                            },
+    "audio_imperf_ind_act":  {
+                                 "type":  "verb",
+                                 "tense":  "imperfect",
+                                 "mood":  "indicative",
+                                 "voice":  "active",
+                                 "lemma":  "audio",
+                                 "english":  "I was hearing",
+                                 "conjugation":  "4th",
+                                 "1st_sg":  "audiebam",
+                                 "2nd_sg":  "audiebas",
+                                 "3rd_sg":  "audiebat",
+                                 "1st_pl":  "audiebamus",
+                                 "2nd_pl":  "audiebatis",
+                                 "3rd_pl":  "audiebant",
+                                 "principal_parts":  {
+                                                         "present_stem":  "audi",
+                                                         "perfect_stem":  "audiv",
+                                                         "perfect_passive_stem":  "audit"
+                                                     }
+                             },
+    "amo_fut_ind_act":  {
+                            "type":  "verb",
+                            "tense":  "future",
+                            "mood":  "indicative",
+                            "voice":  "active",
+                            "lemma":  "amo",
+                            "english":  "I will love",
+                            "conjugation":  "1st",
+                            "1st_sg":  "amabo",
+                            "2nd_sg":  "amabis",
+                            "3rd_sg":  "amabit",
+                            "1st_pl":  "amabimus",
+                            "2nd_pl":  "amabitis",
+                            "3rd_pl":  "amabunt",
+                            "principal_parts":  {
+                                                    "present_stem":  "am",
+                                                    "perfect_stem":  "amav",
+                                                    "perfect_passive_stem":  "amat"
+                                                }
+                        },
+    "moneo_fut_ind_act":  {
+                              "type":  "verb",
+                              "tense":  "future",
+                              "mood":  "indicative",
+                              "voice":  "active",
+                              "lemma":  "moneo",
+                              "english":  "I will warn",
+                              "conjugation":  "2nd",
+                              "1st_sg":  "monebo",
+                              "2nd_sg":  "monebis",
+                              "3rd_sg":  "monebit",
+                              "1st_pl":  "monebimus",
+                              "2nd_pl":  "monebitis",
+                              "3rd_pl":  "monebunt",
+                              "principal_parts":  {
+                                                      "present_stem":  "mone",
+                                                      "perfect_stem":  "monu",
+                                                      "perfect_passive_stem":  "monit"
+                                                  }
+                          },
+    "rego_fut_ind_act":  {
+                             "type":  "verb",
+                             "tense":  "future",
+                             "mood":  "indicative",
+                             "voice":  "active",
+                             "lemma":  "rego",
+                             "english":  "I will rule",
+                             "conjugation":  "3rd",
+                             "1st_sg":  "regam",
+                             "2nd_sg":  "reges",
+                             "3rd_sg":  "reget",
+                             "1st_pl":  "regemus",
+                             "2nd_pl":  "regetis",
+                             "3rd_pl":  "regent",
+                             "principal_parts":  {
+                                                     "present_stem":  "rege",
+                                                     "perfect_stem":  "rex",
+                                                     "perfect_passive_stem":  "rect"
+                                                 }
+                         },
+    "audio_fut_ind_act":  {
+                              "type":  "verb",
+                              "tense":  "future",
+                              "mood":  "indicative",
+                              "voice":  "active",
+                              "lemma":  "audio",
+                              "english":  "I will hear",
+                              "conjugation":  "4th",
+                              "1st_sg":  "audiam",
+                              "2nd_sg":  "audies",
+                              "3rd_sg":  "audiet",
+                              "1st_pl":  "audiemus",
+                              "2nd_pl":  "audietis",
+                              "3rd_pl":  "audient",
+                              "principal_parts":  {
+                                                      "present_stem":  "audi",
+                                                      "perfect_stem":  "audiv",
+                                                      "perfect_passive_stem":  "audit"
+                                                  }
+                          },
+    "amo_perf_ind_act":  {
+                             "type":  "verb",
+                             "tense":  "perfect",
+                             "mood":  "indicative",
+                             "voice":  "active",
+                             "lemma":  "amo",
+                             "english":  "I loved",
+                             "conjugation":  "1st",
+                             "1st_sg":  "amavi",
+                             "2nd_sg":  "amavisti",
+                             "3rd_sg":  "amavit",
+                             "1st_pl":  "amavimus",
+                             "2nd_pl":  "amavistis",
+                             "3rd_pl":  "amaverunt",
+                             "principal_parts":  {
+                                                     "present_stem":  "am",
+                                                     "perfect_stem":  "amav",
+                                                     "perfect_passive_stem":  "amat"
+                                                 }
+                         },
+    "moneo_perf_ind_act":  {
+                               "type":  "verb",
+                               "tense":  "perfect",
+                               "mood":  "indicative",
+                               "voice":  "active",
+                               "lemma":  "moneo",
+                               "english":  "I warned",
+                               "conjugation":  "2nd",
+                               "1st_sg":  "monui",
+                               "2nd_sg":  "monuisti",
+                               "3rd_sg":  "monuit",
+                               "1st_pl":  "monuimus",
+                               "2nd_pl":  "monuistis",
+                               "3rd_pl":  "monuerunt",
+                               "principal_parts":  {
+                                                       "present_stem":  "mone",
+                                                       "perfect_stem":  "monu",
+                                                       "perfect_passive_stem":  "monit"
+                                                   }
+                           },
+    "rego_perf_ind_act":  {
+                              "type":  "verb",
+                              "tense":  "perfect",
+                              "mood":  "indicative",
+                              "voice":  "active",
+                              "lemma":  "rego",
+                              "english":  "I ruled",
+                              "conjugation":  "3rd",
+                              "1st_sg":  "rexi",
+                              "2nd_sg":  "rexisti",
+                              "3rd_sg":  "rexit",
+                              "1st_pl":  "reximus",
+                              "2nd_pl":  "rexistis",
+                              "3rd_pl":  "rexerunt",
+                              "principal_parts":  {
+                                                      "present_stem":  "rege",
+                                                      "perfect_stem":  "rex",
+                                                      "perfect_passive_stem":  "rect"
+                                                  }
+                          },
+    "audio_perf_ind_act":  {
+                               "type":  "verb",
+                               "tense":  "perfect",
+                               "mood":  "indicative",
+                               "voice":  "active",
+                               "lemma":  "audio",
+                               "english":  "I heard",
+                               "conjugation":  "4th",
+                               "1st_sg":  "audivi",
+                               "2nd_sg":  "audivisti",
+                               "3rd_sg":  "audivit",
+                               "1st_pl":  "audivimus",
+                               "2nd_pl":  "audivistis",
+                               "3rd_pl":  "audiverunt",
+                               "principal_parts":  {
+                                                       "present_stem":  "audi",
+                                                       "perfect_stem":  "audiv",
+                                                       "perfect_passive_stem":  "audit"
+                                                   }
+                           },
+    "amo_plup_ind_act":  {
+                             "type":  "verb",
+                             "tense":  "pluperfect",
+                             "mood":  "indicative",
+                             "voice":  "active",
+                             "lemma":  "amo",
+                             "english":  "I had loved",
+                             "conjugation":  "1st",
+                             "1st_sg":  "amaveram",
+                             "2nd_sg":  "amaveras",
+                             "3rd_sg":  "amaverat",
+                             "1st_pl":  "amaveramus",
+                             "2nd_pl":  "amaveratis",
+                             "3rd_pl":  "amaverant",
+                             "principal_parts":  {
+                                                     "present_stem":  "am",
+                                                     "perfect_stem":  "amav",
+                                                     "perfect_passive_stem":  "amat"
+                                                 }
+                         },
+    "moneo_plup_ind_act":  {
+                               "type":  "verb",
+                               "tense":  "pluperfect",
+                               "mood":  "indicative",
+                               "voice":  "active",
+                               "lemma":  "moneo",
+                               "english":  "I had warned",
+                               "conjugation":  "2nd",
+                               "1st_sg":  "monueram",
+                               "2nd_sg":  "monueras",
+                               "3rd_sg":  "monuerat",
+                               "1st_pl":  "monueramus",
+                               "2nd_pl":  "monueratis",
+                               "3rd_pl":  "monuerant",
+                               "principal_parts":  {
+                                                       "present_stem":  "mone",
+                                                       "perfect_stem":  "monu",
+                                                       "perfect_passive_stem":  "monit"
+                                                   }
+                           },
+    "rego_plup_ind_act":  {
+                              "type":  "verb",
+                              "tense":  "pluperfect",
+                              "mood":  "indicative",
+                              "voice":  "active",
+                              "lemma":  "rego",
+                              "english":  "I had ruled",
+                              "conjugation":  "3rd",
+                              "1st_sg":  "rexeram",
+                              "2nd_sg":  "rexeras",
+                              "3rd_sg":  "rexerat",
+                              "1st_pl":  "rexeramus",
+                              "2nd_pl":  "rexeratis",
+                              "3rd_pl":  "rexerant",
+                              "principal_parts":  {
+                                                      "present_stem":  "rege",
+                                                      "perfect_stem":  "rex",
+                                                      "perfect_passive_stem":  "rect"
+                                                  }
+                          },
+    "audio_plup_ind_act":  {
+                               "type":  "verb",
+                               "tense":  "pluperfect",
+                               "mood":  "indicative",
+                               "voice":  "active",
+                               "lemma":  "audio",
+                               "english":  "I had heard",
+                               "conjugation":  "4th",
+                               "1st_sg":  "audiveram",
+                               "2nd_sg":  "audiveras",
+                               "3rd_sg":  "audiverat",
+                               "1st_pl":  "audiveramus",
+                               "2nd_pl":  "audiveratis",
+                               "3rd_pl":  "audiverant",
+                               "principal_parts":  {
+                                                       "present_stem":  "audi",
+                                                       "perfect_stem":  "audiv",
+                                                       "perfect_passive_stem":  "audit"
+                                                   }
+                           },
+    "amo_futperf_ind_act":  {
+                                "type":  "verb",
+                                "tense":  "future perfect",
+                                "mood":  "indicative",
+                                "voice":  "active",
+                                "lemma":  "amo",
+                                "english":  "I will have loved",
+                                "conjugation":  "1st",
+                                "1st_sg":  "amavero",
+                                "2nd_sg":  "amaveris",
+                                "3rd_sg":  "amaverit",
+                                "1st_pl":  "amaverimus",
+                                "2nd_pl":  "amaveritis",
+                                "3rd_pl":  "amaverint",
+                                "principal_parts":  {
+                                                        "present_stem":  "am",
+                                                        "perfect_stem":  "amav",
+                                                        "perfect_passive_stem":  "amat"
+                                                    }
+                            },
+    "moneo_futperf_ind_act":  {
+                                  "type":  "verb",
+                                  "tense":  "future perfect",
+                                  "mood":  "indicative",
+                                  "voice":  "active",
+                                  "lemma":  "moneo",
+                                  "english":  "I will have warned",
+                                  "conjugation":  "2nd",
+                                  "1st_sg":  "monuero",
+                                  "2nd_sg":  "monueris",
+                                  "3rd_sg":  "monuerit",
+                                  "1st_pl":  "monuerimus",
+                                  "2nd_pl":  "monueritis",
+                                  "3rd_pl":  "monuerint",
+                                  "principal_parts":  {
+                                                          "present_stem":  "mone",
+                                                          "perfect_stem":  "monu",
+                                                          "perfect_passive_stem":  "monit"
+                                                      }
+                              },
+    "rego_futperf_ind_act":  {
+                                 "type":  "verb",
+                                 "tense":  "future perfect",
+                                 "mood":  "indicative",
+                                 "voice":  "active",
+                                 "lemma":  "rego",
+                                 "english":  "I will have ruled",
+                                 "conjugation":  "3rd",
+                                 "1st_sg":  "rexero",
+                                 "2nd_sg":  "rexeris",
+                                 "3rd_sg":  "rexerit",
+                                 "1st_pl":  "rexerimus",
+                                 "2nd_pl":  "rexeritis",
+                                 "3rd_pl":  "rexerint",
+                                 "principal_parts":  {
+                                                         "present_stem":  "rege",
+                                                         "perfect_stem":  "rex",
+                                                         "perfect_passive_stem":  "rect"
+                                                     }
+                             },
+    "audio_futperf_ind_act":  {
+                                  "type":  "verb",
+                                  "tense":  "future perfect",
+                                  "mood":  "indicative",
+                                  "voice":  "active",
+                                  "lemma":  "audio",
+                                  "english":  "I will have heard",
+                                  "conjugation":  "4th",
+                                  "1st_sg":  "audivero",
+                                  "2nd_sg":  "audiveris",
+                                  "3rd_sg":  "audiverit",
+                                  "1st_pl":  "audiverimus",
+                                  "2nd_pl":  "audiveritis",
+                                  "3rd_pl":  "audiverint",
+                                  "principal_parts":  {
+                                                          "present_stem":  "audi",
+                                                          "perfect_stem":  "audiv",
+                                                          "perfect_passive_stem":  "audit"
+                                                      }
+                              },
+    "amo_pres_subj_act":  {
+                              "type":  "verb",
+                              "tense":  "present",
+                              "mood":  "subjunctive",
+                              "voice":  "active",
+                              "lemma":  "amo",
+                              "english":  "I may love",
+                              "conjugation":  "1st",
+                              "1st_sg":  "amem",
+                              "2nd_sg":  "ames",
+                              "3rd_sg":  "amet",
+                              "1st_pl":  "amemus",
+                              "2nd_pl":  "ametis",
+                              "3rd_pl":  "ament",
+                              "principal_parts":  {
+                                                      "present_stem":  "am",
+                                                      "perfect_stem":  "amav",
+                                                      "perfect_passive_stem":  "amat"
+                                                  }
+                          },
+    "moneo_pres_subj_act":  {
+                                "type":  "verb",
+                                "tense":  "present",
+                                "mood":  "subjunctive",
+                                "voice":  "active",
+                                "lemma":  "moneo",
+                                "english":  "I may warn",
+                                "conjugation":  "2nd",
+                                "1st_sg":  "moneam",
+                                "2nd_sg":  "moneas",
+                                "3rd_sg":  "moneat",
+                                "1st_pl":  "moneamus",
+                                "2nd_pl":  "moneatis",
+                                "3rd_pl":  "moneant",
+                                "principal_parts":  {
+                                                        "present_stem":  "mone",
+                                                        "perfect_stem":  "monu",
+                                                        "perfect_passive_stem":  "monit"
+                                                    }
+                            },
+    "rego_pres_subj_act":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "subjunctive",
+                               "voice":  "active",
+                               "lemma":  "rego",
+                               "english":  "I may rule",
+                               "conjugation":  "3rd",
+                               "1st_sg":  "regam",
+                               "2nd_sg":  "regas",
+                               "3rd_sg":  "regat",
+                               "1st_pl":  "regamus",
+                               "2nd_pl":  "regatis",
+                               "3rd_pl":  "regant",
+                               "principal_parts":  {
+                                                       "present_stem":  "rege",
+                                                       "perfect_stem":  "rex",
+                                                       "perfect_passive_stem":  "rect"
+                                                   }
+                           },
+    "audio_pres_subj_act":  {
+                                "type":  "verb",
+                                "tense":  "present",
+                                "mood":  "subjunctive",
+                                "voice":  "active",
+                                "lemma":  "audio",
+                                "english":  "I may hear",
+                                "conjugation":  "4th",
+                                "1st_sg":  "audiam",
+                                "2nd_sg":  "audias",
+                                "3rd_sg":  "audiat",
+                                "1st_pl":  "audiamus",
+                                "2nd_pl":  "audiatis",
+                                "3rd_pl":  "audiant",
+                                "principal_parts":  {
+                                                        "present_stem":  "audi",
+                                                        "perfect_stem":  "audiv",
+                                                        "perfect_passive_stem":  "audit"
+                                                    }
+                            },
+    "amo_imperf_subj_act":  {
+                                "type":  "verb",
+                                "tense":  "imperfect",
+                                "mood":  "subjunctive",
+                                "voice":  "active",
+                                "lemma":  "amo",
+                                "english":  "I might love",
+                                "conjugation":  "1st",
+                                "1st_sg":  "amarem",
+                                "2nd_sg":  "amares",
+                                "3rd_sg":  "amaret",
+                                "1st_pl":  "amaremus",
+                                "2nd_pl":  "amaretis",
+                                "3rd_pl":  "amarent",
+                                "principal_parts":  {
+                                                        "present_stem":  "am",
+                                                        "perfect_stem":  "amav",
+                                                        "perfect_passive_stem":  "amat"
+                                                    }
+                            },
+    "moneo_imperf_subj_act":  {
+                                  "type":  "verb",
+                                  "tense":  "imperfect",
+                                  "mood":  "subjunctive",
+                                  "voice":  "active",
+                                  "lemma":  "moneo",
+                                  "english":  "I might warn",
+                                  "conjugation":  "2nd",
+                                  "1st_sg":  "monerem",
+                                  "2nd_sg":  "moneres",
+                                  "3rd_sg":  "moneret",
+                                  "1st_pl":  "moneremus",
+                                  "2nd_pl":  "moneretis",
+                                  "3rd_pl":  "monerent",
+                                  "principal_parts":  {
+                                                          "present_stem":  "mone",
+                                                          "perfect_stem":  "monu",
+                                                          "perfect_passive_stem":  "monit"
+                                                      }
+                              },
+    "rego_imperf_subj_act":  {
+                                 "type":  "verb",
+                                 "tense":  "imperfect",
+                                 "mood":  "subjunctive",
+                                 "voice":  "active",
+                                 "lemma":  "rego",
+                                 "english":  "I might rule",
+                                 "conjugation":  "3rd",
+                                 "1st_sg":  "regerem",
+                                 "2nd_sg":  "regeres",
+                                 "3rd_sg":  "regeret",
+                                 "1st_pl":  "regeremus",
+                                 "2nd_pl":  "regeretis",
+                                 "3rd_pl":  "regerent",
+                                 "principal_parts":  {
+                                                         "present_stem":  "rege",
+                                                         "perfect_stem":  "rex",
+                                                         "perfect_passive_stem":  "rect"
+                                                     }
+                             },
+    "audio_imperf_subj_act":  {
+                                  "type":  "verb",
+                                  "tense":  "imperfect",
+                                  "mood":  "subjunctive",
+                                  "voice":  "active",
+                                  "lemma":  "audio",
+                                  "english":  "I might hear",
+                                  "conjugation":  "4th",
+                                  "1st_sg":  "audirem",
+                                  "2nd_sg":  "audires",
+                                  "3rd_sg":  "audiret",
+                                  "1st_pl":  "audiremus",
+                                  "2nd_pl":  "audiretis",
+                                  "3rd_pl":  "audirent",
+                                  "principal_parts":  {
+                                                          "present_stem":  "audi",
+                                                          "perfect_stem":  "audiv",
+                                                          "perfect_passive_stem":  "audit"
+                                                      }
+                              },
+    "amo_perf_subj_act":  {
+                              "type":  "verb",
+                              "tense":  "perfect",
+                              "mood":  "subjunctive",
+                              "voice":  "active",
+                              "lemma":  "amo",
+                              "english":  "I may have loved",
+                              "conjugation":  "1st",
+                              "1st_sg":  "amaverim",
+                              "2nd_sg":  "amaveris",
+                              "3rd_sg":  "amaverit",
+                              "1st_pl":  "amaverimus",
+                              "2nd_pl":  "amaveritis",
+                              "3rd_pl":  "amaverint",
+                              "principal_parts":  {
+                                                      "present_stem":  "am",
+                                                      "perfect_stem":  "amav",
+                                                      "perfect_passive_stem":  "amat"
+                                                  }
+                          },
+    "moneo_perf_subj_act":  {
+                                "type":  "verb",
+                                "tense":  "perfect",
+                                "mood":  "subjunctive",
+                                "voice":  "active",
+                                "lemma":  "moneo",
+                                "english":  "I may have warned",
+                                "conjugation":  "2nd",
+                                "1st_sg":  "monuerim",
+                                "2nd_sg":  "monueris",
+                                "3rd_sg":  "monuerit",
+                                "1st_pl":  "monuerimus",
+                                "2nd_pl":  "monueritis",
+                                "3rd_pl":  "monuerint",
+                                "principal_parts":  {
+                                                        "present_stem":  "mone",
+                                                        "perfect_stem":  "monu",
+                                                        "perfect_passive_stem":  "monit"
+                                                    }
+                            },
+    "rego_perf_subj_act":  {
+                               "type":  "verb",
+                               "tense":  "perfect",
+                               "mood":  "subjunctive",
+                               "voice":  "active",
+                               "lemma":  "rego",
+                               "english":  "I may have ruled",
+                               "conjugation":  "3rd",
+                               "1st_sg":  "rexerim",
+                               "2nd_sg":  "rexeris",
+                               "3rd_sg":  "rexerit",
+                               "1st_pl":  "rexerimus",
+                               "2nd_pl":  "rexeritis",
+                               "3rd_pl":  "rexerint",
+                               "principal_parts":  {
+                                                       "present_stem":  "rege",
+                                                       "perfect_stem":  "rex",
+                                                       "perfect_passive_stem":  "rect"
+                                                   }
+                           },
+    "audio_perf_subj_act":  {
+                                "type":  "verb",
+                                "tense":  "perfect",
+                                "mood":  "subjunctive",
+                                "voice":  "active",
+                                "lemma":  "audio",
+                                "english":  "I may have heard",
+                                "conjugation":  "4th",
+                                "1st_sg":  "audiverim",
+                                "2nd_sg":  "audiveris",
+                                "3rd_sg":  "audiverit",
+                                "1st_pl":  "audiverimus",
+                                "2nd_pl":  "audiveritis",
+                                "3rd_pl":  "audiverint",
+                                "principal_parts":  {
+                                                        "present_stem":  "audi",
+                                                        "perfect_stem":  "audiv",
+                                                        "perfect_passive_stem":  "audit"
+                                                    }
+                            },
+    "amo_plup_subj_act":  {
+                              "type":  "verb",
+                              "tense":  "pluperfect",
+                              "mood":  "subjunctive",
+                              "voice":  "active",
+                              "lemma":  "amo",
+                              "english":  "I might have loved",
+                              "conjugation":  "1st",
+                              "1st_sg":  "amavissem",
+                              "2nd_sg":  "amavisses",
+                              "3rd_sg":  "amavisset",
+                              "1st_pl":  "amavissemus",
+                              "2nd_pl":  "amavissetis",
+                              "3rd_pl":  "amavissent",
+                              "principal_parts":  {
+                                                      "present_stem":  "am",
+                                                      "perfect_stem":  "amav",
+                                                      "perfect_passive_stem":  "amat"
+                                                  }
+                          },
+    "moneo_plup_subj_act":  {
+                                "type":  "verb",
+                                "tense":  "pluperfect",
+                                "mood":  "subjunctive",
+                                "voice":  "active",
+                                "lemma":  "moneo",
+                                "english":  "I might have warned",
+                                "conjugation":  "2nd",
+                                "1st_sg":  "monuissem",
+                                "2nd_sg":  "monuisses",
+                                "3rd_sg":  "monuisset",
+                                "1st_pl":  "monuissemus",
+                                "2nd_pl":  "monuissetis",
+                                "3rd_pl":  "monuissent",
+                                "principal_parts":  {
+                                                        "present_stem":  "mone",
+                                                        "perfect_stem":  "monu",
+                                                        "perfect_passive_stem":  "monit"
+                                                    }
+                            },
+    "rego_plup_subj_act":  {
+                               "type":  "verb",
+                               "tense":  "pluperfect",
+                               "mood":  "subjunctive",
+                               "voice":  "active",
+                               "lemma":  "rego",
+                               "english":  "I might have ruled",
+                               "conjugation":  "3rd",
+                               "1st_sg":  "rexissem",
+                               "2nd_sg":  "rexisses",
+                               "3rd_sg":  "rexisset",
+                               "1st_pl":  "rexissemus",
+                               "2nd_pl":  "rexissetis",
+                               "3rd_pl":  "rexissent",
+                               "principal_parts":  {
+                                                       "present_stem":  "rege",
+                                                       "perfect_stem":  "rex",
+                                                       "perfect_passive_stem":  "rect"
+                                                   }
+                           },
+    "audio_plup_subj_act":  {
+                                "type":  "verb",
+                                "tense":  "pluperfect",
+                                "mood":  "subjunctive",
+                                "voice":  "active",
+                                "lemma":  "audio",
+                                "english":  "I might have heard",
+                                "conjugation":  "4th",
+                                "1st_sg":  "audivissem",
+                                "2nd_sg":  "audivisses",
+                                "3rd_sg":  "audivisset",
+                                "1st_pl":  "audivissemus",
+                                "2nd_pl":  "audivissetis",
+                                "3rd_pl":  "audivissent",
+                                "principal_parts":  {
+                                                        "present_stem":  "audi",
+                                                        "perfect_stem":  "audiv",
+                                                        "perfect_passive_stem":  "audit"
+                                                    }
+                            },
+    "amo_pres_ind_pass":  {
+                              "type":  "verb",
+                              "tense":  "present",
+                              "mood":  "indicative",
+                              "voice":  "passive",
+                              "lemma":  "amo",
+                              "english":  "I am loved",
+                              "conjugation":  "1st",
+                              "1st_sg":  "amor",
+                              "2nd_sg":  "amaris",
+                              "3rd_sg":  "amatur",
+                              "1st_pl":  "amamur",
+                              "2nd_pl":  "amamini",
+                              "3rd_pl":  "amantur",
+                              "principal_parts":  {
+                                                      "present_stem":  "am",
+                                                      "perfect_stem":  "amav",
+                                                      "perfect_passive_stem":  "amat"
+                                                  }
+                          },
+    "moneo_pres_ind_pass":  {
+                                "type":  "verb",
+                                "tense":  "present",
+                                "mood":  "indicative",
+                                "voice":  "passive",
+                                "lemma":  "moneo",
+                                "english":  "I am warned",
+                                "conjugation":  "2nd",
+                                "1st_sg":  "moneor",
+                                "2nd_sg":  "moneris",
+                                "3rd_sg":  "monetur",
+                                "1st_pl":  "monemur",
+                                "2nd_pl":  "monemini",
+                                "3rd_pl":  "monentur",
+                                "principal_parts":  {
+                                                        "present_stem":  "mone",
+                                                        "perfect_stem":  "monu",
+                                                        "perfect_passive_stem":  "monit"
+                                                    }
+                            },
+    "rego_pres_ind_pass":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "indicative",
+                               "voice":  "passive",
+                               "lemma":  "rego",
+                               "english":  "I am ruled",
+                               "conjugation":  "3rd",
+                               "1st_sg":  "regor",
+                               "2nd_sg":  "regeris",
+                               "3rd_sg":  "regitur",
+                               "1st_pl":  "regimur",
+                               "2nd_pl":  "regimini",
+                               "3rd_pl":  "reguntur",
+                               "principal_parts":  {
+                                                       "present_stem":  "rege",
+                                                       "perfect_stem":  "rex",
+                                                       "perfect_passive_stem":  "rect"
+                                                   }
+                           },
+    "audio_pres_ind_pass":  {
+                                "type":  "verb",
+                                "tense":  "present",
+                                "mood":  "indicative",
+                                "voice":  "passive",
+                                "lemma":  "audio",
+                                "english":  "I am heard",
+                                "conjugation":  "4th",
+                                "1st_sg":  "audior",
+                                "2nd_sg":  "audiris",
+                                "3rd_sg":  "auditur",
+                                "1st_pl":  "audimur",
+                                "2nd_pl":  "audimini",
+                                "3rd_pl":  "audiuntur",
+                                "principal_parts":  {
+                                                        "present_stem":  "audi",
+                                                        "perfect_stem":  "audiv",
+                                                        "perfect_passive_stem":  "audit"
+                                                    }
+                            },
+    "amo_imperf_ind_pass":  {
+                                "type":  "verb",
+                                "tense":  "imperfect",
+                                "mood":  "indicative",
+                                "voice":  "passive",
+                                "lemma":  "amo",
+                                "english":  "I was being loved",
+                                "conjugation":  "1st",
+                                "1st_sg":  "amabar",
+                                "2nd_sg":  "amabaris",
+                                "3rd_sg":  "amabatur",
+                                "1st_pl":  "amabamur",
+                                "2nd_pl":  "amabamini",
+                                "3rd_pl":  "amabantur",
+                                "principal_parts":  {
+                                                        "present_stem":  "am",
+                                                        "perfect_stem":  "amav",
+                                                        "perfect_passive_stem":  "amat"
+                                                    }
+                            },
+    "moneo_imperf_ind_pass":  {
+                                  "type":  "verb",
+                                  "tense":  "imperfect",
+                                  "mood":  "indicative",
+                                  "voice":  "passive",
+                                  "lemma":  "moneo",
+                                  "english":  "I was being warned",
+                                  "conjugation":  "2nd",
+                                  "1st_sg":  "monebar",
+                                  "2nd_sg":  "monebaris",
+                                  "3rd_sg":  "monebatur",
+                                  "1st_pl":  "monebamur",
+                                  "2nd_pl":  "monebamini",
+                                  "3rd_pl":  "monebantur",
+                                  "principal_parts":  {
+                                                          "present_stem":  "mone",
+                                                          "perfect_stem":  "monu",
+                                                          "perfect_passive_stem":  "monit"
+                                                      }
+                              },
+    "rego_imperf_ind_pass":  {
+                                 "type":  "verb",
+                                 "tense":  "imperfect",
+                                 "mood":  "indicative",
+                                 "voice":  "passive",
+                                 "lemma":  "rego",
+                                 "english":  "I was being ruled",
+                                 "conjugation":  "3rd",
+                                 "1st_sg":  "regebar",
+                                 "2nd_sg":  "regebaris",
+                                 "3rd_sg":  "regebatur",
+                                 "1st_pl":  "regebamur",
+                                 "2nd_pl":  "regebamini",
+                                 "3rd_pl":  "regebantur",
+                                 "principal_parts":  {
+                                                         "present_stem":  "rege",
+                                                         "perfect_stem":  "rex",
+                                                         "perfect_passive_stem":  "rect"
+                                                     }
+                             },
+    "audio_imperf_ind_pass":  {
+                                  "type":  "verb",
+                                  "tense":  "imperfect",
+                                  "mood":  "indicative",
+                                  "voice":  "passive",
+                                  "lemma":  "audio",
+                                  "english":  "I was being heard",
+                                  "conjugation":  "4th",
+                                  "1st_sg":  "audiebar",
+                                  "2nd_sg":  "audiebaris",
+                                  "3rd_sg":  "audiebatur",
+                                  "1st_pl":  "audiebamur",
+                                  "2nd_pl":  "audiebamini",
+                                  "3rd_pl":  "audiebantur",
+                                  "principal_parts":  {
+                                                          "present_stem":  "audi",
+                                                          "perfect_stem":  "audiv",
+                                                          "perfect_passive_stem":  "audit"
+                                                      }
+                              },
+    "amo_fut_ind_pass":  {
+                             "type":  "verb",
+                             "tense":  "future",
+                             "mood":  "indicative",
+                             "voice":  "passive",
+                             "lemma":  "amo",
+                             "english":  "I will be loved",
+                             "conjugation":  "1st",
+                             "1st_sg":  "amabor",
+                             "2nd_sg":  "amaberis",
+                             "3rd_sg":  "amabitur",
+                             "1st_pl":  "amabimur",
+                             "2nd_pl":  "amabimini",
+                             "3rd_pl":  "amabuntur",
+                             "principal_parts":  {
+                                                     "present_stem":  "am",
+                                                     "perfect_stem":  "amav",
+                                                     "perfect_passive_stem":  "amat"
+                                                 }
+                         },
+    "moneo_fut_ind_pass":  {
+                               "type":  "verb",
+                               "tense":  "future",
+                               "mood":  "indicative",
+                               "voice":  "passive",
+                               "lemma":  "moneo",
+                               "english":  "I will be warned",
+                               "conjugation":  "2nd",
+                               "1st_sg":  "monebor",
+                               "2nd_sg":  "moneberis",
+                               "3rd_sg":  "monebitur",
+                               "1st_pl":  "monebimur",
+                               "2nd_pl":  "monebimini",
+                               "3rd_pl":  "monebuntur",
+                               "principal_parts":  {
+                                                       "present_stem":  "mone",
+                                                       "perfect_stem":  "monu",
+                                                       "perfect_passive_stem":  "monit"
+                                                   }
+                           },
+    "rego_fut_ind_pass":  {
+                              "type":  "verb",
+                              "tense":  "future",
+                              "mood":  "indicative",
+                              "voice":  "passive",
+                              "lemma":  "rego",
+                              "english":  "I will be ruled",
+                              "conjugation":  "3rd",
+                              "1st_sg":  "regar",
+                              "2nd_sg":  "regeris",
+                              "3rd_sg":  "regetur",
+                              "1st_pl":  "regemur",
+                              "2nd_pl":  "regemini",
+                              "3rd_pl":  "regentur",
+                              "principal_parts":  {
+                                                      "present_stem":  "rege",
+                                                      "perfect_stem":  "rex",
+                                                      "perfect_passive_stem":  "rect"
+                                                  }
+                          },
+    "audio_fut_ind_pass":  {
+                               "type":  "verb",
+                               "tense":  "future",
+                               "mood":  "indicative",
+                               "voice":  "passive",
+                               "lemma":  "audio",
+                               "english":  "I will be heard",
+                               "conjugation":  "4th",
+                               "1st_sg":  "audiar",
+                               "2nd_sg":  "audieris",
+                               "3rd_sg":  "audietur",
+                               "1st_pl":  "audiemur",
+                               "2nd_pl":  "audiemini",
+                               "3rd_pl":  "audientur",
+                               "principal_parts":  {
+                                                       "present_stem":  "audi",
+                                                       "perfect_stem":  "audiv",
+                                                       "perfect_passive_stem":  "audit"
+                                                   }
+                           },
+    "amo_perf_ind_pass":  {
+                              "type":  "verb",
+                              "tense":  "perfect",
+                              "mood":  "indicative",
+                              "voice":  "passive",
+                              "lemma":  "amo",
+                              "english":  "I was loved",
+                              "conjugation":  "1st",
+                              "1st_sg":  "amatus sum",
+                              "2nd_sg":  "amatus es",
+                              "3rd_sg":  "amatus est",
+                              "1st_pl":  "amati sumus",
+                              "2nd_pl":  "amati estis",
+                              "3rd_pl":  "amati sunt",
+                              "principal_parts":  {
+                                                      "present_stem":  "am",
+                                                      "perfect_stem":  "amav",
+                                                      "perfect_passive_stem":  "amat"
+                                                  }
+                          },
+    "moneo_perf_ind_pass":  {
+                                "type":  "verb",
+                                "tense":  "perfect",
+                                "mood":  "indicative",
+                                "voice":  "passive",
+                                "lemma":  "moneo",
+                                "english":  "I was warned",
+                                "conjugation":  "2nd",
+                                "1st_sg":  "monitus sum",
+                                "2nd_sg":  "monitus es",
+                                "3rd_sg":  "monitus est",
+                                "1st_pl":  "moniti sumus",
+                                "2nd_pl":  "moniti estis",
+                                "3rd_pl":  "moniti sunt",
+                                "principal_parts":  {
+                                                        "present_stem":  "mone",
+                                                        "perfect_stem":  "monu",
+                                                        "perfect_passive_stem":  "monit"
+                                                    }
+                            },
+    "rego_perf_ind_pass":  {
+                               "type":  "verb",
+                               "tense":  "perfect",
+                               "mood":  "indicative",
+                               "voice":  "passive",
+                               "lemma":  "rego",
+                               "english":  "I was ruled",
+                               "conjugation":  "3rd",
+                               "1st_sg":  "rectus sum",
+                               "2nd_sg":  "rectus es",
+                               "3rd_sg":  "rectus est",
+                               "1st_pl":  "recti sumus",
+                               "2nd_pl":  "recti estis",
+                               "3rd_pl":  "recti sunt",
+                               "principal_parts":  {
+                                                       "present_stem":  "rege",
+                                                       "perfect_stem":  "rex",
+                                                       "perfect_passive_stem":  "rect"
+                                                   }
+                           },
+    "audio_perf_ind_pass":  {
+                                "type":  "verb",
+                                "tense":  "perfect",
+                                "mood":  "indicative",
+                                "voice":  "passive",
+                                "lemma":  "audio",
+                                "english":  "I was heard",
+                                "conjugation":  "4th",
+                                "1st_sg":  "auditus sum",
+                                "2nd_sg":  "auditus es",
+                                "3rd_sg":  "auditus est",
+                                "1st_pl":  "auditi sumus",
+                                "2nd_pl":  "auditi estis",
+                                "3rd_pl":  "auditi sunt",
+                                "principal_parts":  {
+                                                        "present_stem":  "audi",
+                                                        "perfect_stem":  "audiv",
+                                                        "perfect_passive_stem":  "audit"
+                                                    }
+                            },
+    "amo_plup_ind_pass":  {
+                              "type":  "verb",
+                              "tense":  "pluperfect",
+                              "mood":  "indicative",
+                              "voice":  "passive",
+                              "lemma":  "amo",
+                              "english":  "I had been loved",
+                              "conjugation":  "1st",
+                              "1st_sg":  "amatus eram",
+                              "2nd_sg":  "amatus eras",
+                              "3rd_sg":  "amatus erat",
+                              "1st_pl":  "amati eramus",
+                              "2nd_pl":  "amati eratis",
+                              "3rd_pl":  "amati erant",
+                              "principal_parts":  {
+                                                      "present_stem":  "am",
+                                                      "perfect_stem":  "amav",
+                                                      "perfect_passive_stem":  "amat"
+                                                  }
+                          },
+    "moneo_plup_ind_pass":  {
+                                "type":  "verb",
+                                "tense":  "pluperfect",
+                                "mood":  "indicative",
+                                "voice":  "passive",
+                                "lemma":  "moneo",
+                                "english":  "I had been warned",
+                                "conjugation":  "2nd",
+                                "1st_sg":  "monitus eram",
+                                "2nd_sg":  "monitus eras",
+                                "3rd_sg":  "monitus erat",
+                                "1st_pl":  "moniti eramus",
+                                "2nd_pl":  "moniti eratis",
+                                "3rd_pl":  "moniti erant",
+                                "principal_parts":  {
+                                                        "present_stem":  "mone",
+                                                        "perfect_stem":  "monu",
+                                                        "perfect_passive_stem":  "monit"
+                                                    }
+                            },
+    "rego_plup_ind_pass":  {
+                               "type":  "verb",
+                               "tense":  "pluperfect",
+                               "mood":  "indicative",
+                               "voice":  "passive",
+                               "lemma":  "rego",
+                               "english":  "I had been ruled",
+                               "conjugation":  "3rd",
+                               "1st_sg":  "rectus eram",
+                               "2nd_sg":  "rectus eras",
+                               "3rd_sg":  "rectus erat",
+                               "1st_pl":  "recti eramus",
+                               "2nd_pl":  "recti eratis",
+                               "3rd_pl":  "recti erant",
+                               "principal_parts":  {
+                                                       "present_stem":  "rege",
+                                                       "perfect_stem":  "rex",
+                                                       "perfect_passive_stem":  "rect"
+                                                   }
+                           },
+    "audio_plup_ind_pass":  {
+                                "type":  "verb",
+                                "tense":  "pluperfect",
+                                "mood":  "indicative",
+                                "voice":  "passive",
+                                "lemma":  "audio",
+                                "english":  "I had been heard",
+                                "conjugation":  "4th",
+                                "1st_sg":  "auditus eram",
+                                "2nd_sg":  "auditus eras",
+                                "3rd_sg":  "auditus erat",
+                                "1st_pl":  "auditi eramus",
+                                "2nd_pl":  "auditi eratis",
+                                "3rd_pl":  "auditi erant",
+                                "principal_parts":  {
+                                                        "present_stem":  "audi",
+                                                        "perfect_stem":  "audiv",
+                                                        "perfect_passive_stem":  "audit"
+                                                    }
+                            },
+    "amo_futperf_ind_pass":  {
+                                 "type":  "verb",
+                                 "tense":  "future perfect",
+                                 "mood":  "indicative",
+                                 "voice":  "passive",
+                                 "lemma":  "amo",
+                                 "english":  "I will have been loved",
+                                 "conjugation":  "1st",
+                                 "1st_sg":  "amatus ero",
+                                 "2nd_sg":  "amatus eris",
+                                 "3rd_sg":  "amatus erit",
+                                 "1st_pl":  "amati erimus",
+                                 "2nd_pl":  "amati eritis",
+                                 "3rd_pl":  "amati erunt",
+                                 "principal_parts":  {
+                                                         "present_stem":  "am",
+                                                         "perfect_stem":  "amav",
+                                                         "perfect_passive_stem":  "amat"
+                                                     }
+                             },
+    "moneo_futperf_ind_pass":  {
+                                   "type":  "verb",
+                                   "tense":  "future perfect",
+                                   "mood":  "indicative",
+                                   "voice":  "passive",
+                                   "lemma":  "moneo",
+                                   "english":  "I will have been warned",
+                                   "conjugation":  "2nd",
+                                   "1st_sg":  "monitus ero",
+                                   "2nd_sg":  "monitus eris",
+                                   "3rd_sg":  "monitus erit",
+                                   "1st_pl":  "moniti erimus",
+                                   "2nd_pl":  "moniti eritis",
+                                   "3rd_pl":  "moniti erunt",
+                                   "principal_parts":  {
+                                                           "present_stem":  "mone",
+                                                           "perfect_stem":  "monu",
+                                                           "perfect_passive_stem":  "monit"
+                                                       }
+                               },
+    "rego_futperf_ind_pass":  {
+                                  "type":  "verb",
+                                  "tense":  "future perfect",
+                                  "mood":  "indicative",
+                                  "voice":  "passive",
+                                  "lemma":  "rego",
+                                  "english":  "I will have been ruled",
+                                  "conjugation":  "3rd",
+                                  "1st_sg":  "rectus ero",
+                                  "2nd_sg":  "rectus eris",
+                                  "3rd_sg":  "rectus erit",
+                                  "1st_pl":  "recti erimus",
+                                  "2nd_pl":  "recti eritis",
+                                  "3rd_pl":  "recti erunt",
+                                  "principal_parts":  {
+                                                          "present_stem":  "rege",
+                                                          "perfect_stem":  "rex",
+                                                          "perfect_passive_stem":  "rect"
+                                                      }
+                              },
+    "audio_futperf_ind_pass":  {
+                                   "type":  "verb",
+                                   "tense":  "future perfect",
+                                   "mood":  "indicative",
+                                   "voice":  "passive",
+                                   "lemma":  "audio",
+                                   "english":  "I will have been heard",
+                                   "conjugation":  "4th",
+                                   "1st_sg":  "auditus ero",
+                                   "2nd_sg":  "auditus eris",
+                                   "3rd_sg":  "auditus erit",
+                                   "1st_pl":  "auditi erimus",
+                                   "2nd_pl":  "auditi eritis",
+                                   "3rd_pl":  "auditi erunt",
+                                   "principal_parts":  {
+                                                           "present_stem":  "audi",
+                                                           "perfect_stem":  "audiv",
+                                                           "perfect_passive_stem":  "audit"
+                                                       }
+                               },
+    "amo_pres_subj_pass":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "subjunctive",
+                               "voice":  "passive",
+                               "lemma":  "amo",
+                               "english":  "I may be loved",
+                               "conjugation":  "1st",
+                               "1st_sg":  "amer",
+                               "2nd_sg":  "ameris",
+                               "3rd_sg":  "ametur",
+                               "1st_pl":  "amemur",
+                               "2nd_pl":  "amemini",
+                               "3rd_pl":  "amentur",
+                               "principal_parts":  {
+                                                       "present_stem":  "am",
+                                                       "perfect_stem":  "amav",
+                                                       "perfect_passive_stem":  "amat"
+                                                   }
+                           },
+    "moneo_pres_subj_pass":  {
+                                 "type":  "verb",
+                                 "tense":  "present",
+                                 "mood":  "subjunctive",
+                                 "voice":  "passive",
+                                 "lemma":  "moneo",
+                                 "english":  "I may be warned",
+                                 "conjugation":  "2nd",
+                                 "1st_sg":  "monear",
+                                 "2nd_sg":  "monearis",
+                                 "3rd_sg":  "moneatur",
+                                 "1st_pl":  "moneamur",
+                                 "2nd_pl":  "moneamini",
+                                 "3rd_pl":  "moneantur",
+                                 "principal_parts":  {
+                                                         "present_stem":  "mone",
+                                                         "perfect_stem":  "monu",
+                                                         "perfect_passive_stem":  "monit"
+                                                     }
+                             },
+    "rego_pres_subj_pass":  {
+                                "type":  "verb",
+                                "tense":  "present",
+                                "mood":  "subjunctive",
+                                "voice":  "passive",
+                                "lemma":  "rego",
+                                "english":  "I may be ruled",
+                                "conjugation":  "3rd",
+                                "1st_sg":  "regar",
+                                "2nd_sg":  "regaris",
+                                "3rd_sg":  "regatur",
+                                "1st_pl":  "regamur",
+                                "2nd_pl":  "regamini",
+                                "3rd_pl":  "regantur",
+                                "principal_parts":  {
+                                                        "present_stem":  "rege",
+                                                        "perfect_stem":  "rex",
+                                                        "perfect_passive_stem":  "rect"
+                                                    }
+                            },
+    "audio_pres_subj_pass":  {
+                                 "type":  "verb",
+                                 "tense":  "present",
+                                 "mood":  "subjunctive",
+                                 "voice":  "passive",
+                                 "lemma":  "audio",
+                                 "english":  "I may be heard",
+                                 "conjugation":  "4th",
+                                 "1st_sg":  "audiar",
+                                 "2nd_sg":  "audiaris",
+                                 "3rd_sg":  "audiatur",
+                                 "1st_pl":  "audiamur",
+                                 "2nd_pl":  "audiamini",
+                                 "3rd_pl":  "audiantur",
+                                 "principal_parts":  {
+                                                         "present_stem":  "audi",
+                                                         "perfect_stem":  "audiv",
+                                                         "perfect_passive_stem":  "audit"
+                                                     }
+                             },
+    "amo_imperf_subj_pass":  {
+                                 "type":  "verb",
+                                 "tense":  "imperfect",
+                                 "mood":  "subjunctive",
+                                 "voice":  "passive",
+                                 "lemma":  "amo",
+                                 "english":  "I might be loved",
+                                 "conjugation":  "1st",
+                                 "1st_sg":  "amarer",
+                                 "2nd_sg":  "amareris",
+                                 "3rd_sg":  "amaretur",
+                                 "1st_pl":  "amaremur",
+                                 "2nd_pl":  "amaremini",
+                                 "3rd_pl":  "amarentur",
+                                 "principal_parts":  {
+                                                         "present_stem":  "am",
+                                                         "perfect_stem":  "amav",
+                                                         "perfect_passive_stem":  "amat"
+                                                     }
+                             },
+    "moneo_imperf_subj_pass":  {
+                                   "type":  "verb",
+                                   "tense":  "imperfect",
+                                   "mood":  "subjunctive",
+                                   "voice":  "passive",
+                                   "lemma":  "moneo",
+                                   "english":  "I might be warned",
+                                   "conjugation":  "2nd",
+                                   "1st_sg":  "monerer",
+                                   "2nd_sg":  "monereris",
+                                   "3rd_sg":  "moneretur",
+                                   "1st_pl":  "moneremur",
+                                   "2nd_pl":  "moneremini",
+                                   "3rd_pl":  "monerentur",
+                                   "principal_parts":  {
+                                                           "present_stem":  "mone",
+                                                           "perfect_stem":  "monu",
+                                                           "perfect_passive_stem":  "monit"
+                                                       }
+                               },
+    "rego_imperf_subj_pass":  {
+                                  "type":  "verb",
+                                  "tense":  "imperfect",
+                                  "mood":  "subjunctive",
+                                  "voice":  "passive",
+                                  "lemma":  "rego",
+                                  "english":  "I might be ruled",
+                                  "conjugation":  "3rd",
+                                  "1st_sg":  "regerer",
+                                  "2nd_sg":  "regereris",
+                                  "3rd_sg":  "regeretur",
+                                  "1st_pl":  "regeremur",
+                                  "2nd_pl":  "regeremini",
+                                  "3rd_pl":  "regerentur",
+                                  "principal_parts":  {
+                                                          "present_stem":  "rege",
+                                                          "perfect_stem":  "rex",
+                                                          "perfect_passive_stem":  "rect"
+                                                      }
+                              },
+    "audio_imperf_subj_pass":  {
+                                   "type":  "verb",
+                                   "tense":  "imperfect",
+                                   "mood":  "subjunctive",
+                                   "voice":  "passive",
+                                   "lemma":  "audio",
+                                   "english":  "I might be heard",
+                                   "conjugation":  "4th",
+                                   "1st_sg":  "audirer",
+                                   "2nd_sg":  "audireris",
+                                   "3rd_sg":  "audiretur",
+                                   "1st_pl":  "audiremur",
+                                   "2nd_pl":  "audiremini",
+                                   "3rd_pl":  "audirentur",
+                                   "principal_parts":  {
+                                                           "present_stem":  "audi",
+                                                           "perfect_stem":  "audiv",
+                                                           "perfect_passive_stem":  "audit"
+                                                       }
+                               },
+    "amo_perf_subj_pass":  {
+                               "type":  "verb",
+                               "tense":  "perfect",
+                               "mood":  "subjunctive",
+                               "voice":  "passive",
+                               "lemma":  "amo",
+                               "english":  "I may have been loved",
+                               "conjugation":  "1st",
+                               "1st_sg":  "amatus sim",
+                               "2nd_sg":  "amatus sis",
+                               "3rd_sg":  "amatus sit",
+                               "1st_pl":  "amati simus",
+                               "2nd_pl":  "amati sitis",
+                               "3rd_pl":  "amati sint",
+                               "principal_parts":  {
+                                                       "present_stem":  "am",
+                                                       "perfect_stem":  "amav",
+                                                       "perfect_passive_stem":  "amat"
+                                                   }
+                           },
+    "moneo_perf_subj_pass":  {
+                                 "type":  "verb",
+                                 "tense":  "perfect",
+                                 "mood":  "subjunctive",
+                                 "voice":  "passive",
+                                 "lemma":  "moneo",
+                                 "english":  "I may have been warned",
+                                 "conjugation":  "2nd",
+                                 "1st_sg":  "monitus sim",
+                                 "2nd_sg":  "monitus sis",
+                                 "3rd_sg":  "monitus sit",
+                                 "1st_pl":  "moniti simus",
+                                 "2nd_pl":  "moniti sitis",
+                                 "3rd_pl":  "moniti sint",
+                                 "principal_parts":  {
+                                                         "present_stem":  "mone",
+                                                         "perfect_stem":  "monu",
+                                                         "perfect_passive_stem":  "monit"
+                                                     }
+                             },
+    "rego_perf_subj_pass":  {
+                                "type":  "verb",
+                                "tense":  "perfect",
+                                "mood":  "subjunctive",
+                                "voice":  "passive",
+                                "lemma":  "rego",
+                                "english":  "I may have been ruled",
+                                "conjugation":  "3rd",
+                                "1st_sg":  "rectus sim",
+                                "2nd_sg":  "rectus sis",
+                                "3rd_sg":  "rectus sit",
+                                "1st_pl":  "recti simus",
+                                "2nd_pl":  "recti sitis",
+                                "3rd_pl":  "recti sint",
+                                "principal_parts":  {
+                                                        "present_stem":  "rege",
+                                                        "perfect_stem":  "rex",
+                                                        "perfect_passive_stem":  "rect"
+                                                    }
+                            },
+    "audio_perf_subj_pass":  {
+                                 "type":  "verb",
+                                 "tense":  "perfect",
+                                 "mood":  "subjunctive",
+                                 "voice":  "passive",
+                                 "lemma":  "audio",
+                                 "english":  "I may have been heard",
+                                 "conjugation":  "4th",
+                                 "1st_sg":  "auditus sim",
+                                 "2nd_sg":  "auditus sis",
+                                 "3rd_sg":  "auditus sit",
+                                 "1st_pl":  "auditi simus",
+                                 "2nd_pl":  "auditi sitis",
+                                 "3rd_pl":  "auditi sint",
+                                 "principal_parts":  {
+                                                         "present_stem":  "audi",
+                                                         "perfect_stem":  "audiv",
+                                                         "perfect_passive_stem":  "audit"
+                                                     }
+                             },
+    "amo_plup_subj_pass":  {
+                               "type":  "verb",
+                               "tense":  "pluperfect",
+                               "mood":  "subjunctive",
+                               "voice":  "passive",
+                               "lemma":  "amo",
+                               "english":  "I might have been loved",
+                               "conjugation":  "1st",
+                               "1st_sg":  "amatus essem",
+                               "2nd_sg":  "amatus esses",
+                               "3rd_sg":  "amatus esset",
+                               "1st_pl":  "amati essemus",
+                               "2nd_pl":  "amati essetis",
+                               "3rd_pl":  "amati essent",
+                               "principal_parts":  {
+                                                       "present_stem":  "am",
+                                                       "perfect_stem":  "amav",
+                                                       "perfect_passive_stem":  "amat"
+                                                   }
+                           },
+    "moneo_plup_subj_pass":  {
+                                 "type":  "verb",
+                                 "tense":  "pluperfect",
+                                 "mood":  "subjunctive",
+                                 "voice":  "passive",
+                                 "lemma":  "moneo",
+                                 "english":  "I might have been warned",
+                                 "conjugation":  "2nd",
+                                 "1st_sg":  "monitus essem",
+                                 "2nd_sg":  "monitus esses",
+                                 "3rd_sg":  "monitus esset",
+                                 "1st_pl":  "moniti essemus",
+                                 "2nd_pl":  "moniti essetis",
+                                 "3rd_pl":  "moniti essent",
+                                 "principal_parts":  {
+                                                         "present_stem":  "mone",
+                                                         "perfect_stem":  "monu",
+                                                         "perfect_passive_stem":  "monit"
+                                                     }
+                             },
+    "rego_plup_subj_pass":  {
+                                "type":  "verb",
+                                "tense":  "pluperfect",
+                                "mood":  "subjunctive",
+                                "voice":  "passive",
+                                "lemma":  "rego",
+                                "english":  "I might have been ruled",
+                                "conjugation":  "3rd",
+                                "1st_sg":  "rectus essem",
+                                "2nd_sg":  "rectus esses",
+                                "3rd_sg":  "rectus esset",
+                                "1st_pl":  "recti essemus",
+                                "2nd_pl":  "recti essetis",
+                                "3rd_pl":  "recti essent",
+                                "principal_parts":  {
+                                                        "present_stem":  "rege",
+                                                        "perfect_stem":  "rex",
+                                                        "perfect_passive_stem":  "rect"
+                                                    }
+                            },
+    "audio_plup_subj_pass":  {
+                                 "type":  "verb",
+                                 "tense":  "pluperfect",
+                                 "mood":  "subjunctive",
+                                 "voice":  "passive",
+                                 "lemma":  "audio",
+                                 "english":  "I might have been heard",
+                                 "conjugation":  "4th",
+                                 "1st_sg":  "auditus essem",
+                                 "2nd_sg":  "auditus esses",
+                                 "3rd_sg":  "auditus esset",
+                                 "1st_pl":  "auditi essemus",
+                                 "2nd_pl":  "auditi essetis",
+                                 "3rd_pl":  "auditi essent",
+                                 "principal_parts":  {
+                                                         "present_stem":  "audi",
+                                                         "perfect_stem":  "audiv",
+                                                         "perfect_passive_stem":  "audit"
+                                                     }
+                             },
+    "magnus":  {
+                   "word":  "magnus",
+                   "type":  "adjective",
+                   "declension":  "1st/2nd",
+                   "forms":  {
+                                 "masculine":  {
+                                                   "dative":  {
+                                                                  "sg":  "magno",
+                                                                  "pl":  "magnis"
+                                                              },
+                                                   "vocative":  {
+                                                                    "sg":  "magne",
+                                                                    "pl":  "magni"
+                                                                },
+                                                   "ablative":  {
+                                                                    "sg":  "magno",
+                                                                    "pl":  "magnis"
+                                                                },
+                                                   "accusative":  {
+                                                                      "sg":  "magnum",
+                                                                      "pl":  "magnos"
+                                                                  },
+                                                   "genitive":  {
+                                                                    "sg":  "magni",
+                                                                    "pl":  "magnorum"
+                                                                },
+                                                   "nominative":  {
+                                                                      "sg":  "magnus",
+                                                                      "pl":  "magni"
+                                                                  }
+                                               },
+                                 "neuter":  {
+                                                "dative":  {
+                                                               "sg":  "magno",
+                                                               "pl":  "magnis"
+                                                           },
+                                                "vocative":  {
+                                                                 "sg":  "magnum",
+                                                                 "pl":  "magna"
+                                                             },
+                                                "ablative":  {
+                                                                 "sg":  "magno",
+                                                                 "pl":  "magnis"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "magnum",
+                                                                   "pl":  "magna"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "magni",
+                                                                 "pl":  "magnorum"
+                                                             },
+                                                "nominative":  {
+                                                                   "sg":  "magnum",
+                                                                   "pl":  "magna"
+                                                               }
+                                            },
+                                 "feminine":  {
+                                                  "dative":  {
+                                                                 "sg":  "magnae",
+                                                                 "pl":  "magnis"
+                                                             },
+                                                  "vocative":  {
+                                                                   "sg":  "magna",
+                                                                   "pl":  "magnae"
+                                                               },
+                                                  "ablative":  {
+                                                                   "sg":  "magna",
+                                                                   "pl":  "magnis"
+                                                               },
+                                                  "accusative":  {
+                                                                     "sg":  "magnam",
+                                                                     "pl":  "magnas"
+                                                                 },
+                                                  "genitive":  {
+                                                                   "sg":  "magnae",
+                                                                   "pl":  "magnarum"
+                                                               },
+                                                  "nominative":  {
+                                                                     "sg":  "magna",
+                                                                     "pl":  "magnae"
+                                                                 }
+                                              }
+                             },
+                   "english":  "great, large",
+                   "stem":  "magn"
+               },
+    "malus":  {
+                  "word":  "malus",
+                  "type":  "adjective",
+                  "declension":  "1st/2nd",
+                  "forms":  {
+                                "masculine":  {
+                                                  "dative":  {
+                                                                 "sg":  "malo",
+                                                                 "pl":  "malis"
+                                                             },
+                                                  "vocative":  {
+                                                                   "sg":  "male",
+                                                                   "pl":  "mali"
+                                                               },
+                                                  "ablative":  {
+                                                                   "sg":  "malo",
+                                                                   "pl":  "malis"
+                                                               },
+                                                  "accusative":  {
+                                                                     "sg":  "malum",
+                                                                     "pl":  "malos"
+                                                                 },
+                                                  "genitive":  {
+                                                                   "sg":  "mali",
+                                                                   "pl":  "malorum"
+                                                               },
+                                                  "nominative":  {
+                                                                     "sg":  "malus",
+                                                                     "pl":  "mali"
+                                                                 }
+                                              },
+                                "neuter":  {
+                                               "dative":  {
+                                                              "sg":  "malo",
+                                                              "pl":  "malis"
+                                                          },
+                                               "vocative":  {
+                                                                "sg":  "malum",
+                                                                "pl":  "mala"
+                                                            },
+                                               "ablative":  {
+                                                                "sg":  "malo",
+                                                                "pl":  "malis"
+                                                            },
+                                               "accusative":  {
+                                                                  "sg":  "malum",
+                                                                  "pl":  "mala"
+                                                              },
+                                               "genitive":  {
+                                                                "sg":  "mali",
+                                                                "pl":  "malorum"
+                                                            },
+                                               "nominative":  {
+                                                                  "sg":  "malum",
+                                                                  "pl":  "mala"
+                                                              }
+                                           },
+                                "feminine":  {
+                                                 "dative":  {
+                                                                "sg":  "malae",
+                                                                "pl":  "malis"
+                                                            },
+                                                 "vocative":  {
+                                                                  "sg":  "mala",
+                                                                  "pl":  "malae"
+                                                              },
+                                                 "ablative":  {
+                                                                  "sg":  "mala",
+                                                                  "pl":  "malis"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "malam",
+                                                                    "pl":  "malas"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "malae",
+                                                                  "pl":  "malarum"
+                                                              },
+                                                 "nominative":  {
+                                                                    "sg":  "mala",
+                                                                    "pl":  "malae"
+                                                                }
+                                             }
+                            },
+                  "english":  "bad, evil",
+                  "stem":  "mal"
+              },
+    "sum_imperf_ind_act":  {
+                               "conjugation":  "irregular",
+                               "1st_pl":  "eramus",
+                               "3rd_pl":  "erant",
+                               "1st_sg":  "eram",
+                               "lemma":  "sum",
+                               "tense":  "imperfect",
+                               "type":  "verb",
+                               "english":  "to be",
+                               "voice":  "active",
+                               "mood":  "indicative",
+                               "3rd_sg":  "erat",
+                               "2nd_sg":  "eras",
+                               "2nd_pl":  "eratis"
+                           },
+    "sum_fut_ind_act":  {
+                            "conjugation":  "irregular",
+                            "1st_pl":  "erimus",
+                            "3rd_pl":  "erunt",
+                            "1st_sg":  "ero",
+                            "lemma":  "sum",
+                            "tense":  "future",
+                            "type":  "verb",
+                            "english":  "to be",
+                            "voice":  "active",
+                            "mood":  "indicative",
+                            "3rd_sg":  "erit",
+                            "2nd_sg":  "eris",
+                            "2nd_pl":  "eritis"
+                        },
+    "sum_perf_ind_act":  {
+                             "conjugation":  "irregular",
+                             "1st_pl":  "fuimus",
+                             "3rd_pl":  "fuerunt",
+                             "1st_sg":  "fui",
+                             "lemma":  "sum",
+                             "tense":  "perfect",
+                             "type":  "verb",
+                             "english":  "to be",
+                             "voice":  "active",
+                             "mood":  "indicative",
+                             "3rd_sg":  "fuit",
+                             "2nd_sg":  "fuisti",
+                             "2nd_pl":  "fuistis"
+                         },
+    "sum_plup_ind_act":  {
+                             "conjugation":  "irregular",
+                             "1st_pl":  "fueramus",
+                             "3rd_pl":  "fuerant",
+                             "1st_sg":  "fueram",
+                             "lemma":  "sum",
+                             "tense":  "pluperfect",
+                             "type":  "verb",
+                             "english":  "to be",
+                             "voice":  "active",
+                             "mood":  "indicative",
+                             "3rd_sg":  "fuerat",
+                             "2nd_sg":  "fueras",
+                             "2nd_pl":  "fueratis"
+                         },
+    "sum_futperf_ind_act":  {
+                                "conjugation":  "irregular",
+                                "1st_pl":  "fuerimus",
+                                "3rd_pl":  "fuerint",
+                                "1st_sg":  "fuero",
+                                "lemma":  "sum",
+                                "tense":  "future perfect",
+                                "type":  "verb",
+                                "english":  "to be",
+                                "voice":  "active",
+                                "mood":  "indicative",
+                                "3rd_sg":  "fuerit",
+                                "2nd_sg":  "fueris",
+                                "2nd_pl":  "fueritis"
+                            },
+    "sum_pres_subj_act":  {
+                              "conjugation":  "irregular",
+                              "1st_pl":  "simus",
+                              "3rd_pl":  "sint",
+                              "1st_sg":  "sim",
+                              "lemma":  "sum",
+                              "tense":  "present",
+                              "type":  "verb",
+                              "english":  "to be",
+                              "voice":  "active",
+                              "mood":  "subjunctive",
+                              "3rd_sg":  "sit",
+                              "2nd_sg":  "sis",
+                              "2nd_pl":  "sitis"
+                          },
+    "sum_imperf_subj_act":  {
+                                "conjugation":  "irregular",
+                                "1st_pl":  "essemus",
+                                "3rd_pl":  "essent",
+                                "1st_sg":  "essem",
+                                "lemma":  "sum",
+                                "tense":  "imperfect",
+                                "type":  "verb",
+                                "english":  "to be",
+                                "voice":  "active",
+                                "mood":  "subjunctive",
+                                "3rd_sg":  "esset",
+                                "2nd_sg":  "esses",
+                                "2nd_pl":  "essetis"
+                            },
+    "sum_perf_subj_act":  {
+                              "conjugation":  "irregular",
+                              "1st_pl":  "fuerimus",
+                              "3rd_pl":  "fuerint",
+                              "1st_sg":  "fuerim",
+                              "lemma":  "sum",
+                              "tense":  "perfect",
+                              "type":  "verb",
+                              "english":  "to be",
+                              "voice":  "active",
+                              "mood":  "subjunctive",
+                              "3rd_sg":  "fuerit",
+                              "2nd_sg":  "fueris",
+                              "2nd_pl":  "fueritis"
+                          },
+    "sum_plup_subj_act":  {
+                              "conjugation":  "irregular",
+                              "1st_pl":  "fuissemus",
+                              "3rd_pl":  "fuissent",
+                              "1st_sg":  "fuissem",
+                              "lemma":  "sum",
+                              "tense":  "pluperfect",
+                              "type":  "verb",
+                              "english":  "to be",
+                              "voice":  "active",
+                              "mood":  "subjunctive",
+                              "3rd_sg":  "fuisset",
+                              "2nd_sg":  "fuisses",
+                              "2nd_pl":  "fuissetis"
+                          }
+}
