@@ -2203,5 +2203,141 @@
                               "3rd_sg":  "fuisset",
                               "2nd_sg":  "fuisses",
                               "2nd_pl":  "fuissetis"
-                          }
+                          },
+    "puer":  {
+                 "word":  "puer",
+                 "gender":  "masculine",
+                 "type":  "noun",
+                 "declension":  "2nd",
+                 "forms":  {
+                               "dative":  {
+                                              "sg":  "puero",
+                                              "pl":  "pueris"
+                                          },
+                               "vocative":  {
+                                                "sg":  "puer",
+                                                "pl":  "pueri"
+                                            },
+                               "ablative":  {
+                                                "sg":  "puero",
+                                                "pl":  "pueris"
+                                            },
+                               "accusative":  {
+                                                  "sg":  "puerum",
+                                                  "pl":  "pueros"
+                                              },
+                               "genitive":  {
+                                                "sg":  "pueri",
+                                                "pl":  "puerorum"
+                                            },
+                               "nominative":  {
+                                                  "sg":  "puer",
+                                                  "pl":  "pueri"
+                                              }
+                           },
+                 "english":  "boy",
+                 "stem":  "puer"
+             },
+    "ignis":  {
+                  "word":  "ignis",
+                  "gender":  "masculine",
+                  "type":  "noun",
+                  "declension":  "3rd",
+                  "forms":  {
+                                "dative":  {
+                                               "sg":  "igni",
+                                               "pl":  "ignibus"
+                                           },
+                                "vocative":  {
+                                                 "sg":  "ignis",
+                                                 "pl":  "ignes"
+                                             },
+                                "ablative":  {
+                                                 "sg":  "igni",
+                                                 "pl":  "ignibus"
+                                             },
+                                "accusative":  {
+                                                   "sg":  "ignem",
+                                                   "pl":  "ignes"
+                                               },
+                                "genitive":  {
+                                                 "sg":  "ignis",
+                                                 "pl":  "ignium"
+                                             },
+                                "nominative":  {
+                                                   "sg":  "ignis",
+                                                   "pl":  "ignes"
+                                               }
+                            },
+                  "english":  "fire",
+                  "stem":  "ign"
+              },
+    "nox":  {
+                "word":  "nox",
+                "gender":  "feminine",
+                "type":  "noun",
+                "declension":  "3rd",
+                "forms":  {
+                              "dative":  {
+                                             "sg":  "nocti",
+                                             "pl":  "noctibus"
+                                         },
+                              "vocative":  {
+                                               "sg":  "nox",
+                                               "pl":  "noctes"
+                                           },
+                              "ablative":  {
+                                               "sg":  "nocte",
+                                               "pl":  "noctibus"
+                                           },
+                              "accusative":  {
+                                                 "sg":  "noctem",
+                                                 "pl":  "noctes"
+                                             },
+                              "genitive":  {
+                                               "sg":  "noctis",
+                                               "pl":  "noctium"
+                                           },
+                              "nominative":  {
+                                                 "sg":  "nox",
+                                                 "pl":  "noctes"
+                                             }
+                          },
+                "english":  "night",
+                "stem":  "noct"
+            },
+    "vis":  {
+                "word":  "vis",
+                "gender":  "feminine",
+                "type":  "noun",
+                "declension":  "3rd",
+                "forms":  {
+                              "dative":  {
+                                             "sg":  "",
+                                             "pl":  "viribus"
+                                         },
+                              "vocative":  {
+                                               "sg":  "vis",
+                                               "pl":  "vires"
+                                           },
+                              "ablative":  {
+                                               "sg":  "vi",
+                                               "pl":  "viribus"
+                                           },
+                              "accusative":  {
+                                                 "sg":  "vim",
+                                                 "pl":  "vires"
+                                             },
+                              "genitive":  {
+                                               "sg":  "",
+                                               "pl":  "virium"
+                                           },
+                              "nominative":  {
+                                                 "sg":  "vis",
+                                                 "pl":  "vires"
+                                             }
+                          },
+                "english":  "force",
+                "stem":  "vi"
+            }
 }

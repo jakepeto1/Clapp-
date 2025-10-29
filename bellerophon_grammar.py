@@ -21,6 +21,94 @@ SMOOTH_BREATHING = '\u0313'  # ᾿
 ROUGH_BREATHING = '\u0314'   # ῾
 IOTA_SUBSCRIPT = '\u0345'    # ͅ (combines with α, η, ω)
 
+class TimeTrialManager:
+    """Manages time trial game state and timer"""
+    def __init__(self, callback_on_game_over=None):
+        self.time_left = 0.0  # seconds
+        self.words_completed = 0
+        self.tables_completed = 0
+        self.is_active = False
+        self.is_game_over = False
+        self.waiting_for_input = False  # True when waiting for first keystroke
+        self.timer_id = None
+        self.callback_on_game_over = callback_on_game_over
+        self.start_time = 30.0  # Initial time in seconds
+        
+    def start(self):
+        """Start a new time trial session"""
+        self.time_left = self.start_time
+        self.words_completed = 0
+        self.tables_completed = 0
+        self.is_active = True
+        self.is_game_over = False
+        self.waiting_for_input = True  # Wait for first keystroke before starting timer
+        
+    def begin_countdown(self):
+        """Actually start the countdown (called on first keystroke)"""
+        self.waiting_for_input = False
+        
+    def stop(self):
+        """Stop the timer"""
+        self.is_active = False
+        if self.timer_id:
+            # Will be cancelled by the update loop checking is_active
+            pass
+    
+    def add_time(self, seconds):
+        """Add bonus time for correct answers"""
+        if self.is_active and not self.is_game_over:
+            self.time_left += seconds
+    
+    def subtract_time(self, seconds):
+        """Subtract time as penalty (e.g., for skipping)"""
+        if self.is_active and not self.is_game_over:
+            self.time_left -= seconds
+            if self.time_left < 0:
+                self.time_left = 0
+    
+    def add_word(self, bonus_seconds=2):
+        """Increment words completed and add time"""
+        if self.is_active and not self.is_game_over:
+            self.words_completed += 1
+            self.add_time(bonus_seconds)
+    
+    def add_table(self, bonus_seconds=5):
+        """Increment tables completed and add time"""
+        if self.is_active and not self.is_game_over:
+            self.tables_completed += 1
+            self.add_time(bonus_seconds)
+    
+    def update_timer(self, delta_seconds=0.1):
+        """Decrease time by delta_seconds (called every 100ms)"""
+        if not self.is_active or self.is_game_over or self.waiting_for_input:
+            return False
+        
+        self.time_left -= delta_seconds
+        
+        if self.time_left <= 0:
+            self.time_left = 0
+            self.is_game_over = True
+            self.is_active = False
+            if self.callback_on_game_over:
+                self.callback_on_game_over()
+            return False
+        
+        return True
+    
+    def get_time_string(self):
+        """Get formatted time string"""
+        return f"{self.time_left:.1f}s"
+    
+    def reset(self):
+        """Reset to initial state"""
+        self.time_left = 0.0
+        self.words_completed = 0
+        self.tables_completed = 0
+        self.is_active = False
+        self.is_game_over = False
+        self.waiting_for_input = False
+        self.timer_id = None
+
 class PracticeConfig:
     """Configuration class for practice settings and toggles"""
     def __init__(self):
@@ -501,6 +589,14 @@ class BellerophonGrammarApp:
         self.latin_star_button = None  # Will be created in show_latin_view
         # Load Latin starred items from file
         self.load_latin_starred_items()
+        
+        # Initialize Time Trial Manager
+        self.time_trial = TimeTrialManager(callback_on_game_over=self.on_time_trial_game_over)
+        self.time_trial_ui_frame = None  # Will be created when time trial is active
+        self.time_trial_high_score = 0
+        self.time_trial_scores_file = "latin_time_trial_scores.json"
+        self.load_time_trial_high_score()
+        
         # Initialize header logo and app icon before any UI code that checks them
         self.header_logo = self.load_header_logo()
         self.latin_header_logo = self.load_latin_header_logo()  # Latin-specific logo
@@ -1719,8 +1815,10 @@ class BellerophonGrammarApp:
         red_wrapper.grid_rowconfigure(1, weight=0)  # Type selector - fixed
         red_wrapper.grid_rowconfigure(2, weight=0)  # Word display - fixed
         red_wrapper.grid_rowconfigure(3, weight=0)  # Verb controls - fixed
-        red_wrapper.grid_rowconfigure(4, weight=1)  # Table area - expands
-        red_wrapper.grid_rowconfigure(5, weight=0)  # Buttons - fixed
+        red_wrapper.grid_rowconfigure(4, weight=0)  # Time trial UI - fixed
+        red_wrapper.grid_rowconfigure(5, weight=1)  # Spacer above table - expands
+        red_wrapper.grid_rowconfigure(6, weight=0)  # Table and buttons - fixed
+        red_wrapper.grid_rowconfigure(7, weight=1)  # Spacer below buttons - expands
         red_wrapper.grid_columnconfigure(0, weight=1)  # Center everything horizontally
         
         # Load Latin paradigms
@@ -1802,6 +1900,15 @@ class BellerophonGrammarApp:
         )
         back_button.grid(row=0, column=2, sticky='ne')
         
+        # Tempus Fugit button
+        self.tempus_button = ttk.Button(
+            title_frame,
+            text="Tempus Fugit",
+            command=self.toggle_time_trial,
+            width=12
+        )
+        self.tempus_button.grid(row=0, column=3, sticky='ne', padx=(6,0))
+        
         # Type and word selection frame (matching Greek layout)
         mode_frame = tk.Frame(red_wrapper, bg='#8B0000')
         mode_frame.grid(row=1, column=0, pady=(0, 20), sticky='ew', padx=20)
@@ -1856,7 +1963,7 @@ class BellerophonGrammarApp:
         ).grid(row=0, column=2, sticky='w', padx=(20, 10))
         
         # Initialize Latin mode variables
-        self.latin_word_var = tk.StringVar(value="femina (woman)")
+        self.latin_word_var = tk.StringVar(value="femina (1st declension)")
         
         # Create word dropdown - only show nouns initially since Type defaults to "Noun"
         latin_words = []
@@ -1867,8 +1974,8 @@ class BellerophonGrammarApp:
                 word_value = word_data.get('word', word_key)
                 if word_value not in seen_nouns:
                     seen_nouns.add(word_value)
-                    english = word_data.get('english', '')
-                    display_text = f"{word_value} ({english})"
+                    declension = word_data.get('declension', '')
+                    display_text = f"{word_value} ({declension} declension)" if declension else word_value
                     latin_words.append(display_text)
         
         word_dropdown = ttk.Combobox(
@@ -2006,17 +2113,74 @@ class BellerophonGrammarApp:
         # Initially hide verb controls (will show when verb is selected)
         self.latin_verb_controls_frame.grid_remove()
         
-        # Table container
-        table_container = tk.Frame(red_wrapper, bg='#8B0000')
-        table_container.grid(row=4, column=0, sticky='nsew', padx=20, pady=(10, 0))
-        table_container.grid_columnconfigure(0, weight=1)  # Left padding
-        table_container.grid_columnconfigure(1, weight=0)  # Table content
-        table_container.grid_columnconfigure(2, weight=1)  # Right padding
-        table_container.grid_rowconfigure(0, weight=1)
+        # Time Trial UI Frame (initially hidden)
+        self.time_trial_ui_frame = tk.Frame(red_wrapper, bg='#8B0000')
+        self.time_trial_ui_frame.grid(row=4, column=0, pady=(5, 5), sticky='ew', padx=20)
+        self.time_trial_ui_frame.grid_columnconfigure(0, weight=1)
+        self.time_trial_ui_frame.grid_columnconfigure(1, weight=1)
+        self.time_trial_ui_frame.grid_columnconfigure(2, weight=1)
+        self.time_trial_ui_frame.grid_columnconfigure(3, weight=1)
         
-        # Create the table frame with red background
-        self.latin_table_frame = tk.Frame(table_container, bg='#8B0000')
-        self.latin_table_frame.grid(row=0, column=1, sticky='n', padx=10, pady=0)
+        # Timer display
+        self.time_trial_timer_label = tk.Label(
+            self.time_trial_ui_frame,
+            text="Time: 30.0s",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 18, 'bold')
+        )
+        self.time_trial_timer_label.grid(row=0, column=0, padx=10)
+        
+        # Words completed
+        self.time_trial_words_label = tk.Label(
+            self.time_trial_ui_frame,
+            text="Words: 0",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 14)
+        )
+        self.time_trial_words_label.grid(row=0, column=1, padx=10)
+        
+        # Tables completed
+        self.time_trial_tables_label = tk.Label(
+            self.time_trial_ui_frame,
+            text="Tables: 0",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 14)
+        )
+        self.time_trial_tables_label.grid(row=0, column=2, padx=10)
+        
+        # High score
+        self.time_trial_high_score_label = tk.Label(
+            self.time_trial_ui_frame,
+            text=f"High Score: {self.time_trial_high_score}",
+            bg='#8B0000',
+            fg='#FFD700',
+            font=('Arial', 14, 'bold')
+        )
+        self.time_trial_high_score_label.grid(row=0, column=3, padx=10)
+        
+        # Time bonus animation label (initially hidden)
+        self.time_bonus_label = tk.Label(
+            self.time_trial_ui_frame,
+            text="",
+            bg='#8B0000',
+            fg='#00FF00',
+            font=('Arial', 16, 'bold')
+        )
+        self.time_bonus_label.grid(row=1, column=0, columnspan=4)
+        
+        # Initially hide time trial UI
+        self.time_trial_ui_frame.grid_remove()
+        
+        # Create a centered content container for table and buttons
+        content_container = tk.Frame(red_wrapper, bg='#8B0000')
+        content_container.grid(row=6, column=0, sticky='')  # No sticky = centered
+        
+        # Table frame - centered in content_container
+        self.latin_table_frame = tk.Frame(content_container, bg='#8B0000')
+        self.latin_table_frame.grid(row=0, column=0, pady=(0, 20))
         
         # Initialize entries dictionary and tracking for Latin
         self.latin_entries = {}
@@ -2039,9 +2203,9 @@ class BellerophonGrammarApp:
         else:
             self.create_latin_noun_table()
         
-        # Button frame
-        button_frame = tk.Frame(red_wrapper, bg='#8B0000')
-        button_frame.grid(row=5, column=0, pady=(15, 20))
+        # Button frame - centered below table in content_container
+        button_frame = tk.Frame(content_container, bg='#8B0000')
+        button_frame.grid(row=1, column=0)
         
         # Reveal button
         self.latin_reveal_button = ttk.Button(
@@ -2061,14 +2225,14 @@ class BellerophonGrammarApp:
         )
         self.latin_reset_retry_button.pack(side='left', padx=5)
         
-        # Next button
-        latin_next_button = ttk.Button(
+        # Next/Skip button (changes during time trial)
+        self.latin_next_button = ttk.Button(
             button_frame,
             text="Next",
-            command=self.next_latin_word,
+            command=self.latin_next_or_skip,
             width=15
         )
-        latin_next_button.pack(side='left', padx=5)
+        self.latin_next_button.pack(side='left', padx=5)
     
     def create_latin_noun_table(self):
         """Create table for Latin noun declensions."""
@@ -2148,6 +2312,7 @@ class BellerophonGrammarApp:
             entry_sg.grid(row=i, column=1, padx=5, pady=6, sticky='ew')
             self.latin_entries[f"{case}_sg"] = entry_sg
             entry_sg.bind('<Return>', lambda e, c=case: self.check_latin_single_entry(f"{c}_sg"))
+            entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
             
             # Plural entry
             entry_pl = tk.Entry(
@@ -2160,10 +2325,43 @@ class BellerophonGrammarApp:
             entry_pl.grid(row=i, column=2, padx=5, pady=6, sticky='ew')
             self.latin_entries[f"{case}_pl"] = entry_pl
             entry_pl.bind('<Return>', lambda e, c=case: self.check_latin_single_entry(f"{c}_pl"))
+            entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
+        
+        # Mark unattested forms as readonly and grey
+        self.mark_unattested_latin_forms(paradigm)
         
         # Apply prefill stems if enabled
         if self.config.prefill_stems.get():
             self.apply_latin_prefill_stems()
+    
+    def mark_unattested_latin_forms(self, paradigm):
+        """Mark unattested forms (empty strings) as readonly with grey background."""
+        if paradigm.get('type') == 'noun':
+            cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+            for case in cases:
+                for number in ["sg", "pl"]:
+                    entry_key = f"{case}_{number}"
+                    if entry_key in self.latin_entries:
+                        # Check if the form is empty (unattested)
+                        form_value = paradigm.get('forms', {}).get(case.lower(), {}).get(number, None)
+                        if form_value == "":
+                            # Mark as readonly and grey
+                            entry = self.latin_entries[entry_key]
+                            entry.configure(state='readonly', readonlybackground='#D3D3D3')  # Light grey
+        elif paradigm.get('type') == 'adjective':
+            cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+            genders = ["masculine", "feminine", "neuter"]
+            for case in cases:
+                for gender in genders:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{gender}_{number}"
+                        if entry_key in self.latin_entries:
+                            # Check if the form is empty (unattested)
+                            form_value = paradigm.get('forms', {}).get(gender, {}).get(case, {}).get(number, None)
+                            if form_value == "":
+                                # Mark as readonly and grey
+                                entry = self.latin_entries[entry_key]
+                                entry.configure(state='readonly', readonlybackground='#D3D3D3')  # Light grey
     
     def create_latin_adjective_table(self):
         """Create table for Latin adjective declensions (masculine, feminine, neuter)."""
@@ -2282,6 +2480,7 @@ class BellerophonGrammarApp:
                 key_sg = f"{case}_{gender}_sg"
                 self.latin_entries[key_sg] = entry_sg
                 entry_sg.bind('<Return>', lambda e, k=key_sg: self.check_latin_single_entry(k))
+                entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
                 
                 # Plural entry
                 entry_pl = tk.Entry(
@@ -2295,6 +2494,13 @@ class BellerophonGrammarApp:
                 key_pl = f"{case}_{gender}_pl"
                 self.latin_entries[key_pl] = entry_pl
                 entry_pl.bind('<Return>', lambda e, k=key_pl: self.check_latin_single_entry(k))
+                entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
+                key_pl = f"{case}_{gender}_pl"
+                self.latin_entries[key_pl] = entry_pl
+                entry_pl.bind('<Return>', lambda e, k=key_pl: self.check_latin_single_entry(k))
+        
+        # Mark unattested forms as readonly and grey
+        self.mark_unattested_latin_forms(paradigm)
     
     def create_latin_verb_table(self):
         """Create the Latin verb conjugation table."""
@@ -2350,7 +2556,7 @@ class BellerophonGrammarApp:
             bg='#8B0000',
             fg='white',
             font=('Arial', 12, 'bold')
-        ).grid(row=0, column=0, padx=10, pady=10, sticky='e')
+        ).grid(row=0, column=0, padx=10, pady=5, sticky='e')
         
         tk.Label(
             self.latin_table_frame,
@@ -2358,7 +2564,7 @@ class BellerophonGrammarApp:
             bg='#8B0000',
             fg='white',
             font=('Arial', 12, 'bold')
-        ).grid(row=0, column=1, padx=10, pady=10)
+        ).grid(row=0, column=1, padx=10, pady=5)
         
         tk.Label(
             self.latin_table_frame,
@@ -2366,7 +2572,7 @@ class BellerophonGrammarApp:
             bg='#8B0000',
             fg='white',
             font=('Arial', 12, 'bold')
-        ).grid(row=0, column=2, padx=10, pady=10)
+        ).grid(row=0, column=2, padx=10, pady=5)
         
         # Create rows for each person (1st, 2nd, 3rd)
         persons = ["1st", "2nd", "3rd"]
@@ -2380,7 +2586,7 @@ class BellerophonGrammarApp:
                 fg='white',
                 font=('Arial', 12, 'bold')
             )
-            person_label.grid(row=i, column=0, padx=10, pady=6, sticky='e')
+            person_label.grid(row=i, column=0, padx=10, pady=4, sticky='e')
             
             # Singular entry
             entry_sg = tk.Entry(
@@ -2390,9 +2596,10 @@ class BellerophonGrammarApp:
                 relief='solid',
                 borderwidth=1
             )
-            entry_sg.grid(row=i, column=1, padx=5, pady=6, sticky='ew')
+            entry_sg.grid(row=i, column=1, padx=5, pady=4, sticky='ew')
             self.latin_entries[f"{person}_sg"] = entry_sg
             entry_sg.bind('<Return>', lambda e, p=person: self.check_latin_single_entry(f"{p}_sg"))
+            entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
             
             # Plural entry
             entry_pl = tk.Entry(
@@ -2402,8 +2609,10 @@ class BellerophonGrammarApp:
                 relief='solid',
                 borderwidth=1
             )
-            entry_pl.grid(row=i, column=2, padx=5, pady=6, sticky='ew')
+            entry_pl.grid(row=i, column=2, padx=5, pady=4, sticky='ew')
             self.latin_entries[f"{person}_pl"] = entry_pl
+            entry_pl.bind('<Return>', lambda e, p=person: self.check_latin_single_entry(f"{p}_pl"))
+            entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
             entry_pl.bind('<Return>', lambda e, p=person: self.check_latin_single_entry(f"{p}_pl"))
         
         # Apply prefill stems if enabled
@@ -2657,24 +2866,24 @@ class BellerophonGrammarApp:
                         display = f"{word} ({voice} {tense} {mood})"
                         latin_words.append(display)
                     elif word_type == "Noun":
-                        # Find English translation
-                        english = ""
+                        # Find declension
+                        declension = ""
                         for key, data in self.latin_paradigms.items():
                             word_value = data.get('word', '')
                             if word_value == word and data.get('type') == 'noun':
-                                english = data.get('english', '')
+                                declension = data.get('declension', '')
                                 break
-                        display = f"{word} ({english})" if english else word
+                        display = f"{word} ({declension} declension)" if declension else word
                         latin_words.append(display)
                     elif word_type == "Adjective":
-                        # Find English translation
-                        english = ""
+                        # Find declension
+                        declension = ""
                         for key, data in self.latin_paradigms.items():
                             word_value = data.get('word', '')
                             if word_value == word and data.get('type') == 'adjective':
-                                english = data.get('english', '')
+                                declension = data.get('declension', '')
                                 break
-                        display = f"{word} ({english})" if english else word
+                        display = f"{word} ({declension} declension)" if declension else word
                         latin_words.append(display)
         else:
             # Regular type selection
@@ -2684,8 +2893,8 @@ class BellerophonGrammarApp:
                     # Only add unique nouns (avoid duplicates)
                     if word_value not in seen_nouns:
                         seen_nouns.add(word_value)
-                        english = word_data.get('english', '')
-                        display_text = f"{word_value} ({english})"
+                        declension = word_data.get('declension', '')
+                        display_text = f"{word_value} ({declension} declension)" if declension else word_value
                         latin_words.append(display_text)
                 elif latin_type == "Verb" and word_data.get('type') == 'verb':
                     lemma = word_data.get('lemma', word_key)
@@ -2700,8 +2909,8 @@ class BellerophonGrammarApp:
                     # Only add unique adjectives
                     if word_value not in seen_adjectives:
                         seen_adjectives.add(word_value)
-                        english = word_data.get('english', '')
-                        display_text = f"{word_value} ({english})"
+                        declension = word_data.get('declension', '')
+                        display_text = f"{word_value} ({declension} declension)" if declension else word_value
                         latin_words.append(display_text)
         
         if latin_words:
@@ -2753,6 +2962,7 @@ class BellerophonGrammarApp:
             # Apply noun stems
             stem = paradigm.get('stem', '')
             stem_nom_sg = paradigm.get('stem_nom_sg', stem)  # Some nouns have different nominative singular stem
+            declension = paradigm.get('declension', '')
             
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
             
@@ -2761,6 +2971,11 @@ class BellerophonGrammarApp:
                     entry_key = f"{case}_{number}"
                     if entry_key in self.latin_entries:
                         entry = self.latin_entries[entry_key]
+                        
+                        # Skip nominative singular for 3rd declension (irregular stem)
+                        if declension == "3rd" and case == "Nominative" and number == "sg":
+                            continue
+                        
                         # Use special nom sg stem if it's nominative singular, otherwise regular stem
                         if case == "Nominative" and number == "sg":
                             entry.delete(0, tk.END)
@@ -2853,136 +3068,27 @@ class BellerophonGrammarApp:
                             # Don't change text color - keep it black for readability
     
     def clear_latin_prefill_stems(self):
-        """Clear only the user-entered endings, preserve the prefilled stems."""
-        if not self.config.prefill_stems.get():
-            return
-            
-        # Get the current paradigm to determine stems
-        word_display = self.latin_word_var.get()
-        word = word_display.split(' (')[0]
-        
-        # Find paradigm
-        paradigm = None
-        for key, data in self.latin_paradigms.items():
-            if data.get('type') == 'noun' and data.get('word') == word:
-                paradigm = data
-                break
-            elif data.get('type') == 'verb' and data.get('lemma') == word:
-                # For verbs, match current tense/voice/mood
-                if (data.get('tense') == self.latin_tense_var.get() and
-                    data.get('voice') == self.latin_voice_var.get() and
-                    data.get('mood') == self.latin_mood_var.get()):
-                    paradigm = data
-                    break
-        
-        if not paradigm:
-            return
-            
-        if paradigm.get('type') == 'noun':
-            # Get the stems
-            stem = paradigm.get('stem', '')
-            stem_nom_sg = paradigm.get('stem_nom_sg', stem)
-            
-            # Reset to just the stems
-            cases = ["Nominative", "Genitive", "Dative", "Accusative", "Ablative", "Vocative"]
-            for case in cases:
-                for number in ["sg", "pl"]:
-                    entry_key = f"{case}_{number}"
-                    if entry_key in self.latin_entries:
-                        entry = self.latin_entries[entry_key]
-                        entry.delete(0, tk.END)
-                        # Use special nom sg stem if it's nominative singular, otherwise regular stem
-                        if case == "Nominative" and number == "sg":
-                            entry.insert(0, stem_nom_sg)
-                        else:
-                            entry.insert(0, stem)
-                        
-        elif paradigm.get('type') == 'verb':
-            # Hardcoded verb stems for accuracy (same as apply_latin_prefill_stems)
-            lemma = paradigm.get('lemma')
-            tense = paradigm.get('tense')
-            voice = paradigm.get('voice')
-            
-            # Define hardcoded stems for each verb
-            verb_stems = {
-                'amo': {
-                    'present': 'am',
-                    'imperfect': 'am',
-                    'future': 'am',
-                    'perfect_active': 'amav',
-                    'pluperfect_active': 'amav',
-                    'future_perfect_active': 'amav',
-                    'perfect_passive': 'amat',
-                    'pluperfect_passive': 'amat',
-                    'future_perfect_passive': 'amat'
-                },
-                'audio': {
-                    'present': 'audi',
-                    'imperfect': 'audi',
-                    'future': 'audi',
-                    'perfect_active': 'audiv',
-                    'pluperfect_active': 'audiv',
-                    'future_perfect_active': 'audiv',
-                    'perfect_passive': 'audit',
-                    'pluperfect_passive': 'audit',
-                    'future_perfect_passive': 'audit'
-                },
-                'rego': {
-                    'present': 'reg',
-                    'imperfect': 'reg',
-                    'future': 'reg',
-                    'perfect_active': 'rex',
-                    'pluperfect_active': 'rex',
-                    'future_perfect_active': 'rex',
-                    'perfect_passive': 'rect',
-                    'pluperfect_passive': 'rect',
-                    'future_perfect_passive': 'rect'
-                },
-                'moneo': {
-                    'present': 'mone',
-                    'imperfect': 'mone',
-                    'future': 'mone',
-                    'perfect_active': 'monu',
-                    'pluperfect_active': 'monu',
-                    'future_perfect_active': 'monu',
-                    'perfect_passive': 'monit',
-                    'pluperfect_passive': 'monit',
-                    'future_perfect_passive': 'monit'
-                },
-                'sum': {
-                    # sum has no stems - will be empty string
-                }
-            }
-            
-            stem = ''
-            if lemma in verb_stems:
-                stems = verb_stems[lemma]
-                
-                # Determine which stem to use based on tense and voice
-                if tense in ['present', 'imperfect', 'future']:
-                    stem = stems.get(tense, '')
-                elif tense in ['perfect', 'pluperfect', 'future perfect']:
-                    if voice == 'passive':
-                        stem = stems.get(f'{tense.replace(" ", "_")}_passive', '')
-                    else:
-                        stem = stems.get(f'{tense.replace(" ", "_")}_active', '')
-            
-            # Reset to just the stems (only if stem is not empty)
-            if stem:
-                persons = ["1st", "2nd", "3rd"]
-                for person in persons:
-                    for number in ["sg", "pl"]:
-                        entry_key = f"{person}_{number}"
-                        if entry_key in self.latin_entries:
-                            entry = self.latin_entries[entry_key]
-                            entry.delete(0, tk.END)
-                            entry.insert(0, stem)
+        """Clear all prefilled stems from entries."""
+        # Simply clear all entries when prefill is turned off
+        for entry_key, entry in self.latin_entries.items():
+            # Skip entries that are already readonly (correct answers or unattested forms)
+            if str(entry.cget('state')) != 'readonly':
+                entry.delete(0, tk.END)
     
     def reveal_latin_answers(self):
         """Reveal answers for Latin table and track incorrect ones."""
         # Prevent revealing twice in a row
         if self.latin_has_revealed:
             return
+        
+        # Apply time penalty if in time trial mode
+        if self.time_trial.is_active:
+            self.time_trial.subtract_time(5)
+            # Start countdown if not started yet
+            if self.time_trial.waiting_for_input:
+                self.time_trial.begin_countdown()
+            # Update UI to show time decrease
+            self.update_time_trial_ui()
         
         word_display = self.latin_word_var.get()
         word = word_display.split(' (')[0]
@@ -3021,8 +3127,13 @@ class BellerophonGrammarApp:
                         entry_key = f"{case}_{gender}_{number}"
                         if entry_key in self.latin_entries:
                             entry = self.latin_entries[entry_key]
-                            user_answer = entry.get().strip()
                             correct_answer = paradigm['forms'][gender][case][number]
+                            
+                            # Skip unattested forms (empty strings) - they're already grey and readonly
+                            if correct_answer == "":
+                                continue
+                            
+                            user_answer = entry.get().strip()
                             
                             if user_answer.lower() == correct_answer.lower():
                                 entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
@@ -3044,8 +3155,13 @@ class BellerophonGrammarApp:
                     entry_key = f"{case}_{number}"
                     if entry_key in self.latin_entries:
                         entry = self.latin_entries[entry_key]
-                        user_answer = entry.get().strip()
                         correct_answer = paradigm['forms'][case.lower()][number]
+                        
+                        # Skip unattested forms (empty strings) - they're already grey and readonly
+                        if correct_answer == "":
+                            continue
+                        
+                        user_answer = entry.get().strip()
                         
                         if user_answer.lower() == correct_answer.lower():
                             entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
@@ -3192,6 +3308,22 @@ class BellerophonGrammarApp:
         else:
             # Before reveal or no incorrect entries - show as Reset
             self.latin_reset_retry_button.configure(text="Reset", state='normal')
+    
+    def latin_next_or_skip(self):
+        """Handle Next button click - becomes Skip with penalty during time trial"""
+        if self.time_trial.is_active:
+            # Time trial mode: Skip with -10s penalty
+            self.time_trial.subtract_time(10)
+            # Start countdown if not started yet
+            if self.time_trial.waiting_for_input:
+                self.time_trial.begin_countdown()
+            # Update UI to show time decrease
+            self.update_time_trial_ui()
+            # Load next word
+            self.random_latin_next()
+        else:
+            # Normal mode: Regular next
+            self.next_latin_word()
     
     def next_latin_word(self):
         """Navigate to the next Latin word/verb combination in the dropdown list."""
@@ -3502,10 +3634,21 @@ class BellerophonGrammarApp:
         if correct_answer is None:
             return
         
+        # Skip unattested forms (empty strings)
+        if correct_answer == "":
+            return
+        
         is_correct = user_answer.lower() == correct_answer.lower()
         
         if is_correct:
             entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
+            
+            # Time Trial: Award time for correct word (reduced if prefill stems enabled)
+            if self.time_trial.is_active:
+                word_bonus = 1 if self.config.prefill_stems.get() else 2
+                self.time_trial.add_word(word_bonus)
+                self.show_time_bonus(word_bonus)
+                self.update_time_trial_ui()
             
             # Check if all entries are now readonly and auto-advance is enabled
             auto_advance_enabled = False
@@ -3513,6 +3656,13 @@ class BellerophonGrammarApp:
                 auto_advance_enabled = self.config.auto_advance.get()
             
             all_correct = all(str(e.cget('state')) == 'readonly' for e in self.latin_entries.values())
+            
+            # Time Trial: Award time for completed table (reduced if prefill stems enabled)
+            if all_correct and self.time_trial.is_active:
+                table_bonus = 3 if self.config.prefill_stems.get() else 5
+                self.time_trial.add_table(table_bonus)
+                self.show_time_bonus(table_bonus)
+                self.update_time_trial_ui()
             
             if all_correct and auto_advance_enabled:
                 # Auto-advance to next table
@@ -3544,32 +3694,33 @@ class BellerophonGrammarApp:
             except ValueError:
                 return
             
-            # Navigation order: move right (sg->pl), then down (next case), then to next gender column
-            # Current order in table: masculine_sg, masculine_pl, feminine_sg, feminine_pl, neuter_sg, neuter_pl
+            # Navigation order: move DOWN (next case), then right (next gender/number in same case)
+            # This matches noun and verb behavior - downward movement first
             
-            # Try moving to plural in same case and gender
-            if number == "sg":
-                next_key = f"{case}_{gender}_pl"
-                if next_key in self.latin_entries:
-                    next_entry = self.latin_entries[next_key]
-                    if str(next_entry.cget('state')) != 'readonly':
-                        next_entry.focus()
-                        return
-            
-            # Move to next gender's singular
-            if number == "pl" and gender_idx < len(genders) - 1:
-                next_gender = genders[gender_idx + 1]
-                next_key = f"{case}_{next_gender}_sg"
-                if next_key in self.latin_entries:
-                    next_entry = self.latin_entries[next_key]
-                    if str(next_entry.cget('state')) != 'readonly':
-                        next_entry.focus()
-                        return
-            
-            # Move to next case, first gender, singular
+            # Try moving to next case in same gender and number (downward movement)
             if case_idx < len(cases) - 1:
-                next_case = cases[case_idx + 1]
-                next_key = f"{next_case}_masculine_sg"
+                for i in range(case_idx + 1, len(cases)):
+                    next_key = f"{cases[i]}_{gender}_{number}"
+                    if next_key in self.latin_entries:
+                        next_entry = self.latin_entries[next_key]
+                        if str(next_entry.cget('state')) != 'readonly':
+                            next_entry.focus()
+                            return
+            
+            # Finished all cases in current column, move to next column
+            # Order: masc_sg -> masc_pl -> fem_sg -> fem_pl -> neut_sg -> neut_pl
+            if number == "sg":
+                # Move to plural in same gender
+                next_key = f"nominative_{gender}_pl"
+                if next_key in self.latin_entries:
+                    next_entry = self.latin_entries[next_key]
+                    if str(next_entry.cget('state')) != 'readonly':
+                        next_entry.focus()
+                        return
+            elif number == "pl" and gender_idx < len(genders) - 1:
+                # Move to next gender's singular
+                next_gender = genders[gender_idx + 1]
+                next_key = f"nominative_{next_gender}_sg"
                 if next_key in self.latin_entries:
                     next_entry = self.latin_entries[next_key]
                     if str(next_entry.cget('state')) != 'readonly':
@@ -8935,6 +9086,255 @@ Tips:
             print(f"Saved {len(self.latin_starred_items)} Latin starred items")
         except Exception as e:
             print(f"Error saving Latin starred items: {e}")
+    
+    def load_time_trial_high_score(self):
+        """Load time trial high score from file."""
+        try:
+            if os.path.exists(self.time_trial_scores_file):
+                with open(self.time_trial_scores_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.time_trial_high_score = data.get('high_score', 0)
+                    print(f"Loaded time trial high score: {self.time_trial_high_score}")
+        except Exception as e:
+            print(f"Error loading time trial high score: {e}")
+            self.time_trial_high_score = 0
+    
+    def save_time_trial_high_score(self, score):
+        """Save time trial high score to file."""
+        try:
+            if score > self.time_trial_high_score:
+                self.time_trial_high_score = score
+                with open(self.time_trial_scores_file, 'w', encoding='utf-8') as f:
+                    json.dump({'high_score': score}, f, indent=2)
+                print(f"New high score saved: {score}")
+                return True
+            return False
+        except Exception as e:
+            print(f"Error saving time trial high score: {e}")
+            return False
+    
+    def toggle_time_trial(self):
+        """Toggle time trial mode on/off"""
+        if not self.time_trial.is_active:
+            # Start time trial
+            self.start_time_trial()
+        else:
+            # Stop time trial
+            self.stop_time_trial()
+    
+    def start_time_trial(self):
+        """Start a new time trial session"""
+        # Initialize time trial
+        self.time_trial.start()
+        
+        # Save current settings and enable them for time trial
+        self.time_trial_saved_auto_advance = self.config.auto_advance.get()
+        self.time_trial_saved_randomize_next = self.config.randomize_next.get()
+        self.time_trial_saved_lock_current_type = self.config.lock_current_type.get()
+        self.config.auto_advance.set(True)
+        self.config.randomize_next.set(True)
+        self.config.lock_current_type.set(False)  # Uncheck lock type
+        
+        # Show lock type checkbox (but unchecked)
+        if hasattr(self, 'latin_lock_type_cb'):
+            try:
+                self.latin_lock_type_cb.grid()
+            except tk.TclError:
+                pass
+        
+        # Update button texts
+        self.tempus_button.config(text="Stop Trial")
+        self.latin_next_button.config(text="Skip (-10s)")
+        self.latin_reveal_button.config(text="Reveal (-5s)")
+        
+        # Show time trial UI
+        self.time_trial_ui_frame.grid()
+        
+        # Load a new random word/table to start
+        self.random_latin_next()
+        
+        # Update UI
+        self.update_time_trial_ui()
+        
+        # Start timer loop
+        self.time_trial_timer_loop()
+    
+    def stop_time_trial(self):
+        """Stop the time trial session"""
+        self.time_trial.stop()
+        
+        # Restore previous settings
+        if hasattr(self, 'time_trial_saved_auto_advance'):
+            self.config.auto_advance.set(self.time_trial_saved_auto_advance)
+        if hasattr(self, 'time_trial_saved_randomize_next'):
+            self.config.randomize_next.set(self.time_trial_saved_randomize_next)
+        if hasattr(self, 'time_trial_saved_lock_current_type'):
+            self.config.lock_current_type.set(self.time_trial_saved_lock_current_type)
+        
+        # Hide lock type checkbox if randomize was disabled before
+        if hasattr(self, 'time_trial_saved_randomize_next') and not self.time_trial_saved_randomize_next:
+            if hasattr(self, 'latin_lock_type_cb'):
+                try:
+                    self.latin_lock_type_cb.grid_remove()
+                except tk.TclError:
+                    pass
+        
+        # Update button texts
+        self.tempus_button.config(text="Tempus Fugit")
+        self.latin_next_button.config(text="Next")
+        self.latin_reveal_button.config(text="Reveal Answers")
+        
+        # Hide time trial UI
+        self.time_trial_ui_frame.grid_remove()
+        
+        # Hide bonus label
+        self.time_bonus_label.config(text="")
+    
+    def time_trial_timer_loop(self):
+        """Main timer loop - updates every 100ms"""
+        if not self.time_trial.is_active:
+            return
+        
+        # Update timer (will not decrease time if waiting_for_input is True)
+        self.time_trial.update_timer(0.1)
+        
+        # Update UI
+        self.update_time_trial_ui()
+        
+        # Schedule next update (continue even if waiting for input)
+        self.root.after(100, self.time_trial_timer_loop)
+    
+    def on_time_trial_first_keystroke(self, event):
+        """Called when user types first character in time trial mode"""
+        if self.time_trial.is_active and self.time_trial.waiting_for_input:
+            self.time_trial.begin_countdown()
+    
+    def update_time_trial_ui(self):
+        """Update time trial UI elements"""
+        # Update timer display
+        time_str = f"Time: {self.time_trial.time_left:.1f}s"
+        self.time_trial_timer_label.config(text=time_str)
+        
+        # Change color if low on time
+        if self.time_trial.time_left <= 5.0:
+            self.time_trial_timer_label.config(fg='#FF0000')  # Red
+        else:
+            self.time_trial_timer_label.config(fg='white')
+        
+        # Update counters
+        self.time_trial_words_label.config(text=f"Words: {self.time_trial.words_completed}")
+        self.time_trial_tables_label.config(text=f"Tables: {self.time_trial.tables_completed}")
+    
+    def show_time_bonus(self, seconds):
+        """Show floating +time animation"""
+        self.time_bonus_label.config(text=f"+{seconds}s")
+        # Hide after 800ms
+        self.root.after(800, lambda: self.time_bonus_label.config(text=""))
+    
+    def on_time_trial_game_over(self):
+        """Called when time trial ends"""
+        # Check if new high score
+        final_score = self.time_trial.words_completed
+        is_new_high_score = self.save_time_trial_high_score(final_score)
+        
+        # Update high score display
+        self.time_trial_high_score_label.config(text=f"High Score: {self.time_trial_high_score}")
+        
+        # Show game over dialog
+        self.show_time_trial_game_over_dialog(is_new_high_score)
+    
+    def show_time_trial_game_over_dialog(self, is_new_high_score):
+        """Show game over dialog with results"""
+        # Create dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Time's Up!")
+        dialog.geometry("400x300")
+        dialog.configure(bg='#8B0000')
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Define exit function that stops time trial and closes dialog
+        def exit_trial():
+            dialog.destroy()
+            self.stop_time_trial()
+        
+        # Set protocol for window close (X button)
+        dialog.protocol("WM_DELETE_WINDOW", exit_trial)
+        
+        # Center the dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
+        y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
+        dialog.geometry(f"+{x}+{y}")
+        
+        # Title
+        title_label = tk.Label(
+            dialog,
+            text="TEMPUS FUGIT!",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 24, 'bold')
+        )
+        title_label.pack(pady=20)
+        
+        # Stats
+        stats_frame = tk.Frame(dialog, bg='#8B0000')
+        stats_frame.pack(pady=10)
+        
+        tk.Label(
+            stats_frame,
+            text=f"Words Completed: {self.time_trial.words_completed}",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 14)
+        ).pack(pady=5)
+        
+        tk.Label(
+            stats_frame,
+            text=f"Tables Completed: {self.time_trial.tables_completed}",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 14)
+        ).pack(pady=5)
+        
+        if is_new_high_score:
+            tk.Label(
+                stats_frame,
+                text="🎉 NEW HIGH SCORE! 🎉",
+                bg='#8B0000',
+                fg='#FFD700',
+                font=('Arial', 16, 'bold')
+            ).pack(pady=10)
+        else:
+            tk.Label(
+                stats_frame,
+                text=f"High Score: {self.time_trial_high_score}",
+                bg='#8B0000',
+                fg='#FFD700',
+                font=('Arial', 14)
+            ).pack(pady=10)
+        
+        # Buttons
+        button_frame = tk.Frame(dialog, bg='#8B0000')
+        button_frame.pack(pady=20)
+        
+        def restart():
+            dialog.destroy()
+            self.start_time_trial()
+        
+        ttk.Button(
+            button_frame,
+            text="Try Again",
+            command=restart,
+            width=12
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Exit",
+            command=exit_trial,
+            width=12
+        ).pack(side='left', padx=5)
 
     def get_available_latin_types(self):
         """Get the list of available Latin types based on whether starred items exist."""
@@ -9405,14 +9805,14 @@ Tips:
                             display = f"{word} ({voice} {tense} {mood})"
                             remaining_words.append(display)
                         elif word_type == "Noun":
-                            # Find English translation
-                            english = ""
+                            # Find declension
+                            declension = ""
                             for key, data in self.latin_paradigms.items():
                                 word_value = data.get('word', '')
                                 if word_value == word and data.get('type') == 'noun':
-                                    english = data.get('english', '')
+                                    declension = data.get('declension', '')
                                     break
-                            display = f"{word} ({english})" if english else word
+                            display = f"{word} ({declension} declension)" if declension else word
                             remaining_words.append(display)
                 
                 if remaining_words:
