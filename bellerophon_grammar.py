@@ -118,10 +118,10 @@ class PracticeConfig:
         self.randomize_next = tk.BooleanVar(value=False)
         self.lock_current_type = tk.BooleanVar(value=False)
         self.auto_advance = tk.BooleanVar(value=False)
+        self.hide_vocative = tk.BooleanVar(value=False)  # New: Hide vocative case
         # Future toggles can be added here
         # self.ignore_accents = tk.BooleanVar(value=False)
         # self.show_hints = tk.BooleanVar(value=True)
-        # self.auto_advance = tk.BooleanVar(value=False)
     
     def get_setting(self, setting_name):
         """Get the value of a specific setting"""
@@ -138,8 +138,72 @@ class PracticeConfig:
         self.prefill_stems.set(False)
         self.randomize_next.set(False)
         self.lock_current_type.set(False)
+        self.auto_advance.set(False)
+        self.hide_vocative.set(False)
+
+    def to_dict(self):
+        """Serialize settings to a plain dict (JSON-friendly)."""
+        return {
+            'ignore_breathings': bool(self.ignore_breathings.get()),
+            'prefill_stems': bool(self.prefill_stems.get()),
+            'randomize_next': bool(self.randomize_next.get()),
+            'lock_current_type': bool(self.lock_current_type.get()),
+            'auto_advance': bool(self.auto_advance.get()),
+            'hide_vocative': bool(self.hide_vocative.get()),
+        }
+
+    def apply_from_dict(self, data: dict):
+        """Apply settings from a plain dict; missing keys keep current defaults."""
+        if not isinstance(data, dict):
+            return
+        if 'ignore_breathings' in data:
+            self.ignore_breathings.set(bool(data['ignore_breathings']))
+        if 'prefill_stems' in data:
+            self.prefill_stems.set(bool(data['prefill_stems']))
+        if 'randomize_next' in data:
+            self.randomize_next.set(bool(data['randomize_next']))
+        if 'lock_current_type' in data:
+            self.lock_current_type.set(bool(data['lock_current_type']))
+        if 'auto_advance' in data:
+            self.auto_advance.set(bool(data['auto_advance']))
+        if 'hide_vocative' in data:
+            self.hide_vocative.set(bool(data['hide_vocative']))
 
 class BellerophonGrammarApp:
+    def get_settings_path(self):
+        try:
+            base = os.path.dirname(__file__)
+        except Exception:
+            base = os.getcwd()
+        return os.path.join(base, 'user_settings.json')
+
+    def load_settings(self):
+        """Load persisted user settings into PracticeConfig if the file exists."""
+        try:
+            settings_path = getattr(self, 'settings_file', self.get_settings_path())
+            if os.path.exists(settings_path):
+                with open(settings_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                # Apply to config
+                self.config.apply_from_dict(data)
+        except Exception as e:
+            # Non-fatal: print and continue with defaults
+            print(f"Warning: Could not load settings: {e}")
+
+    def save_settings(self):
+        """Persist current PracticeConfig settings to disk."""
+        try:
+            settings_path = getattr(self, 'settings_file', self.get_settings_path())
+            data = self.config.to_dict()
+            with open(settings_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            # Non-fatal: print and continue
+            print(f"Warning: Could not save settings: {e}")
+
+    def on_setting_changed(self):
+        """Generic handler to persist settings when a toggle is changed."""
+        self.save_settings()
     def check_and_auto_advance(self):
         auto_advance_enabled = False
         if hasattr(self, 'config') and hasattr(self.config, 'auto_advance'):
@@ -569,6 +633,9 @@ class BellerophonGrammarApp:
         self.has_revealed = False  # Track if answers have been revealed
         # Initialize practice configuration
         self.config = PracticeConfig()
+        # Load persisted settings (if available)
+        self.settings_file = os.path.join(os.path.dirname(__file__), 'user_settings.json')
+        self.load_settings()
         # Initialize session manager
         self.session_manager = SessionManager()
         self.current_session_id = None
@@ -590,12 +657,19 @@ class BellerophonGrammarApp:
         # Load Latin starred items from file
         self.load_latin_starred_items()
         
-        # Initialize Time Trial Manager
+        # Initialize Latin Time Trial Manager
         self.time_trial = TimeTrialManager(callback_on_game_over=self.on_time_trial_game_over)
         self.time_trial_ui_frame = None  # Will be created when time trial is active
         self.time_trial_high_score = 0
         self.time_trial_scores_file = "latin_time_trial_scores.json"
         self.load_time_trial_high_score()
+        
+        # Initialize Greek Time Trial Manager (παντα ῥει)
+        self.greek_time_trial = TimeTrialManager(callback_on_game_over=self.on_greek_time_trial_game_over)
+        self.greek_time_trial_ui_frame = None  # Will be created when time trial is active
+        self.greek_time_trial_high_score = 0
+        self.greek_time_trial_scores_file = "greek_time_trial_scores.json"
+        self.load_greek_time_trial_high_score()
         
         # Initialize header logo and app icon before any UI code that checks them
         self.header_logo = self.load_header_logo()
@@ -1814,11 +1888,10 @@ class BellerophonGrammarApp:
         red_wrapper.grid_rowconfigure(0, weight=0)  # Title - fixed
         red_wrapper.grid_rowconfigure(1, weight=0)  # Type selector - fixed
         red_wrapper.grid_rowconfigure(2, weight=0)  # Word display - fixed
-        red_wrapper.grid_rowconfigure(3, weight=0)  # Verb controls - fixed
-        red_wrapper.grid_rowconfigure(4, weight=0)  # Time trial UI - fixed
-        red_wrapper.grid_rowconfigure(5, weight=1)  # Spacer above table - expands
-        red_wrapper.grid_rowconfigure(6, weight=0)  # Table and buttons - fixed
-        red_wrapper.grid_rowconfigure(7, weight=1)  # Spacer below buttons - expands
+        red_wrapper.grid_rowconfigure(3, weight=0)  # Verb controls - fixed or Time Trial UI when active
+        red_wrapper.grid_rowconfigure(4, weight=1)  # Spacer above table - expands
+        red_wrapper.grid_rowconfigure(5, weight=0)  # Table and buttons - fixed
+        red_wrapper.grid_rowconfigure(6, weight=1)  # Spacer below buttons - expands
         red_wrapper.grid_columnconfigure(0, weight=1)  # Center everything horizontally
         
         # Load Latin paradigms
@@ -1839,7 +1912,6 @@ class BellerophonGrammarApp:
         title_frame.grid(row=0, column=0, pady=(20, 20), sticky='ew', padx=20)
         title_frame.grid_columnconfigure(0, weight=1)
         title_frame.grid_columnconfigure(1, weight=0)
-        title_frame.grid_columnconfigure(2, weight=0)
         
         # Logo (Latin-specific logo)
         if self.latin_header_logo:
@@ -1865,49 +1937,41 @@ class BellerophonGrammarApp:
         practice_options_frame = tk.Frame(title_frame, bg='#8B0000')
         practice_options_frame.grid(row=0, column=1, sticky='ne', padx=(10, 10))
         
-        # Prefill stems checkbox
-        prefill_stems_cb = ttk.Checkbutton(
-            practice_options_frame,
-            text="Prefill stems",
-            variable=self.config.prefill_stems,
-            command=self.on_latin_prefill_stems_toggle
-        )
-        prefill_stems_cb.grid(row=0, column=0, sticky='e', padx=(0, 10))
-
-        # Randomize next checkbox
+        # Randomize next checkbox (column 0)
         randomize_next_cb = ttk.Checkbutton(
             practice_options_frame,
             text="Randomize next",
             variable=self.config.randomize_next,
             command=self.on_randomize_toggle
         )
-        randomize_next_cb.grid(row=0, column=1, sticky='e')
-
-        # Auto advance checkbox
-        auto_advance_cb = ttk.Checkbutton(
-            practice_options_frame,
-            text="Auto advance",
-            variable=self.config.auto_advance
-        )
-        auto_advance_cb.grid(row=0, column=2, sticky='e', padx=(10, 0))
+        randomize_next_cb.grid(row=0, column=0, sticky='e', padx=(0, 10))
         
-        # Back to Greek button
-        back_button = ttk.Button(
-            title_frame,
-            text="← Back to Greek",
-            command=self.show_tables_view,
-            width=15
-        )
-        back_button.grid(row=0, column=2, sticky='ne')
-        
-        # Tempus Fugit button
+        # Tempus Fugit button (column 1)
         self.tempus_button = ttk.Button(
-            title_frame,
+            practice_options_frame,
             text="Tempus Fugit",
             command=self.toggle_time_trial,
             width=12
         )
-        self.tempus_button.grid(row=0, column=3, sticky='ne', padx=(6,0))
+        self.tempus_button.grid(row=0, column=1, sticky='e', padx=(0, 10))
+        
+        # Back to Greek button (column 2)
+        back_button = ttk.Button(
+            practice_options_frame,
+            text="← Greek",
+            command=self.show_tables_view,
+            width=10
+        )
+        back_button.grid(row=0, column=2, sticky='e', padx=(0, 10))
+        
+        # Settings button (column 3)
+        settings_button = ttk.Button(
+            practice_options_frame,
+            text="⚙ Settings",
+            command=self.show_latin_settings_dialog,
+            width=12
+        )
+        settings_button.grid(row=0, column=3, sticky='e')
         
         # Type and word selection frame (matching Greek layout)
         mode_frame = tk.Frame(red_wrapper, bg='#8B0000')
@@ -2113,19 +2177,20 @@ class BellerophonGrammarApp:
         # Initially hide verb controls (will show when verb is selected)
         self.latin_verb_controls_frame.grid_remove()
         
-        # Time Trial UI Frame (initially hidden)
-        self.time_trial_ui_frame = tk.Frame(red_wrapper, bg='#8B0000')
-        self.time_trial_ui_frame.grid(row=4, column=0, pady=(5, 5), sticky='ew', padx=20)
+        # Time Trial UI Frame (initially hidden) - placed between word display and table
+        self.time_trial_ui_frame = tk.Frame(red_wrapper, bg='#2C2C2C', height=70)
+        self.time_trial_ui_frame.grid(row=3, column=0, pady=(5, 5), sticky='ew', padx=20)
         self.time_trial_ui_frame.grid_columnconfigure(0, weight=1)
         self.time_trial_ui_frame.grid_columnconfigure(1, weight=1)
         self.time_trial_ui_frame.grid_columnconfigure(2, weight=1)
         self.time_trial_ui_frame.grid_columnconfigure(3, weight=1)
+        self.time_trial_ui_frame.grid_propagate(False)
         
         # Timer display
         self.time_trial_timer_label = tk.Label(
             self.time_trial_ui_frame,
             text="Time: 30.0s",
-            bg='#8B0000',
+            bg='#2C2C2C',
             fg='white',
             font=('Arial', 18, 'bold')
         )
@@ -2135,7 +2200,7 @@ class BellerophonGrammarApp:
         self.time_trial_words_label = tk.Label(
             self.time_trial_ui_frame,
             text="Words: 0",
-            bg='#8B0000',
+            bg='#2C2C2C',
             fg='white',
             font=('Arial', 14)
         )
@@ -2145,7 +2210,7 @@ class BellerophonGrammarApp:
         self.time_trial_tables_label = tk.Label(
             self.time_trial_ui_frame,
             text="Tables: 0",
-            bg='#8B0000',
+            bg='#2C2C2C',
             fg='white',
             font=('Arial', 14)
         )
@@ -2155,7 +2220,7 @@ class BellerophonGrammarApp:
         self.time_trial_high_score_label = tk.Label(
             self.time_trial_ui_frame,
             text=f"High Score: {self.time_trial_high_score}",
-            bg='#8B0000',
+            bg='#2C2C2C',
             fg='#FFD700',
             font=('Arial', 14, 'bold')
         )
@@ -2165,7 +2230,7 @@ class BellerophonGrammarApp:
         self.time_bonus_label = tk.Label(
             self.time_trial_ui_frame,
             text="",
-            bg='#8B0000',
+            bg='#2C2C2C',
             fg='#00FF00',
             font=('Arial', 16, 'bold')
         )
@@ -2176,7 +2241,7 @@ class BellerophonGrammarApp:
         
         # Create a centered content container for table and buttons
         content_container = tk.Frame(red_wrapper, bg='#8B0000')
-        content_container.grid(row=6, column=0, sticky='')  # No sticky = centered
+        content_container.grid(row=5, column=0, sticky='')  # No sticky = centered
         
         # Table frame - centered in content_container
         self.latin_table_frame = tk.Frame(content_container, bg='#8B0000')
@@ -2260,10 +2325,11 @@ class BellerophonGrammarApp:
         for col in range(10):
             self.latin_table_frame.grid_columnconfigure(col, weight=0, minsize=0)
         
-        # Configure grid weights for 3 columns only
-        self.latin_table_frame.grid_columnconfigure(0, weight=0, minsize=100)
-        self.latin_table_frame.grid_columnconfigure(1, weight=1, minsize=120)
-        self.latin_table_frame.grid_columnconfigure(2, weight=1, minsize=120)
+        # Configure grid weights - the gap between columns 1 and 2 should be centered
+        self.latin_table_frame.grid_columnconfigure(0, weight=1, minsize=100)  # Left padding - pushes content right
+        self.latin_table_frame.grid_columnconfigure(1, weight=0, minsize=120)  # Singular column - fixed
+        self.latin_table_frame.grid_columnconfigure(2, weight=0, minsize=120)  # Plural column - fixed
+        self.latin_table_frame.grid_columnconfigure(3, weight=1)  # Right padding - balances left padding
         
         # Headers
         tk.Label(
@@ -2290,6 +2356,11 @@ class BellerophonGrammarApp:
         
         # Create input fields for each case (Latin has 6 cases including Ablative)
         cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+        
+        # Filter out vocative if hide_vocative is enabled
+        if self.config.hide_vocative.get():
+            cases = [c for c in cases if c != "Vocative"]
+        
         for i, case in enumerate(cases, 1):
             # Case label
             case_label = tk.Label(
@@ -2454,6 +2525,17 @@ class BellerophonGrammarApp:
         cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
         case_labels = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
         
+        # Filter out vocative if hide_vocative is enabled
+        if self.config.hide_vocative.get():
+            filtered_cases = []
+            filtered_labels = []
+            for case, label in zip(cases, case_labels):
+                if case != "vocative":
+                    filtered_cases.append(case)
+                    filtered_labels.append(label)
+            cases = filtered_cases
+            case_labels = filtered_labels
+        
         for i, (case, label) in enumerate(zip(cases, case_labels), 2):
             # Case label
             tk.Label(
@@ -2501,6 +2583,10 @@ class BellerophonGrammarApp:
         
         # Mark unattested forms as readonly and grey
         self.mark_unattested_latin_forms(paradigm)
+        
+        # Apply stem prefilling if enabled
+        if self.config.prefill_stems.get():
+            self.apply_latin_prefill_stems()
     
     def create_latin_verb_table(self):
         """Create the Latin verb conjugation table."""
@@ -2544,10 +2630,11 @@ class BellerophonGrammarApp:
         for col in range(10):
             self.latin_table_frame.grid_columnconfigure(col, weight=0, minsize=0)
         
-        # Configure grid columns for verb table (3 columns only)
-        self.latin_table_frame.grid_columnconfigure(0, weight=1)  # Person column
-        self.latin_table_frame.grid_columnconfigure(1, weight=1)  # Singular column
-        self.latin_table_frame.grid_columnconfigure(2, weight=1)  # Plural column
+        # Configure grid weights - the gap between columns 1 and 2 should be centered
+        self.latin_table_frame.grid_columnconfigure(0, weight=1, minsize=100)  # Left padding - pushes content right
+        self.latin_table_frame.grid_columnconfigure(1, weight=0)  # Singular column - fixed
+        self.latin_table_frame.grid_columnconfigure(2, weight=0)  # Plural column - fixed
+        self.latin_table_frame.grid_columnconfigure(3, weight=1)  # Right padding - balances left padding
         
         # Create table headers
         tk.Label(
@@ -2619,6 +2706,271 @@ class BellerophonGrammarApp:
         if self.config.prefill_stems.get():
             self.apply_latin_prefill_stems()
     
+    def create_latin_pronoun_table(self):
+        """Create table for Latin pronoun declensions."""
+        # Clear any existing widgets in the table frame
+        for widget in self.latin_table_frame.winfo_children():
+            widget.destroy()
+        
+        self.latin_entries.clear()
+        
+        # Get current word
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]  # Extract just the word
+        
+        # Find paradigm - search through all paradigms for matching pronoun
+        paradigm = None
+        for key, data in self.latin_paradigms.items():
+            if data.get('type') == 'pronoun' and data.get('word') == word:
+                paradigm = data
+                break
+        
+        if not paradigm:
+            return
+        
+        forms = paradigm.get('forms', {})
+        
+        # Determine if this is a personal pronoun (singular/plural) or gendered pronoun (m/f/n)
+        if 'singular' in forms and 'plural' in forms:
+            # Personal pronoun structure (e.g., ego, tu)
+            self.create_latin_personal_pronoun_table(paradigm)
+        elif 'masculine' in forms and 'feminine' in forms and 'neuter' in forms:
+            # Gendered pronoun structure (e.g., quis, is, quidam)
+            self.create_latin_gendered_pronoun_table(paradigm)
+    
+    def create_latin_personal_pronoun_table(self, paradigm):
+        """Create table for personal pronouns with singular/plural structure."""
+        forms = paradigm.get('forms', {})
+        
+        # Configure grid weights - the gap between columns 1 and 2 should be centered
+        # This means column 0 (case labels) should push content left, 
+        # and the space after column 2 should balance it
+        self.latin_table_frame.grid_columnconfigure(0, weight=1, minsize=100)  # Left padding - pushes content right
+        self.latin_table_frame.grid_columnconfigure(1, weight=0, minsize=150)  # Singular column - fixed
+        self.latin_table_frame.grid_columnconfigure(2, weight=0, minsize=150)  # Plural column - fixed
+        self.latin_table_frame.grid_columnconfigure(3, weight=1)  # Right padding - balances left padding
+        
+        # Headers
+        tk.Label(
+            self.latin_table_frame,
+            text="Case",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=0, padx=5, pady=(5,10), sticky='e')
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Singular",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=1, padx=5, pady=(5,10))
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Plural",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=2, padx=5, pady=(5,10))
+        
+        # Create input fields for each case
+        cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+        case_labels = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+        
+        # Filter out vocative (personal pronouns don't have vocative, or hide if setting enabled)
+        # Also filter out cases where both singular and plural are "—" (unattested)
+        filtered_cases = []
+        filtered_labels = []
+        for case, label in zip(cases, case_labels):
+            sg_form = forms.get('singular', {}).get(case, "")
+            pl_form = forms.get('plural', {}).get(case, "")
+            
+            # Skip if both are unattested or if vocative case
+            if (sg_form == "—" and pl_form == "—") or case == "vocative":
+                continue
+            
+            # Skip vocative if hide_vocative setting is enabled (redundant but keeps consistency)
+            if case == "vocative" and self.config.hide_vocative.get():
+                continue
+                
+            filtered_cases.append(case)
+            filtered_labels.append(label)
+        
+        cases = filtered_cases
+        case_labels = filtered_labels
+        
+        for i, (case, label) in enumerate(zip(cases, case_labels), 1):
+            # Case label
+            tk.Label(
+                self.latin_table_frame,
+                text=label,
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 11, 'bold')
+            ).grid(row=i, column=0, padx=10, pady=4, sticky='e')
+            
+            # Singular entry
+            entry_sg = tk.Entry(
+                self.latin_table_frame,
+                width=15,
+                font=('Times New Roman', 12),
+                relief='solid',
+                borderwidth=1
+            )
+            entry_sg.grid(row=i, column=1, padx=5, pady=4, sticky='ew')
+            key_sg = f"{case}_sg"
+            self.latin_entries[key_sg] = entry_sg
+            entry_sg.bind('<Return>', lambda e, k=key_sg: self.check_latin_single_entry(k))
+            entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
+            
+            # Plural entry
+            entry_pl = tk.Entry(
+                self.latin_table_frame,
+                width=15,
+                font=('Times New Roman', 12),
+                relief='solid',
+                borderwidth=1
+            )
+            entry_pl.grid(row=i, column=2, padx=5, pady=4, sticky='ew')
+            key_pl = f"{case}_pl"
+            self.latin_entries[key_pl] = entry_pl
+            entry_pl.bind('<Return>', lambda e, k=key_pl: self.check_latin_single_entry(k))
+            entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
+        
+        # Mark unattested forms as readonly and grey
+        self.mark_unattested_latin_forms(paradigm)
+    
+    def create_latin_gendered_pronoun_table(self, paradigm):
+        """Create table for gendered pronouns with masculine/feminine/neuter structure."""
+        forms = paradigm.get('forms', {})
+        
+        # Configure grid weights for 7 columns (case + 3 genders x 2 numbers)
+        self.latin_table_frame.grid_columnconfigure(0, weight=0, minsize=100)
+        for col in range(1, 7):
+            self.latin_table_frame.grid_columnconfigure(col, weight=1, minsize=100)
+        
+        # Top headers for genders
+        tk.Label(
+            self.latin_table_frame,
+            text="",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=0, padx=5, pady=(5,2))
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Masculine",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=1, columnspan=2, padx=5, pady=(5,2))
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Feminine",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=3, columnspan=2, padx=5, pady=(5,2))
+        
+        tk.Label(
+            self.latin_table_frame,
+            text="Neuter",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=5, columnspan=2, padx=5, pady=(5,2))
+        
+        # Sub-headers for singular/plural
+        tk.Label(
+            self.latin_table_frame,
+            text="Case",
+            bg='#8B0000',
+            fg='white',
+            font=('Arial', 11, 'bold')
+        ).grid(row=1, column=0, padx=5, pady=(2,10), sticky='e')
+        
+        for col_offset, gender in enumerate(['Masculine', 'Feminine', 'Neuter']):
+            base_col = 1 + (col_offset * 2)
+            tk.Label(
+                self.latin_table_frame,
+                text="Sg",
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 10)
+            ).grid(row=1, column=base_col, padx=3, pady=(2,10))
+            
+            tk.Label(
+                self.latin_table_frame,
+                text="Pl",
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 10)
+            ).grid(row=1, column=base_col+1, padx=3, pady=(2,10))
+        
+        # Create input fields for each case
+        cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+        case_labels = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+        
+        # Filter out vocative if hide_vocative is enabled
+        if self.config.hide_vocative.get():
+            filtered_cases = []
+            filtered_labels = []
+            for case, label in zip(cases, case_labels):
+                if case != "vocative":
+                    filtered_cases.append(case)
+                    filtered_labels.append(label)
+            cases = filtered_cases
+            case_labels = filtered_labels
+        
+        for i, (case, label) in enumerate(zip(cases, case_labels), 2):
+            # Case label
+            tk.Label(
+                self.latin_table_frame,
+                text=label,
+                bg='#8B0000',
+                fg='white',
+                font=('Arial', 11, 'bold')
+            ).grid(row=i, column=0, padx=10, pady=4, sticky='e')
+            
+            # Create entries for each gender (masculine, feminine, neuter) and number (sg, pl)
+            for gender_idx, gender in enumerate(['masculine', 'feminine', 'neuter']):
+                base_col = 1 + (gender_idx * 2)
+                
+                # Singular entry
+                entry_sg = tk.Entry(
+                    self.latin_table_frame,
+                    width=12,
+                    font=('Times New Roman', 12),
+                    relief='solid',
+                    borderwidth=1
+                )
+                entry_sg.grid(row=i, column=base_col, padx=2, pady=4, sticky='ew')
+                key_sg = f"{case}_{gender}_sg"
+                self.latin_entries[key_sg] = entry_sg
+                entry_sg.bind('<Return>', lambda e, k=key_sg: self.check_latin_single_entry(k))
+                entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
+                
+                # Plural entry
+                entry_pl = tk.Entry(
+                    self.latin_table_frame,
+                    width=12,
+                    font=('Times New Roman', 12),
+                    relief='solid',
+                    borderwidth=1
+                )
+                entry_pl.grid(row=i, column=base_col+1, padx=2, pady=4, sticky='ew')
+                key_pl = f"{case}_{gender}_pl"
+                self.latin_entries[key_pl] = entry_pl
+                entry_pl.bind('<Return>', lambda e, k=key_pl: self.check_latin_single_entry(k))
+                entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
+        
+        # Mark unattested forms as readonly and grey
+        self.mark_unattested_latin_forms(paradigm)
+    
     def on_latin_word_change(self, event=None):
         """Handle Latin word selection change."""
         word_display = self.latin_word_var.get()
@@ -2668,10 +3020,24 @@ class BellerophonGrammarApp:
                     self.create_latin_verb_table()
                     return
                 else:
-                    # It's a noun
-                    self.latin_instruction_label.config(text="Decline the word:")
+                    # It's a noun, adjective, or pronoun - determine which
+                    # Find the word type in paradigms
+                    word_type = None
+                    for key, data in self.latin_paradigms.items():
+                        if data.get('word') == word:
+                            word_type = data.get('type')
+                            break
+                    
                     self.hide_latin_verb_controls()
-                    self.create_latin_noun_table()
+                    if word_type == 'adjective':
+                        self.latin_instruction_label.config(text="Decline the adjective:")
+                        self.create_latin_adjective_table()
+                    elif word_type == 'pronoun':
+                        self.latin_instruction_label.config(text="Decline the pronoun:")
+                        self.create_latin_pronoun_table()
+                    else:
+                        self.latin_instruction_label.config(text="Decline the word:")
+                        self.create_latin_noun_table()
                     return
         else:
             # Not in Starred mode - enable the verb dropdowns
@@ -2702,6 +3068,10 @@ class BellerophonGrammarApp:
             self.latin_instruction_label.config(text="Decline the adjective:")
             self.hide_latin_verb_controls()
             self.create_latin_adjective_table()
+        elif paradigm and paradigm.get('type') == 'pronoun':
+            self.latin_instruction_label.config(text="Decline the pronoun:")
+            self.hide_latin_verb_controls()
+            self.create_latin_pronoun_table()
         else:
             self.latin_instruction_label.config(text="Decline the word:")
             self.hide_latin_verb_controls()
@@ -2849,6 +3219,7 @@ class BellerophonGrammarApp:
         seen_verbs = set()  # Track unique verb lemmas
         seen_nouns = set()  # Track unique nouns
         seen_adjectives = set()  # Track unique adjectives
+        seen_pronouns = set()  # Track unique pronouns
         
         if latin_type == "Starred":
             # Show starred Latin items
@@ -2885,6 +3256,16 @@ class BellerophonGrammarApp:
                                 break
                         display = f"{word} ({declension} declension)" if declension else word
                         latin_words.append(display)
+                    elif word_type == "Pronoun":
+                        # Find declension
+                        declension = ""
+                        for key, data in self.latin_paradigms.items():
+                            word_value = data.get('word', '')
+                            if word_value == word and data.get('type') == 'pronoun':
+                                declension = data.get('declension', '')
+                                break
+                        display = f"{word} ({declension})" if declension else word
+                        latin_words.append(display)
         else:
             # Regular type selection
             for word_key, word_data in self.latin_paradigms.items():
@@ -2912,6 +3293,14 @@ class BellerophonGrammarApp:
                         declension = word_data.get('declension', '')
                         display_text = f"{word_value} ({declension} declension)" if declension else word_value
                         latin_words.append(display_text)
+                elif latin_type == "Pronoun" and word_data.get('type') == 'pronoun':
+                    word_value = word_data.get('word', word_key)
+                    # Only add unique pronouns
+                    if word_value not in seen_pronouns:
+                        seen_pronouns.add(word_value)
+                        english = word_data.get('english', '')
+                        display_text = f"{word_value} ({english})" if english else word_value
+                        latin_words.append(display_text)
         
         if latin_words:
             # Find the word dropdown and update it
@@ -2927,6 +3316,290 @@ class BellerophonGrammarApp:
                                         self.on_latin_word_change()
                                     break
     
+    
+    def show_latin_settings_dialog(self):
+        """Show the Settings dialog for Latin interface"""
+        # Create dialog window
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Settings")
+        dialog.geometry("500x550")
+        dialog.configure(bg='#F8F6F1')
+        dialog.resizable(False, False)
+        
+        # Make dialog modal
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Center the dialog on screen
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (500 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (550 // 2)
+        dialog.geometry(f"500x550+{x}+{y}")
+        
+        # Main container
+        main_frame = ttk.Frame(dialog, padding=20)
+        main_frame.pack(fill='both', expand=True)
+        
+        # Title
+        title_label = ttk.Label(
+            main_frame,
+            text="Settings",
+            font=('Arial', 18, 'bold')
+        )
+        title_label.pack(pady=(0, 20))
+        
+        # Practice Options Section
+        practice_section = ttk.LabelFrame(main_frame, text="Practice Options", padding=15)
+        practice_section.pack(fill='x', pady=(0, 15))
+        
+        # Prefill stems
+        prefill_cb = ttk.Checkbutton(
+            practice_section,
+            text="Prefill stems",
+            variable=self.config.prefill_stems,
+            command=self.on_prefill_stems_setting_toggle
+        )
+        prefill_cb.pack(anchor='w', pady=5)
+        
+        # Auto advance
+        auto_cb = ttk.Checkbutton(
+            practice_section,
+            text="Auto advance to next table",
+            variable=self.config.auto_advance,
+            command=lambda: self.on_setting_changed()
+        )
+        auto_cb.pack(anchor='w', pady=5)
+        
+        # Hide vocative
+        vocative_cb = ttk.Checkbutton(
+            practice_section,
+            text="Hide vocative case",
+            variable=self.config.hide_vocative,
+            command=self.on_hide_vocative_toggle
+        )
+        vocative_cb.pack(anchor='w', pady=5)
+        
+        # Statistics Section
+        stats_section = ttk.LabelFrame(main_frame, text="Statistics", padding=15)
+        stats_section.pack(fill='x', pady=(0, 15))
+        
+        # Time trial high score display - Latin (Tempus Fugit)
+        latin_high_score_frame = ttk.Frame(stats_section)
+        latin_high_score_frame.pack(fill='x', pady=5)
+        
+        ttk.Label(
+            latin_high_score_frame,
+            text="Latin (Tempus Fugit):",
+            font=('Arial', 10, 'bold')
+        ).pack(side='left')
+        
+        # Store reference to high score label for updating
+        self.high_score_label = ttk.Label(
+            latin_high_score_frame,
+            text=f" {self.time_trial_high_score}",
+            font=('Arial', 11)
+        )
+        self.high_score_label.pack(side='left')
+        
+        # Reset high score button - pass the label reference
+        reset_latin_score_btn = ttk.Button(
+            latin_high_score_frame,
+            text="Reset",
+            command=lambda: self.reset_time_trial_high_score(self.high_score_label),
+            width=10
+        )
+        reset_latin_score_btn.pack(side='right')
+        
+        # Greek time trial high score display (παντα ῥει)
+        greek_high_score_frame = ttk.Frame(stats_section)
+        greek_high_score_frame.pack(fill='x', pady=5)
+        
+        ttk.Label(
+            greek_high_score_frame,
+            text="Greek (παντα ῥει):",
+            font=('Arial', 10, 'bold')
+        ).pack(side='left')
+        
+        # Store reference to Greek high score label for updating
+        self.greek_high_score_label = ttk.Label(
+            greek_high_score_frame,
+            text=f" {self.greek_time_trial_high_score}",
+            font=('Arial', 11)
+        )
+        self.greek_high_score_label.pack(side='left')
+        
+        # Reset Greek high score button
+        reset_greek_score_btn = ttk.Button(
+            greek_high_score_frame,
+            text="Reset",
+            command=lambda: self.reset_greek_time_trial_high_score(self.greek_high_score_label),
+            width=10
+        )
+        reset_greek_score_btn.pack(side='right')
+        
+        # Data Management Section
+        data_section = ttk.LabelFrame(main_frame, text="Data Management", padding=15)
+        data_section.pack(fill='x', pady=(0, 15))
+        
+        # Create a frame for starred items buttons
+        starred_buttons_frame = ttk.Frame(data_section)
+        starred_buttons_frame.pack(fill='x', pady=5)
+        
+        # Clear Greek starred items button
+        clear_greek_starred_btn = ttk.Button(
+            starred_buttons_frame,
+            text="Clear Greek Starred",
+            command=self.reset_all_greek_starred_items,
+            width=20
+        )
+        clear_greek_starred_btn.pack(side='left', padx=(0, 5))
+        
+        # Clear Latin starred items button
+        clear_latin_starred_btn = ttk.Button(
+            starred_buttons_frame,
+            text="Clear Latin Starred",
+            command=self.reset_all_latin_starred_items,
+            width=20
+        )
+        clear_latin_starred_btn.pack(side='left', padx=(5, 0))
+        
+        # Warning label
+        ttk.Label(
+            data_section,
+            text="⚠️ Warning: This will remove all starred items for the selected language",
+            font=('Arial', 9),
+            foreground='#666'
+        ).pack(pady=(5, 0))
+        
+        # Close button at bottom
+        close_btn = ttk.Button(
+            main_frame,
+            text="Close",
+            command=lambda: (self.save_settings(), dialog.destroy()),
+            width=15
+        )
+        close_btn.pack(pady=(20, 0))
+    
+    def on_hide_vocative_toggle(self):
+        """Handle hide vocative toggle - refresh current table"""
+        # Refresh the current table to apply/remove vocative
+        # Detect which side is currently active and refresh appropriately
+        try:
+            if hasattr(self, 'latin_type_var') and hasattr(self, 'latin_entries') and self.latin_entries:
+                # Latin view appears active
+                latin_type = self.latin_type_var.get()
+                if latin_type in ["Noun", "Adjective", "Pronoun"]:
+                    self.on_latin_word_change()
+            else:
+                # Greek view: force a full rebuild to account for structural change
+                # Invalidate optimization so structure (rows) is rebuilt without Vocative
+                self._last_table_type = None
+                self.reset_table()
+                # Update labels and focus for better UX
+                self.update_word_display()
+                self.root.after(50, self.focus_first_greek_entry)
+        except Exception:
+            # As a safety net, at least persist the setting
+            pass
+        # Persist setting
+        self.save_settings()
+    
+    def reset_time_trial_high_score(self, label=None):
+        """Reset the time trial high score"""
+        if messagebox.askyesno(
+            "Reset High Score",
+            "Are you sure you want to reset the Time Trial high score to 0?"
+        ):
+            self.time_trial_high_score = 0
+            self.save_time_trial_high_score()
+            # Update the label if provided
+            if label:
+                label.config(text=f"Time Trial High Score: 0")
+            messagebox.showinfo("Success", "Time Trial high score has been reset.")
+    
+    def reset_all_latin_starred_items(self):
+        """Reset all starred items in Latin interface"""
+        if messagebox.askyesno(
+            "Reset Starred Items",
+            "Are you sure you want to remove all starred items?\n\nThis cannot be undone."
+        ):
+            self.latin_starred_items.clear()
+            self.save_latin_starred_items()
+            
+            # Update star button if it exists
+            if hasattr(self, 'latin_star_button'):
+                self.update_latin_star_button()
+            
+            # Update type dropdown to remove Starred option if no items left
+            if hasattr(self, 'latin_type_var'):
+                current_type = self.latin_type_var.get()
+                self.update_latin_type_dropdown()
+                
+                # If we were viewing Starred, switch to Noun
+                if current_type == "Starred":
+                    self.latin_type_var.set("Noun")
+                    self.on_latin_type_change()
+            
+            messagebox.showinfo("Success", "All starred items have been removed.")
+    
+    def reset_all_greek_starred_items(self):
+        """Reset all starred items in Greek interface"""
+        if messagebox.askyesno(
+            "Clear Greek Starred Items",
+            "Are you sure you want to remove all Greek starred items?\n\nThis cannot be undone."
+        ):
+            self.starred_items.clear()
+            self.save_starred_items()
+            
+            # Update star button if it exists
+            if hasattr(self, 'star_button'):
+                self.update_star_button()
+            
+            # Update type dropdown to remove Starred option if no items left
+            if hasattr(self, 'type_var'):
+                current_type = self.type_var.get()
+                self.update_type_dropdown()
+                
+                # If we were viewing Starred, switch to Noun
+                if current_type == "Starred":
+                    self.type_var.set("Noun")
+                    self.on_type_change(None)
+            
+            messagebox.showinfo("Success", "All Greek starred items have been removed.")
+    
+    def reset_greek_time_trial_high_score(self, label=None):
+        """Reset the Greek time trial high score"""
+        if messagebox.askyesno(
+            "Reset Greek High Score",
+            "Are you sure you want to reset the παντα ῥει high score to 0?"
+        ):
+            self.greek_time_trial_high_score = 0
+            # Save to file
+            try:
+                with open(self.greek_time_trial_scores_file, 'w', encoding='utf-8') as f:
+                    json.dump({'high_score': 0}, f, indent=2)
+            except Exception as e:
+                print(f"Error saving Greek time trial high score: {e}")
+            
+            # Update the label if provided
+            if label:
+                label.config(text=" 0")
+            messagebox.showinfo("Success", "Greek time trial high score has been reset.")
+    
+    def update_latin_type_dropdown(self):
+        """Update the Latin type dropdown values based on starred items"""
+        base_types = ["Noun", "Verb", "Adjective", "Pronoun"]
+        
+        # Add Starred if there are any starred items
+        if self.latin_starred_items:
+            available_types = base_types + ["Starred"]
+        else:
+            available_types = base_types
+        
+        # Update dropdown if it exists
+        if hasattr(self, 'latin_type_dropdown'):
+            self.latin_type_dropdown['values'] = available_types
+    
     def on_latin_prefill_stems_toggle(self):
         """Handle the Latin prefill stems toggle change"""
         if self.config.prefill_stems.get():
@@ -2935,6 +3608,44 @@ class BellerophonGrammarApp:
         else:
             # Prefill stems disabled, clear the prefilled content
             self.clear_latin_prefill_stems()
+        # Persist setting
+        self.save_settings()
+
+    def on_prefill_stems_setting_toggle(self):
+        """Unified handler for Prefill stems from Settings; applies immediately to current view(s)."""
+        enabled = bool(self.config.prefill_stems.get())
+
+        # Apply/clear on Latin view if present
+        if hasattr(self, 'latin_entries') and isinstance(self.latin_entries, dict):
+            try:
+                if enabled:
+                    self.apply_latin_prefill_stems()
+                else:
+                    self.clear_latin_prefill_stems()
+            except Exception:
+                pass
+
+        # Apply/clear on Greek view if present
+        if hasattr(self, 'entries') and isinstance(self.entries, dict):
+            try:
+                if enabled:
+                    # apply immediately to current Greek table
+                    self.apply_prefill_stems_to_all_entries()
+                else:
+                    # clear Greek prefilled stems without touching readonly cells
+                    for key, entry in list(self.entries.items()):
+                        try:
+                            if str(entry.cget('state')) != 'readonly':
+                                if hasattr(entry, '_full_answer'):
+                                    delattr(entry, '_full_answer')
+                                entry.delete(0, tk.END)
+                        except tk.TclError:
+                            continue
+            except Exception:
+                pass
+
+        # Persist the setting
+        self.save_settings()
     
     def apply_latin_prefill_stems(self):
         """Apply prefill stems to the current Latin table"""
@@ -2945,6 +3656,9 @@ class BellerophonGrammarApp:
         paradigm = None
         for key, data in self.latin_paradigms.items():
             if data.get('type') == 'noun' and data.get('word') == word:
+                paradigm = data
+                break
+            elif data.get('type') == 'adjective' and data.get('word') == word:
                 paradigm = data
                 break
             elif data.get('type') == 'verb' and data.get('lemma') == word:
@@ -2984,6 +3698,75 @@ class BellerophonGrammarApp:
                             entry.delete(0, tk.END)
                             entry.insert(0, stem)
                         # Don't change text color - keep it black for readability
+        
+        elif paradigm.get('type') == 'adjective':
+            # Apply adjective stems with support for multiple stems and per-cell safe prefixes
+            # Collect candidate stems
+            candidates = []
+            base_stem = paradigm.get('stem', '') or ''
+            if base_stem:
+                candidates.append(base_stem)
+
+            # Allow optional multiple stems via 'stems' (list or dict)
+            extra_stems = paradigm.get('stems')
+            if isinstance(extra_stems, list):
+                for s in extra_stems:
+                    if isinstance(s, str) and s and s not in candidates:
+                        candidates.append(s)
+            elif isinstance(extra_stems, dict):
+                for s in extra_stems.values():
+                    if isinstance(s, str) and s and s not in candidates:
+                        candidates.append(s)
+
+            # Helper to fetch the correct form for a given slot
+            forms = paradigm.get('forms', {})
+            def get_correct(case_lc: str, gender_lc: str, number: str) -> str:
+                try:
+                    return forms[gender_lc][case_lc][number]
+                except Exception:
+                    return ''
+
+            # Helper: choose the longest candidate that is a prefix of the target
+            def choose_prefix(target: str) -> str:
+                if not target:
+                    return ''
+                best = ''
+                # First, try direct candidates as prefixes
+                for cand in candidates:
+                    if cand and target.startswith(cand) and len(cand) > len(best):
+                        best = cand
+                if best:
+                    return best
+                # Next, try the longest common prefix between target and any candidate
+                for cand in candidates:
+                    if not cand:
+                        continue
+                    max_len = min(len(cand), len(target))
+                    k = max_len
+                    while k > 0 and not target.startswith(cand[:k]):
+                        k -= 1
+                    if k > len(best):
+                        best = cand[:k]
+                return best
+
+            cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+
+            # Filter out vocative if hide_vocative is enabled
+            if self.config.hide_vocative.get():
+                cases = [c for c in cases if c != "vocative"]
+
+            for case in cases:
+                for gender in ["masculine", "feminine", "neuter"]:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{gender}_{number}"
+                        if entry_key in self.latin_entries:
+                            entry = self.latin_entries[entry_key]
+                            target = get_correct(case, gender, number)
+                            stem_to_insert = choose_prefix(target)
+                            entry.delete(0, tk.END)
+                            if stem_to_insert:
+                                entry.insert(0, stem_to_insert)
+                            # Don't change text color - keep it black for readability
         
         elif paradigm.get('type') == 'verb':
             # Hardcoded verb stems for accuracy
@@ -3093,13 +3876,16 @@ class BellerophonGrammarApp:
         word_display = self.latin_word_var.get()
         word = word_display.split(' (')[0]
         
-        # Find paradigm - could be noun, adjective, or verb
+        # Find paradigm - could be noun, adjective, pronoun, or verb
         paradigm = None
         for key, data in self.latin_paradigms.items():
             if data.get('type') == 'noun' and data.get('word') == word:
                 paradigm = data
                 break
             elif data.get('type') == 'adjective' and data.get('word') == word:
+                paradigm = data
+                break
+            elif data.get('type') == 'pronoun' and data.get('word') == word:
                 paradigm = data
                 break
             elif data.get('type') == 'verb' and data.get('lemma') == word:
@@ -3173,6 +3959,77 @@ class BellerophonGrammarApp:
                             entry.insert(0, correct_answer)
                             # Then set to readonly with red background
                             entry.configure(state='readonly', readonlybackground='#FFB6C6')  # Light red
+        
+        elif paradigm.get('type') == 'pronoun':
+            # Handle pronoun declension
+            forms = paradigm.get('forms', {})
+            
+            # Check if this is a personal pronoun (singular/plural) or gendered pronoun (m/f/n)
+            if 'singular' in forms and 'plural' in forms:
+                # Personal pronoun structure (e.g., ego, tu)
+                cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+                
+                for case in cases:
+                    for number in ["sg", "pl"]:
+                        entry_key = f"{case}_{number}"
+                        if entry_key in self.latin_entries:
+                            entry = self.latin_entries[entry_key]
+                            number_key = "singular" if number == "sg" else "plural"
+                            correct_answer = forms[number_key].get(case, "")
+                            
+                            # Skip unattested forms (empty strings or "—")
+                            if correct_answer == "" or correct_answer == "—":
+                                continue
+                            
+                            user_answer = entry.get().strip()
+                            
+                            # Handle alternative forms (e.g., "nostrum / nostri")
+                            if " / " in correct_answer:
+                                alternative_forms = [form.strip() for form in correct_answer.split(" / ")]
+                                is_correct = user_answer.lower() in [form.lower() for form in alternative_forms]
+                            else:
+                                is_correct = user_answer.lower() == correct_answer.lower()
+                            
+                            if is_correct:
+                                entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
+                            else:
+                                # Track as incorrect
+                                self.latin_incorrect_entries.add(entry_key)
+                                # First delete and insert the correct answer (with alternatives)
+                                entry.delete(0, tk.END)
+                                entry.insert(0, correct_answer)
+                                # Then set to readonly with red background
+                                entry.configure(state='readonly', readonlybackground='#FFB6C6')  # Light red
+            
+            elif 'masculine' in forms and 'feminine' in forms and 'neuter' in forms:
+                # Gendered pronoun structure (e.g., quis, is, quidam)
+                cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+                genders = ["masculine", "feminine", "neuter"]
+                
+                for case in cases:
+                    for gender in genders:
+                        for number in ["sg", "pl"]:
+                            entry_key = f"{case}_{gender}_{number}"
+                            if entry_key in self.latin_entries:
+                                entry = self.latin_entries[entry_key]
+                                correct_answer = forms[gender][case][number]
+                                
+                                # Skip unattested forms (empty strings)
+                                if correct_answer == "":
+                                    continue
+                                
+                                user_answer = entry.get().strip()
+                                
+                                if user_answer.lower() == correct_answer.lower():
+                                    entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
+                                else:
+                                    # Track as incorrect
+                                    self.latin_incorrect_entries.add(entry_key)
+                                    # First delete and insert the correct answer
+                                    entry.delete(0, tk.END)
+                                    entry.insert(0, correct_answer)
+                                    # Then set to readonly with red background
+                                    entry.configure(state='readonly', readonlybackground='#FFB6C6')  # Light red
         
         elif paradigm.get('type') == 'verb':
             # Handle verb conjugation
@@ -3592,13 +4449,16 @@ class BellerophonGrammarApp:
         word_display = self.latin_word_var.get()
         word = word_display.split(' (')[0]
         
-        # Find paradigm - could be noun, adjective, or verb
+        # Find paradigm - could be noun, adjective, pronoun, or verb
         paradigm = None
         for key, data in self.latin_paradigms.items():
             if data.get('type') == 'noun' and data.get('word') == word:
                 paradigm = data
                 break
             elif data.get('type') == 'adjective' and data.get('word') == word:
+                paradigm = data
+                break
+            elif data.get('type') == 'pronoun' and data.get('word') == word:
                 paradigm = data
                 break
             elif data.get('type') == 'verb' and data.get('lemma') == word:
@@ -3627,6 +4487,23 @@ class BellerophonGrammarApp:
             if len(parts) == 2:
                 identifier, number = parts
                 correct_answer = paradigm['forms'][identifier.lower()][number]
+        elif paradigm.get('type') == 'pronoun':
+            # Parse entry key based on pronoun structure
+            forms = paradigm.get('forms', {})
+            
+            if 'singular' in forms and 'plural' in forms:
+                # Personal pronoun: "case_number" (e.g., "nominative_sg")
+                parts = entry_key.split('_')
+                if len(parts) == 2:
+                    case, number = parts
+                    number_key = "singular" if number == "sg" else "plural"
+                    correct_answer = forms[number_key].get(case, "")
+            elif 'masculine' in forms and 'feminine' in forms and 'neuter' in forms:
+                # Gendered pronoun: "case_gender_number" (e.g., "nominative_masculine_sg")
+                parts = entry_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    correct_answer = forms[gender][case][number]
         else:  # verb
             # entry_key is like "1st_sg" or "2nd_pl"
             correct_answer = paradigm.get(entry_key, '')
@@ -3634,11 +4511,18 @@ class BellerophonGrammarApp:
         if correct_answer is None:
             return
         
-        # Skip unattested forms (empty strings)
-        if correct_answer == "":
+        # Skip unattested forms (empty strings or "—")
+        if correct_answer == "" or correct_answer == "—":
             return
         
-        is_correct = user_answer.lower() == correct_answer.lower()
+        # Handle alternative forms separated by " / " (e.g., "nostrum / nostri")
+        # Accept either form, but when checking convert the correct answer to show both
+        alternative_forms = []
+        if " / " in correct_answer:
+            alternative_forms = [form.strip() for form in correct_answer.split(" / ")]
+            is_correct = user_answer.lower() in [form.lower() for form in alternative_forms]
+        else:
+            is_correct = user_answer.lower() == correct_answer.lower()
         
         if is_correct:
             entry.configure(state='readonly', readonlybackground='#B8860B')  # Dark goldenrod
@@ -3664,6 +4548,10 @@ class BellerophonGrammarApp:
                 self.show_time_bonus(table_bonus)
                 self.update_time_trial_ui()
             
+            # Disable reveal button if all entries are correct
+            if all_correct and hasattr(self, 'latin_reveal_button'):
+                self.latin_reveal_button.configure(state='disabled')
+            
             if all_correct and auto_advance_enabled:
                 # Auto-advance to next table
                 self.next_latin_word()
@@ -3680,7 +4568,7 @@ class BellerophonGrammarApp:
         # Parse current key
         parts = current_key.split('_')
         
-        # Check if it's an adjective (3 parts: case_gender_number)
+        # Check if it's an adjective or gendered pronoun (3 parts: case_gender_number)
         if len(parts) == 3:
             case, gender, number = parts
             cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
@@ -3729,18 +4617,27 @@ class BellerophonGrammarApp:
             
             return
         
-        # Original logic for nouns (2 parts) and verbs
+        # Original logic for nouns (2 parts), verbs, and personal pronouns
         if len(parts) != 2:
             return
         
         identifier, number = parts
         
-        # Check if we're dealing with nouns (cases) or verbs (persons)
-        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+        # Check if we're dealing with nouns (capitalized cases), pronouns (lowercase cases), or verbs (persons)
+        cases_capitalized = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+        cases_lowercase = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
         persons = ["1st", "2nd", "3rd"]
         
-        if identifier in cases:
-            # Noun logic
+        # Determine which case list to use
+        if identifier in cases_capitalized:
+            cases = cases_capitalized
+        elif identifier in cases_lowercase:
+            cases = cases_lowercase
+        else:
+            cases = None
+        
+        if cases:
+            # Noun or personal pronoun logic
             case_idx = cases.index(identifier)
             
             # Try next case in same number column first (downward movement)
@@ -3835,46 +4732,48 @@ class BellerophonGrammarApp:
             # Bind click event to return to startup page
             title_label.bind('<Button-1>', lambda e: self.show_startup_page())
             
-        # Practice options in top corner (simplified)
+        # Practice options in top-right corner (match Latin layout)
         practice_options_frame = tk.Frame(title_frame, bg='#F8F6F1')
         practice_options_frame.grid(row=0, column=1, sticky='ne', padx=(10, 10))
-        
-        # Prefill stems checkbox (simplified, no breathing option)
-        prefill_stems_cb = ttk.Checkbutton(
-            practice_options_frame,
-            text="Prefill stems",
-            variable=self.config.prefill_stems,
-            command=self.on_prefill_stems_toggle
-        )
-        prefill_stems_cb.grid(row=0, column=0, sticky='e')
-        
-        # Randomize next checkbox
+
+        # Randomize next checkbox (column 0)
         randomize_next_cb = ttk.Checkbutton(
             practice_options_frame,
             text="Randomize next",
             variable=self.config.randomize_next,
             command=self.on_randomize_toggle
         )
-        randomize_next_cb.grid(row=0, column=1, sticky='e', padx=(10, 0))
-        
-        # Auto advance checkbox
-        auto_advance_cb = ttk.Checkbutton(
+        randomize_next_cb.grid(row=0, column=0, sticky='e', padx=(0, 10))
+
+        # παντα ῥει button (column 1) - Greek time trial button
+        self.greek_tempus_button = ttk.Button(
             practice_options_frame,
-            text="Auto advance",
-            variable=self.config.auto_advance
+            text="παντα ῥει",
+            command=self.toggle_greek_time_trial,
+            width=12,
+            state='normal'
         )
-        auto_advance_cb.grid(row=0, column=2, sticky='e', padx=(10, 0))
-        
-        # Latin button in top right corner
-        latin_button = ttk.Button(
-            title_frame,
-            text="Latin",
+        self.greek_tempus_button.grid(row=0, column=1, sticky='e', padx=(0, 10))
+
+        # Latin button (column 2)
+        latin_switch_button = ttk.Button(
+            practice_options_frame,
+            text="Latin →",
             command=self.show_latin_view,
-            width=8
+            width=10
         )
-        latin_button.grid(row=0, column=2, sticky='ne', padx=(0, 5))
-        
-        # Help button in top right corner
+        latin_switch_button.grid(row=0, column=2, sticky='e', padx=(0, 10))
+
+        # Settings button (column 3) - reuse Latin settings dialog
+        settings_button = ttk.Button(
+            practice_options_frame,
+            text="⚙ Settings",
+            command=self.show_latin_settings_dialog,
+            width=12
+        )
+        settings_button.grid(row=0, column=3, sticky='e')
+
+        # Help button (keep existing placement)
         help_button = ttk.Button(
             title_frame,
             text="Help",
@@ -4195,6 +5094,13 @@ class BellerophonGrammarApp:
 
     def next_answer(self):
         """Navigate to the next item in the current dropdown list."""
+        # Greek Time Trial: Start timer if waiting for input, then penalize for skipping (-10 seconds)
+        if self.greek_time_trial.is_active:
+            if self.greek_time_trial.waiting_for_input:
+                self.greek_time_trial.begin_countdown()
+            self.greek_time_trial.subtract_time(10)
+            self.update_greek_time_trial_ui()
+        
         # Check if randomize next is enabled
         if self.config.randomize_next.get():
             self.random_next()
@@ -4839,6 +5745,9 @@ class BellerophonGrammarApp:
         )
         reveal_button.grid(row=0, column=1, padx=15)
         
+        # Store reference for Greek time trial text updates
+        self.reveal_button = reveal_button
+        
         # Combined Reset/Retry button in the center
         reset_retry_button = ttk.Button(
             button_container,
@@ -4860,6 +5769,14 @@ class BellerophonGrammarApp:
             width=12
         )
         next_button.grid(row=0, column=3, padx=15)
+        
+        # Store reference for Greek time trial text updates
+        self.next_button = next_button
+        
+        # Update button text if Greek time trial is active
+        if self.greek_time_trial.is_active:
+            self.reveal_button.configure(text="Reveal (-5s)")
+            self.next_button.configure(text="Skip (-10s)")
         
         # Apply stem prefilling if enabled
         self.apply_prefill_stems_to_all_entries()
@@ -4898,6 +5815,9 @@ class BellerophonGrammarApp:
 
         # Create input fields for each case with guaranteed visibility (British order)
         cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+        # Apply Hide vocative setting
+        if self.config.hide_vocative.get():
+            cases = [c for c in cases if c != "Vocative"]
         for i, case in enumerate(cases, 1):
             # Case label with consistent styling and better positioning
             case_label = ttk.Label(
@@ -5026,6 +5946,9 @@ class BellerophonGrammarApp:
 
             # Create input fields for each case
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            # Apply Hide vocative setting
+            if self.config.hide_vocative.get():
+                cases = [c for c in cases if c != "Vocative"]
             for i, case in enumerate(cases, 2):  # Start from row 2
                 # Case label with consistent styling
                 case_label = ttk.Label(
@@ -5155,6 +6078,9 @@ class BellerophonGrammarApp:
 
             # Create input fields for each case and gender
             cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+            # Apply Hide vocative setting
+            if self.config.hide_vocative.get():
+                cases = [c for c in cases if c != "Vocative"]
             for i, case in enumerate(cases, 2):  # Start from row 2
                 # Case label with consistent styling
                 case_label = ttk.Label(
@@ -7960,6 +8886,13 @@ class BellerophonGrammarApp:
         if self.has_revealed:
             return
         
+        # Greek Time Trial: Start timer if waiting for input, then penalize for revealing (-5 seconds)
+        if self.greek_time_trial.is_active:
+            if self.greek_time_trial.waiting_for_input:
+                self.greek_time_trial.begin_countdown()
+            self.greek_time_trial.subtract_time(5)
+            self.update_greek_time_trial_ui()
+        
         # Disable the reveal button immediately to prevent double-clicking
         if hasattr(self, 'reveal_button'):
             self.reveal_button.configure(state='disabled')
@@ -8626,6 +9559,24 @@ Tips:
                 entry.configure(state='readonly', readonlybackground='#7C8C4E')  # Gold color
                 if error_label:
                     error_label.grid_remove()
+                
+                # Greek Time Trial: Award time for correct word (reduced if prefill stems enabled)
+                if self.greek_time_trial.is_active:
+                    word_bonus = 1 if self.config.prefill_stems.get() else 2
+                    self.greek_time_trial.add_word(word_bonus)
+                    self.show_greek_time_bonus(word_bonus)
+                    self.update_greek_time_trial_ui()
+                
+                # Check if all entries are complete for table bonus
+                all_correct = all(str(e.cget('state')) == 'readonly' for e in self.entries.values())
+                
+                # Greek Time Trial: Award time for completed table (reduced if prefill stems enabled)
+                if all_correct and self.greek_time_trial.is_active:
+                    table_bonus = 3 if self.config.prefill_stems.get() else 5
+                    self.greek_time_trial.add_table(table_bonus)
+                    self.show_greek_time_bonus(table_bonus)
+                    self.update_greek_time_trial_ui()
+                
                 # Check auto-advance after setting readonly
                 self.check_and_auto_advance()
             else:
@@ -9336,9 +10287,346 @@ Tips:
             width=12
         ).pack(side='left', padx=5)
 
+    # ============================================================================
+    # GREEK TIME TRIAL (παντα ῥει) METHODS
+    # ============================================================================
+    
+    def load_greek_time_trial_high_score(self):
+        """Load Greek time trial high score from file."""
+        try:
+            if os.path.exists(self.greek_time_trial_scores_file):
+                with open(self.greek_time_trial_scores_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.greek_time_trial_high_score = data.get('high_score', 0)
+                    print(f"Loaded Greek time trial high score: {self.greek_time_trial_high_score}")
+        except Exception as e:
+            print(f"Error loading Greek time trial high score: {e}")
+            self.greek_time_trial_high_score = 0
+    
+    def save_greek_time_trial_high_score(self, score):
+        """Save Greek time trial high score to file."""
+        try:
+            if score > self.greek_time_trial_high_score:
+                self.greek_time_trial_high_score = score
+                with open(self.greek_time_trial_scores_file, 'w', encoding='utf-8') as f:
+                    json.dump({'high_score': score}, f, indent=2)
+                print(f"New Greek high score saved: {score}")
+                return True
+            return False
+        except Exception as e:
+            print(f"Error saving Greek time trial high score: {e}")
+            return False
+    
+    def toggle_greek_time_trial(self):
+        """Toggle Greek time trial mode on/off"""
+        if not self.greek_time_trial.is_active:
+            # Start time trial
+            self.start_greek_time_trial()
+        else:
+            # Stop time trial
+            self.stop_greek_time_trial()
+    
+    def start_greek_time_trial(self):
+        """Start a new Greek time trial session"""
+        # Initialize time trial
+        self.greek_time_trial.start()
+        
+        # Save current settings and enable them for time trial
+        self.greek_time_trial_saved_auto_advance = self.config.auto_advance.get()
+        self.greek_time_trial_saved_randomize_next = self.config.randomize_next.get()
+        self.greek_time_trial_saved_lock_current_type = self.config.lock_current_type.get()
+        self.config.auto_advance.set(True)
+        self.config.randomize_next.set(True)
+        self.config.lock_current_type.set(False)
+        
+        # Update button
+        if hasattr(self, 'greek_tempus_button'):
+            self.greek_tempus_button.configure(text="παντα ῥει (Active)", state='normal')
+        
+        # Update Reveal and Next button text to show penalties
+        if hasattr(self, 'reveal_button'):
+            self.reveal_button.configure(text="Reveal (-5s)")
+        if hasattr(self, 'next_button'):
+            self.next_button.configure(text="Skip (-10s)")
+        
+        # Create time trial UI frame
+        self.create_greek_time_trial_ui()
+        
+        # Reset table for new word
+        self.random_next()
+        
+        # Bind first keystroke event to all entries
+        for entry in self.entries.values():
+            entry.bind('<KeyPress>', self.on_greek_time_trial_first_keystroke, add='+')
+        
+        # Start timer loop
+        self.greek_time_trial_timer_loop()
+    
+    def stop_greek_time_trial(self):
+        """Stop the Greek time trial session"""
+        self.greek_time_trial.stop()
+        
+        # Restore saved settings
+        if hasattr(self, 'greek_time_trial_saved_auto_advance'):
+            self.config.auto_advance.set(self.greek_time_trial_saved_auto_advance)
+        if hasattr(self, 'greek_time_trial_saved_randomize_next'):
+            self.config.randomize_next.set(self.greek_time_trial_saved_randomize_next)
+        if hasattr(self, 'greek_time_trial_saved_lock_current_type'):
+            self.config.lock_current_type.set(self.greek_time_trial_saved_lock_current_type)
+        
+        # Update button
+        if hasattr(self, 'greek_tempus_button'):
+            self.greek_tempus_button.configure(text="παντα ῥει", state='normal')
+        
+        # Restore Reveal and Next button text
+        if hasattr(self, 'reveal_button'):
+            self.reveal_button.configure(text="Reveal")
+        if hasattr(self, 'next_button'):
+            self.next_button.configure(text="Next")
+        
+        # Remove time trial UI
+        if self.greek_time_trial_ui_frame:
+            self.greek_time_trial_ui_frame.destroy()
+            self.greek_time_trial_ui_frame = None
+            
+            # Restore table back to original position (row 3)
+            if hasattr(self, 'table_frame') and self.table_frame:
+                parent = self.table_frame.master  # This is table_container
+                if parent:
+                    parent.grid(row=3, column=0, columnspan=3, rowspan=2, sticky='nsew')
+        
+        # Unbind keystroke events
+        for entry in self.entries.values():
+            try:
+                entry.unbind('<KeyPress>', self.on_greek_time_trial_first_keystroke)
+            except:
+                pass
+    
+    def create_greek_time_trial_ui(self):
+        """Create the Greek time trial UI overlay"""
+        # Remove old UI if exists
+        if self.greek_time_trial_ui_frame:
+            self.greek_time_trial_ui_frame.destroy()
+        
+        # Create frame between word display (row 2) and table (row 3)
+        # This pushes the table down when time trial is active
+        self.greek_time_trial_ui_frame = tk.Frame(self.main_frame, bg='#2C2C2C', height=70)
+        self.greek_time_trial_ui_frame.grid(row=3, column=0, columnspan=3, sticky='ew', pady=(0, 5))
+        self.greek_time_trial_ui_frame.grid_propagate(False)
+        
+        # Shift the table down to row 4 when time trial is active
+        if hasattr(self, 'table_frame') and self.table_frame:
+            parent = self.table_frame.master  # This is table_container
+            if parent:
+                parent.grid(row=4, column=0, columnspan=3, rowspan=2, sticky='nsew')
+        
+        # Timer (left side)
+        timer_frame = tk.Frame(self.greek_time_trial_ui_frame, bg='#2C2C2C')
+        timer_frame.pack(side='left', padx=20)
+        
+        self.greek_time_trial_timer_label = tk.Label(
+            timer_frame,
+            text=f"Time: {self.greek_time_trial.time_left:.1f}s",
+            bg='#2C2C2C',
+            fg='white',
+            font=('Arial', 18, 'bold')
+        )
+        self.greek_time_trial_timer_label.pack()
+        
+        # Counters (center)
+        counters_frame = tk.Frame(self.greek_time_trial_ui_frame, bg='#2C2C2C')
+        counters_frame.pack(side='left', expand=True)
+        
+        self.greek_time_trial_words_label = tk.Label(
+            counters_frame,
+            text=f"Words: {self.greek_time_trial.words_completed}",
+            bg='#2C2C2C',
+            fg='white',
+            font=('Arial', 14)
+        )
+        self.greek_time_trial_words_label.pack(side='left', padx=10)
+        
+        self.greek_time_trial_tables_label = tk.Label(
+            counters_frame,
+            text=f"Tables: {self.greek_time_trial.tables_completed}",
+            bg='#2C2C2C',
+            fg='white',
+            font=('Arial', 14)
+        )
+        self.greek_time_trial_tables_label.pack(side='left', padx=10)
+        
+        # Bonus display (animated)
+        self.greek_time_bonus_label = tk.Label(
+            counters_frame,
+            text="",
+            bg='#2C2C2C',
+            fg='#00FF00',
+            font=('Arial', 16, 'bold')
+        )
+        self.greek_time_bonus_label.pack(side='left', padx=10)
+        
+        # High score (right side)
+        high_score_frame = tk.Frame(self.greek_time_trial_ui_frame, bg='#2C2C2C')
+        high_score_frame.pack(side='right', padx=20)
+        
+        self.greek_time_trial_high_score_label = tk.Label(
+            high_score_frame,
+            text=f"High Score: {self.greek_time_trial_high_score}",
+            bg='#2C2C2C',
+            fg='#FFD700',
+            font=('Arial', 12)
+        )
+        self.greek_time_trial_high_score_label.pack()
+    
+    def greek_time_trial_timer_loop(self):
+        """Greek time trial main timer loop - updates every 100ms"""
+        if not self.greek_time_trial.is_active:
+            return
+        
+        # Update timer (will not decrease time if waiting_for_input is True)
+        self.greek_time_trial.update_timer(0.1)
+        
+        # Update UI
+        self.update_greek_time_trial_ui()
+        
+        # Schedule next update (continue even if waiting for input)
+        self.root.after(100, self.greek_time_trial_timer_loop)
+    
+    def on_greek_time_trial_first_keystroke(self, event):
+        """Called when user types first character in Greek time trial mode"""
+        if self.greek_time_trial.is_active and self.greek_time_trial.waiting_for_input:
+            self.greek_time_trial.begin_countdown()
+    
+    def update_greek_time_trial_ui(self):
+        """Update Greek time trial UI elements"""
+        # Update timer display
+        time_str = f"Time: {self.greek_time_trial.time_left:.1f}s"
+        self.greek_time_trial_timer_label.config(text=time_str)
+        
+        # Change color if low on time
+        if self.greek_time_trial.time_left <= 5.0:
+            self.greek_time_trial_timer_label.config(fg='#FF0000')  # Red
+        else:
+            self.greek_time_trial_timer_label.config(fg='white')
+        
+        # Update counters
+        self.greek_time_trial_words_label.config(text=f"Words: {self.greek_time_trial.words_completed}")
+        self.greek_time_trial_tables_label.config(text=f"Tables: {self.greek_time_trial.tables_completed}")
+    
+    def show_greek_time_bonus(self, seconds):
+        """Show floating +time animation for Greek"""
+        self.greek_time_bonus_label.config(text=f"+{seconds}s")
+        # Hide after 800ms
+        self.root.after(800, lambda: self.greek_time_bonus_label.config(text=""))
+    
+    def on_greek_time_trial_game_over(self):
+        """Called when Greek time trial ends"""
+        # Check if new high score
+        final_score = self.greek_time_trial.words_completed
+        is_new_high_score = self.save_greek_time_trial_high_score(final_score)
+        
+        # Update high score display
+        self.greek_time_trial_high_score_label.config(text=f"High Score: {self.greek_time_trial_high_score}")
+        
+        # Show game over dialog
+        self.show_greek_time_trial_game_over_dialog(is_new_high_score)
+    
+    def show_greek_time_trial_game_over_dialog(self, is_new_high_score):
+        """Show Greek time trial game over dialog with results"""
+        # Create dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title("παντα ῥει - Time's Up!")
+        dialog.geometry("400x300")
+        dialog.configure(bg='#2C2C2C')
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Define exit function that stops time trial and closes dialog
+        def exit_trial():
+            dialog.destroy()
+            self.stop_greek_time_trial()
+        
+        # Set protocol for window close (X button)
+        dialog.protocol("WM_DELETE_WINDOW", exit_trial)
+        
+        # Center the dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
+        y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
+        dialog.geometry(f"+{x}+{y}")
+        
+        # Title
+        title_label = tk.Label(
+            dialog,
+            text="ΠΑΝΤΑ ῬΕΙ!",
+            bg='#2C2C2C',
+            fg='white',
+            font=('Arial', 24, 'bold')
+        )
+        title_label.pack(pady=20)
+        
+        # Stats
+        stats_frame = tk.Frame(dialog, bg='#2C2C2C')
+        stats_frame.pack(pady=10)
+        
+        tk.Label(
+            stats_frame,
+            text=f"Words Completed: {self.greek_time_trial.words_completed}",
+            bg='#2C2C2C',
+            fg='white',
+            font=('Arial', 14)
+        ).pack(pady=5)
+        
+        tk.Label(
+            stats_frame,
+            text=f"Tables Completed: {self.greek_time_trial.tables_completed}",
+            bg='#2C2C2C',
+            fg='white',
+            font=('Arial', 14)
+        ).pack(pady=5)
+        
+        if is_new_high_score:
+            tk.Label(
+                stats_frame,
+                text="🎉 NEW HIGH SCORE! 🎉",
+                bg='#2C2C2C',
+                fg='#FFD700',
+                font=('Arial', 16, 'bold')
+            ).pack(pady=10)
+        else:
+            tk.Label(
+                stats_frame,
+                text=f"High Score: {self.greek_time_trial_high_score}",
+                bg='#2C2C2C',
+                fg='#FFD700',
+                font=('Arial', 14)
+            ).pack(pady=10)
+        
+        # Buttons
+        button_frame = tk.Frame(dialog, bg='#2C2C2C')
+        button_frame.pack(pady=20)
+        
+        def restart():
+            dialog.destroy()
+            self.start_greek_time_trial()
+        
+        ttk.Button(
+            button_frame,
+            text="Try Again",
+            command=restart,
+            width=12
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Exit",
+            command=exit_trial,
+            width=12
+        ).pack(side='left', padx=5)
+
     def get_available_latin_types(self):
         """Get the list of available Latin types based on whether starred items exist."""
-        base_types = ["Noun", "Verb", "Adjective"]
+        base_types = ["Noun", "Verb", "Adjective", "Pronoun"]
         
         # Check if there are any starred items
         if self.latin_starred_items:
