@@ -2339,5 +2339,1856 @@
                           },
                 "english":  "force",
                 "stem":  "vi"
-            }
+            },
+    "dexter":  {
+                   "word":  "dexter",
+                   "type":  "adjective",
+                   "declension":  "1st/2nd",
+                   "english":  "right, on the right",
+                   "stem":  "dextr",
+                   "stem_masc_nom_sg":  "dexter",
+                   "forms":  {
+                                 "masculine":  {
+                                                   "nominative":  {
+                                                                      "sg":  "dexter",
+                                                                      "pl":  "dextri"
+                                                                  },
+                                                   "vocative":  {
+                                                                    "sg":  "dexter",
+                                                                    "pl":  "dextri"
+                                                                },
+                                                   "accusative":  {
+                                                                      "sg":  "dextrum",
+                                                                      "pl":  "dextros"
+                                                                  },
+                                                   "genitive":  {
+                                                                    "sg":  "dextri",
+                                                                    "pl":  "dextrorum"
+                                                                },
+                                                   "dative":  {
+                                                                  "sg":  "dextro",
+                                                                  "pl":  "dextris"
+                                                              },
+                                                   "ablative":  {
+                                                                    "sg":  "dextro",
+                                                                    "pl":  "dextris"
+                                                                }
+                                               },
+                                 "feminine":  {
+                                                  "nominative":  {
+                                                                     "sg":  "dextra",
+                                                                     "pl":  "dextrae"
+                                                                 },
+                                                  "vocative":  {
+                                                                   "sg":  "dextra",
+                                                                   "pl":  "dextrae"
+                                                               },
+                                                  "accusative":  {
+                                                                     "sg":  "dextram",
+                                                                     "pl":  "dextras"
+                                                                 },
+                                                  "genitive":  {
+                                                                   "sg":  "dextrae",
+                                                                   "pl":  "dextrarum"
+                                                               },
+                                                  "dative":  {
+                                                                 "sg":  "dextrae",
+                                                                 "pl":  "dextris"
+                                                             },
+                                                  "ablative":  {
+                                                                   "sg":  "dextra",
+                                                                   "pl":  "dextris"
+                                                               }
+                                              },
+                                 "neuter":  {
+                                                "nominative":  {
+                                                                   "sg":  "dextrum",
+                                                                   "pl":  "dextra"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "dextrum",
+                                                                 "pl":  "dextra"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "dextrum",
+                                                                   "pl":  "dextra"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "dextri",
+                                                                 "pl":  "dextrorum"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "dextro",
+                                                               "pl":  "dextris"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "dextro",
+                                                                 "pl":  "dextris"
+                                                             }
+                                            }
+                             }
+               },
+    "totus":  {
+                  "word":  "totus",
+                  "type":  "adjective",
+                  "declension":  "1st/2nd",
+                  "english":  "whole, entire",
+                  "stem":  "tot",
+                  "forms":  {
+                                "masculine":  {
+                                                  "nominative":  {
+                                                                     "sg":  "totus",
+                                                                     "pl":  "toti"
+                                                                 },
+                                                  "vocative":  {
+                                                                   "sg":  "tote",
+                                                                   "pl":  "toti"
+                                                               },
+                                                  "accusative":  {
+                                                                     "sg":  "totum",
+                                                                     "pl":  "totos"
+                                                                 },
+                                                  "genitive":  {
+                                                                   "sg":  "totius",
+                                                                   "pl":  "totorum"
+                                                               },
+                                                  "dative":  {
+                                                                 "sg":  "toti",
+                                                                 "pl":  "totis"
+                                                             },
+                                                  "ablative":  {
+                                                                   "sg":  "toto",
+                                                                   "pl":  "totis"
+                                                               }
+                                              },
+                                "feminine":  {
+                                                 "nominative":  {
+                                                                    "sg":  "tota",
+                                                                    "pl":  "totae"
+                                                                },
+                                                 "vocative":  {
+                                                                  "sg":  "tota",
+                                                                  "pl":  "totae"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "totam",
+                                                                    "pl":  "totas"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "totius",
+                                                                  "pl":  "totarum"
+                                                              },
+                                                 "dative":  {
+                                                                "sg":  "toti",
+                                                                "pl":  "totis"
+                                                            },
+                                                 "ablative":  {
+                                                                  "sg":  "tota",
+                                                                  "pl":  "totis"
+                                                              }
+                                             },
+                                "neuter":  {
+                                               "nominative":  {
+                                                                  "sg":  "totum",
+                                                                  "pl":  "tota"
+                                                              },
+                                               "vocative":  {
+                                                                "sg":  "totum",
+                                                                "pl":  "tota"
+                                                            },
+                                               "accusative":  {
+                                                                  "sg":  "totum",
+                                                                  "pl":  "tota"
+                                                              },
+                                               "genitive":  {
+                                                                "sg":  "totius",
+                                                                "pl":  "totorum"
+                                                            },
+                                               "dative":  {
+                                                              "sg":  "toti",
+                                                              "pl":  "totis"
+                                                          },
+                                               "ablative":  {
+                                                                "sg":  "toto",
+                                                                "pl":  "totis"
+                                                            }
+                                           }
+                            }
+              },
+    "acer":  {
+                 "word":  "acer",
+                 "type":  "adjective",
+                 "declension":  "3rd",
+                 "english":  "sharp, keen, fierce",
+                 "stem":  "acr",
+                 "stem_masc_nom_sg":  "acer",
+                 "forms":  {
+                               "masculine":  {
+                                                 "nominative":  {
+                                                                    "sg":  "acer",
+                                                                    "pl":  "acres"
+                                                                },
+                                                 "vocative":  {
+                                                                  "sg":  "acer",
+                                                                  "pl":  "acres"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "acrem",
+                                                                    "pl":  "acres"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "acris",
+                                                                  "pl":  "acrium"
+                                                              },
+                                                 "dative":  {
+                                                                "sg":  "acri",
+                                                                "pl":  "acribus"
+                                                            },
+                                                 "ablative":  {
+                                                                  "sg":  "acri",
+                                                                  "pl":  "acribus"
+                                                              }
+                                             },
+                               "feminine":  {
+                                                "nominative":  {
+                                                                   "sg":  "acris",
+                                                                   "pl":  "acres"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "acris",
+                                                                 "pl":  "acres"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "acrem",
+                                                                   "pl":  "acres"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "acris",
+                                                                 "pl":  "acrium"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "acri",
+                                                               "pl":  "acribus"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "acri",
+                                                                 "pl":  "acribus"
+                                                             }
+                                            },
+                               "neuter":  {
+                                              "nominative":  {
+                                                                 "sg":  "acre",
+                                                                 "pl":  "acria"
+                                                             },
+                                              "vocative":  {
+                                                               "sg":  "acre",
+                                                               "pl":  "acria"
+                                                           },
+                                              "accusative":  {
+                                                                 "sg":  "acre",
+                                                                 "pl":  "acria"
+                                                             },
+                                              "genitive":  {
+                                                               "sg":  "acris",
+                                                               "pl":  "acrium"
+                                                           },
+                                              "dative":  {
+                                                             "sg":  "acri",
+                                                             "pl":  "acribus"
+                                                         },
+                                              "ablative":  {
+                                                               "sg":  "acri",
+                                                               "pl":  "acribus"
+                                                           }
+                                          }
+                           }
+             },
+    "omnis":  {
+                  "word":  "omnis",
+                  "type":  "adjective",
+                  "declension":  "3rd",
+                  "english":  "all, every",
+                  "stem":  "omn",
+                  "forms":  {
+                                "masculine":  {
+                                                  "nominative":  {
+                                                                     "sg":  "omnis",
+                                                                     "pl":  "omnes"
+                                                                 },
+                                                  "vocative":  {
+                                                                   "sg":  "omnis",
+                                                                   "pl":  "omnes"
+                                                               },
+                                                  "accusative":  {
+                                                                     "sg":  "omnem",
+                                                                     "pl":  "omnes"
+                                                                 },
+                                                  "genitive":  {
+                                                                   "sg":  "omnis",
+                                                                   "pl":  "omnium"
+                                                               },
+                                                  "dative":  {
+                                                                 "sg":  "omni",
+                                                                 "pl":  "omnibus"
+                                                             },
+                                                  "ablative":  {
+                                                                   "sg":  "omni",
+                                                                   "pl":  "omnibus"
+                                                               }
+                                              },
+                                "feminine":  {
+                                                 "nominative":  {
+                                                                    "sg":  "omnis",
+                                                                    "pl":  "omnes"
+                                                                },
+                                                 "vocative":  {
+                                                                  "sg":  "omnis",
+                                                                  "pl":  "omnes"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "omnem",
+                                                                    "pl":  "omnes"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "omnis",
+                                                                  "pl":  "omnium"
+                                                              },
+                                                 "dative":  {
+                                                                "sg":  "omni",
+                                                                "pl":  "omnibus"
+                                                            },
+                                                 "ablative":  {
+                                                                  "sg":  "omni",
+                                                                  "pl":  "omnibus"
+                                                              }
+                                             },
+                                "neuter":  {
+                                               "nominative":  {
+                                                                  "sg":  "omne",
+                                                                  "pl":  "omnia"
+                                                              },
+                                               "vocative":  {
+                                                                "sg":  "omne",
+                                                                "pl":  "omnia"
+                                                            },
+                                               "accusative":  {
+                                                                  "sg":  "omne",
+                                                                  "pl":  "omnia"
+                                                              },
+                                               "genitive":  {
+                                                                "sg":  "omnis",
+                                                                "pl":  "omnium"
+                                                            },
+                                               "dative":  {
+                                                              "sg":  "omni",
+                                                              "pl":  "omnibus"
+                                                          },
+                                               "ablative":  {
+                                                                "sg":  "omni",
+                                                                "pl":  "omnibus"
+                                                            }
+                                           }
+                            }
+              },
+    "amans":  {
+                 "word":  "amans",
+                 "type":  "adjective",
+                 "declension":  "3rd",
+                 "english":  "loving (present participle of amo)",
+                 "stem":  "amant",
+                 "forms":  {
+                               "masculine":  {
+                                                 "nominative":  {
+                                                                    "sg":  "amans",
+                                                                    "pl":  "amantes"
+                                                                },
+                                                 "vocative":  {
+                                                                  "sg":  "amans",
+                                                                  "pl":  "amantes"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "amantem",
+                                                                    "pl":  "amantes"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "amantis",
+                                                                  "pl":  "amantium"
+                                                              },
+                                                 "dative":  {
+                                                                "sg":  "amanti",
+                                                                "pl":  "amantibus"
+                                                            },
+                                                 "ablative":  {
+                                                                  "sg":  "amanti",
+                                                                  "pl":  "amantibus"
+                                                              }
+                                             },
+                               "feminine":  {
+                                                "nominative":  {
+                                                                   "sg":  "amans",
+                                                                   "pl":  "amantes"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "amans",
+                                                                 "pl":  "amantes"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "amantem",
+                                                                   "pl":  "amantes"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "amantis",
+                                                                 "pl":  "amantium"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "amanti",
+                                                               "pl":  "amantibus"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "amanti",
+                                                                 "pl":  "amantibus"
+                                                             }
+                                            },
+                               "neuter":  {
+                                              "nominative":  {
+                                                                 "sg":  "amans",
+                                                                 "pl":  "amantia"
+                                                             },
+                                              "vocative":  {
+                                                               "sg":  "amans",
+                                                               "pl":  "amantia"
+                                                           },
+                                              "accusative":  {
+                                                                 "sg":  "amans",
+                                                                 "pl":  "amantia"
+                                                             },
+                                              "genitive":  {
+                                                               "sg":  "amantis",
+                                                               "pl":  "amantium"
+                                                           },
+                                              "dative":  {
+                                                             "sg":  "amanti",
+                                                             "pl":  "amantibus"
+                                                         },
+                                              "ablative":  {
+                                                               "sg":  "amanti",
+                                                               "pl":  "amantibus"
+                                                           }
+                                          }
+                           }
+             },
+    "hic":  {
+                "word":  "hic",
+                "type":  "adjective",
+                "declension":  "irregular",
+                "english":  "this",
+                "stem":  "h",
+                "forms":  {
+                              "masculine":  {
+                                                "nominative":  {
+                                                                   "sg":  "hic",
+                                                                   "pl":  "hi"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "hic",
+                                                                 "pl":  "hi"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "hunc",
+                                                                   "pl":  "hos"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "huius",
+                                                                 "pl":  "horum"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "huic",
+                                                               "pl":  "his"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "hoc",
+                                                                 "pl":  "his"
+                                                             }
+                                            },
+                              "feminine":  {
+                                               "nominative":  {
+                                                                  "sg":  "haec",
+                                                                  "pl":  "hae"
+                                                              },
+                                               "vocative":  {
+                                                                "sg":  "haec",
+                                                                "pl":  "hae"
+                                                            },
+                                               "accusative":  {
+                                                                  "sg":  "hanc",
+                                                                  "pl":  "has"
+                                                              },
+                                               "genitive":  {
+                                                                "sg":  "huius",
+                                                                "pl":  "harum"
+                                                            },
+                                               "dative":  {
+                                                              "sg":  "huic",
+                                                              "pl":  "his"
+                                                          },
+                                               "ablative":  {
+                                                                "sg":  "hac",
+                                                                "pl":  "his"
+                                                            }
+                                           },
+                              "neuter":  {
+                                             "nominative":  {
+                                                                "sg":  "hoc",
+                                                                "pl":  "haec"
+                                                            },
+                                             "vocative":  {
+                                                              "sg":  "hoc",
+                                                              "pl":  "haec"
+                                                          },
+                                             "accusative":  {
+                                                                "sg":  "hoc",
+                                                                "pl":  "haec"
+                                                            },
+                                             "genitive":  {
+                                                              "sg":  "huius",
+                                                              "pl":  "horum"
+                                                          },
+                                             "dative":  {
+                                                            "sg":  "huic",
+                                                            "pl":  "his"
+                                                        },
+                                             "ablative":  {
+                                                              "sg":  "hoc",
+                                                              "pl":  "his"
+                                                          }
+                                         }
+                          }
+            },
+    "ille":  {
+                 "word":  "ille",
+                 "type":  "adjective",
+                 "declension":  "irregular",
+                 "english":  "that",
+                 "stem":  "ill",
+                 "forms":  {
+                               "masculine":  {
+                                                 "nominative":  {
+                                                                    "sg":  "ille",
+                                                                    "pl":  "illi"
+                                                                },
+                                                 "vocative":  {
+                                                                  "sg":  "ille",
+                                                                  "pl":  "illi"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "illum",
+                                                                    "pl":  "illos"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "illius",
+                                                                  "pl":  "illorum"
+                                                              },
+                                                 "dative":  {
+                                                                "sg":  "illi",
+                                                                "pl":  "illis"
+                                                            },
+                                                 "ablative":  {
+                                                                  "sg":  "illo",
+                                                                  "pl":  "illis"
+                                                              }
+                                             },
+                               "feminine":  {
+                                                "nominative":  {
+                                                                   "sg":  "illa",
+                                                                   "pl":  "illae"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "illa",
+                                                                 "pl":  "illae"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "illam",
+                                                                   "pl":  "illas"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "illius",
+                                                                 "pl":  "illarum"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "illi",
+                                                               "pl":  "illis"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "illa",
+                                                                 "pl":  "illis"
+                                                             }
+                                            },
+                               "neuter":  {
+                                              "nominative":  {
+                                                                 "sg":  "illud",
+                                                                 "pl":  "illa"
+                                                             },
+                                              "vocative":  {
+                                                               "sg":  "illud",
+                                                               "pl":  "illa"
+                                                           },
+                                              "accusative":  {
+                                                                 "sg":  "illud",
+                                                                 "pl":  "illa"
+                                                             },
+                                              "genitive":  {
+                                                               "sg":  "illius",
+                                                               "pl":  "illorum"
+                                                           },
+                                              "dative":  {
+                                                             "sg":  "illi",
+                                                             "pl":  "illis"
+                                                         },
+                                              "ablative":  {
+                                                               "sg":  "illo",
+                                                               "pl":  "illis"
+                                                           }
+                                          }
+                           }
+             },
+    "ipse":  {
+                 "word":  "ipse",
+                 "type":  "adjective",
+                 "declension":  "irregular",
+                 "english":  "himself, herself, itself",
+                 "stem":  "ips",
+                 "forms":  {
+                               "masculine":  {
+                                                 "nominative":  {
+                                                                    "sg":  "ipse",
+                                                                    "pl":  "ipsi"
+                                                                },
+                                                 "vocative":  {
+                                                                  "sg":  "ipse",
+                                                                  "pl":  "ipsi"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "ipsum",
+                                                                    "pl":  "ipsos"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "ipsius",
+                                                                  "pl":  "ipsorum"
+                                                              },
+                                                 "dative":  {
+                                                                "sg":  "ipsi",
+                                                                "pl":  "ipsis"
+                                                            },
+                                                 "ablative":  {
+                                                                  "sg":  "ipso",
+                                                                  "pl":  "ipsis"
+                                                              }
+                                             },
+                               "feminine":  {
+                                                "nominative":  {
+                                                                   "sg":  "ipsa",
+                                                                   "pl":  "ipsae"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "ipsa",
+                                                                 "pl":  "ipsae"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "ipsam",
+                                                                   "pl":  "ipsas"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "ipsius",
+                                                                 "pl":  "ipsarum"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "ipsi",
+                                                               "pl":  "ipsis"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "ipsa",
+                                                                 "pl":  "ipsis"
+                                                             }
+                                            },
+                               "neuter":  {
+                                              "nominative":  {
+                                                                 "sg":  "ipsum",
+                                                                 "pl":  "ipsa"
+                                                             },
+                                              "vocative":  {
+                                                               "sg":  "ipsum",
+                                                               "pl":  "ipsa"
+                                                           },
+                                              "accusative":  {
+                                                                 "sg":  "ipsum",
+                                                                 "pl":  "ipsa"
+                                                             },
+                                              "genitive":  {
+                                                               "sg":  "ipsius",
+                                                               "pl":  "ipsorum"
+                                                           },
+                                              "dative":  {
+                                                             "sg":  "ipsi",
+                                                             "pl":  "ipsis"
+                                                         },
+                                              "ablative":  {
+                                                               "sg":  "ipso",
+                                                               "pl":  "ipsis"
+                                                           }
+                                          }
+                           }
+             },
+    "iste":  {
+                 "word":  "iste",
+                 "type":  "adjective",
+                 "declension":  "irregular",
+                 "english":  "that (of yours)",
+                 "stem":  "ist",
+                 "forms":  {
+                               "masculine":  {
+                                                 "nominative":  {
+                                                                    "sg":  "iste",
+                                                                    "pl":  "isti"
+                                                                },
+                                                 "vocative":  {
+                                                                  "sg":  "iste",
+                                                                  "pl":  "isti"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "istum",
+                                                                    "pl":  "istos"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "istius",
+                                                                  "pl":  "istorum"
+                                                              },
+                                                 "dative":  {
+                                                                "sg":  "isti",
+                                                                "pl":  "istis"
+                                                            },
+                                                 "ablative":  {
+                                                                  "sg":  "isto",
+                                                                  "pl":  "istis"
+                                                              }
+                                             },
+                               "feminine":  {
+                                                "nominative":  {
+                                                                   "sg":  "ista",
+                                                                   "pl":  "istae"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "ista",
+                                                                 "pl":  "istae"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "istam",
+                                                                   "pl":  "istas"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "istius",
+                                                                 "pl":  "istarum"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "isti",
+                                                               "pl":  "istis"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "ista",
+                                                                 "pl":  "istis"
+                                                             }
+                                            },
+                               "neuter":  {
+                                              "nominative":  {
+                                                                 "sg":  "istud",
+                                                                 "pl":  "ista"
+                                                             },
+                                              "vocative":  {
+                                                               "sg":  "istud",
+                                                               "pl":  "ista"
+                                                           },
+                                              "accusative":  {
+                                                                 "sg":  "istud",
+                                                                 "pl":  "ista"
+                                                             },
+                                              "genitive":  {
+                                                               "sg":  "istius",
+                                                               "pl":  "istorum"
+                                                           },
+                                              "dative":  {
+                                                             "sg":  "isti",
+                                                             "pl":  "istis"
+                                                         },
+                                              "ablative":  {
+                                                               "sg":  "isto",
+                                                               "pl":  "istis"
+                                                           }
+                                          }
+                           }
+             },
+    "is":  {
+               "word":  "is",
+               "type":  "pronoun",
+               "declension":  "irregular",
+               "english":  "he, she, it; that",
+               "stem":  "e",
+               "forms":  {
+                             "masculine":  {
+                                               "nominative":  {
+                                                                  "sg":  "is",
+                                                                  "pl":  "ei"
+                                                              },
+                                               "vocative":  {
+                                                                "sg":  "is",
+                                                                "pl":  "ei"
+                                                            },
+                                               "accusative":  {
+                                                                  "sg":  "eum",
+                                                                  "pl":  "eos"
+                                                              },
+                                               "genitive":  {
+                                                                "sg":  "eius",
+                                                                "pl":  "eorum"
+                                                            },
+                                               "dative":  {
+                                                              "sg":  "ei",
+                                                              "pl":  "eis"
+                                                          },
+                                               "ablative":  {
+                                                                "sg":  "eo",
+                                                                "pl":  "eis"
+                                                            }
+                                           },
+                             "feminine":  {
+                                              "nominative":  {
+                                                                 "sg":  "ea",
+                                                                 "pl":  "eae"
+                                                             },
+                                              "vocative":  {
+                                                               "sg":  "ea",
+                                                               "pl":  "eae"
+                                                           },
+                                              "accusative":  {
+                                                                 "sg":  "eam",
+                                                                 "pl":  "eas"
+                                                             },
+                                              "genitive":  {
+                                                               "sg":  "eius",
+                                                               "pl":  "earum"
+                                                           },
+                                              "dative":  {
+                                                             "sg":  "ei",
+                                                             "pl":  "eis"
+                                                         },
+                                              "ablative":  {
+                                                               "sg":  "ea",
+                                                               "pl":  "eis"
+                                                           }
+                                          },
+                             "neuter":  {
+                                            "nominative":  {
+                                                               "sg":  "id",
+                                                               "pl":  "ea"
+                                                           },
+                                            "vocative":  {
+                                                             "sg":  "id",
+                                                             "pl":  "ea"
+                                                         },
+                                            "accusative":  {
+                                                               "sg":  "id",
+                                                               "pl":  "ea"
+                                                           },
+                                            "genitive":  {
+                                                             "sg":  "eius",
+                                                             "pl":  "eorum"
+                                                         },
+                                            "dative":  {
+                                                           "sg":  "ei",
+                                                           "pl":  "eis"
+                                                       },
+                                            "ablative":  {
+                                                             "sg":  "eo",
+                                                             "pl":  "eis"
+                                                         }
+                                        }
+                         }
+           },
+    "idem":  {
+                 "word":  "idem",
+                 "type":  "adjective",
+                 "declension":  "irregular",
+                 "english":  "the same",
+                 "stem":  "ead",
+                 "forms":  {
+                               "masculine":  {
+                                                 "nominative":  {
+                                                                    "sg":  "idem",
+                                                                    "pl":  "eidem"
+                                                                },
+                                                 "vocative":  {
+                                                                  "sg":  "idem",
+                                                                  "pl":  "eidem"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "eundem",
+                                                                    "pl":  "eosdem"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "eiusdem",
+                                                                  "pl":  "eorundem"
+                                                              },
+                                                 "dative":  {
+                                                                "sg":  "eidem",
+                                                                "pl":  "eisdem"
+                                                            },
+                                                 "ablative":  {
+                                                                  "sg":  "eodem",
+                                                                  "pl":  "eisdem"
+                                                              }
+                                             },
+                               "feminine":  {
+                                                "nominative":  {
+                                                                   "sg":  "eadem",
+                                                                   "pl":  "eaedem"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "eadem",
+                                                                 "pl":  "eaedem"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "eandem",
+                                                                   "pl":  "easdem"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "eiusdem",
+                                                                 "pl":  "earundem"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "eidem",
+                                                               "pl":  "eisdem"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "eadem",
+                                                                 "pl":  "eisdem"
+                                                             }
+                                            },
+                               "neuter":  {
+                                              "nominative":  {
+                                                                 "sg":  "idem",
+                                                                 "pl":  "eadem"
+                                                             },
+                                              "vocative":  {
+                                                               "sg":  "idem",
+                                                               "pl":  "eadem"
+                                                           },
+                                              "accusative":  {
+                                                                 "sg":  "idem",
+                                                                 "pl":  "eadem"
+                                                             },
+                                              "genitive":  {
+                                                               "sg":  "eiusdem",
+                                                               "pl":  "eorundem"
+                                                           },
+                                              "dative":  {
+                                                             "sg":  "eidem",
+                                                             "pl":  "eisdem"
+                                                         },
+                                              "ablative":  {
+                                                               "sg":  "eodem",
+                                                               "pl":  "eisdem"
+                                                           }
+                                          }
+                           }
+             },
+    "qui":  {
+                "word":  "qui",
+                "type":  "adjective",
+                "declension":  "irregular",
+                "english":  "who, which, that (relative pronoun)",
+                "stem":  "qu",
+                "stems": ["qu", "cu"],
+                "forms":  {
+                              "masculine":  {
+                                                "nominative":  {
+                                                                   "sg":  "qui",
+                                                                   "pl":  "qui"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "qui",
+                                                                 "pl":  "qui"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "quem",
+                                                                   "pl":  "quos"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "cuius",
+                                                                 "pl":  "quorum"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "cui",
+                                                               "pl":  "quibus"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "quo",
+                                                                 "pl":  "quibus"
+                                                             }
+                                            },
+                              "feminine":  {
+                                               "nominative":  {
+                                                                  "sg":  "quae",
+                                                                  "pl":  "quae"
+                                                              },
+                                               "vocative":  {
+                                                                "sg":  "quae",
+                                                                "pl":  "quae"
+                                                            },
+                                               "accusative":  {
+                                                                  "sg":  "quam",
+                                                                  "pl":  "quas"
+                                                              },
+                                               "genitive":  {
+                                                                "sg":  "cuius",
+                                                                "pl":  "quarum"
+                                                            },
+                                               "dative":  {
+                                                              "sg":  "cui",
+                                                              "pl":  "quibus"
+                                                          },
+                                               "ablative":  {
+                                                                "sg":  "qua",
+                                                                "pl":  "quibus"
+                                                            }
+                                           },
+                              "neuter":  {
+                                             "nominative":  {
+                                                                "sg":  "quod",
+                                                                "pl":  "quae"
+                                                            },
+                                             "vocative":  {
+                                                              "sg":  "quod",
+                                                              "pl":  "quae"
+                                                          },
+                                             "accusative":  {
+                                                                "sg":  "quod",
+                                                                "pl":  "quae"
+                                                            },
+                                             "genitive":  {
+                                                              "sg":  "cuius",
+                                                              "pl":  "quorum"
+                                                          },
+                                             "dative":  {
+                                                            "sg":  "cui",
+                                                            "pl":  "quibus"
+                                                        },
+                                             "ablative":  {
+                                                              "sg":  "quo",
+                                                              "pl":  "quibus"
+                                                          }
+                                         }
+                          }
+            },
+    "ego":  {
+                "word":  "ego",
+                "type":  "pronoun",
+                "declension":  "irregular",
+                "english":  "I",
+                "stem":  "me",
+                "forms":  {
+                              "singular":  {
+                                               "nominative":  "ego",
+                                               "vocative":  "—",
+                                               "accusative":  "me",
+                                               "genitive":  "mei",
+                                               "dative":  "mihi",
+                                               "ablative":  "me"
+                                           },
+                              "plural":  {
+                                             "nominative":  "nos",
+                                             "vocative":  "—",
+                                             "accusative":  "nos",
+                                             "genitive":  "nostrum / nostri",
+                                             "dative":  "nobis",
+                                             "ablative":  "nobis"
+                                         }
+                          }
+            },
+    "tu":  {
+               "word":  "tu",
+               "type":  "pronoun",
+               "declension":  "irregular",
+               "english":  "you (singular)",
+               "stem":  "te",
+               "forms":  {
+                             "singular":  {
+                                              "nominative":  "tu",
+                                              "vocative":  "—",
+                                              "accusative":  "te",
+                                              "genitive":  "tui",
+                                              "dative":  "tibi",
+                                              "ablative":  "te"
+                                          },
+                             "plural":  {
+                                            "nominative":  "vos",
+                                            "vocative":  "—",
+                                            "accusative":  "vos",
+                                            "genitive":  "vestrum / vestri",
+                                            "dative":  "vobis",
+                                            "ablative":  "vobis"
+                                        }
+                         }
+           },
+    "quis":  {
+                 "word":  "quis",
+                 "type":  "pronoun",
+                 "declension":  "irregular",
+                 "english":  "who? what? (interrogative)",
+                 "stem":  "qu",
+                 "forms":  {
+                               "masculine":  {
+                                                 "nominative":  {
+                                                                    "sg":  "quis",
+                                                                    "pl":  "qui"
+                                                                },
+                                                 "vocative":  {
+                                                                  "sg":  "—",
+                                                                  "pl":  "—"
+                                                              },
+                                                 "accusative":  {
+                                                                    "sg":  "quem",
+                                                                    "pl":  "quos"
+                                                                },
+                                                 "genitive":  {
+                                                                  "sg":  "cuius",
+                                                                  "pl":  "quorum"
+                                                              },
+                                                 "dative":  {
+                                                                "sg":  "cui",
+                                                                "pl":  "quibus"
+                                                            },
+                                                 "ablative":  {
+                                                                  "sg":  "quo",
+                                                                  "pl":  "quibus"
+                                                              }
+                                             },
+                               "feminine":  {
+                                                "nominative":  {
+                                                                   "sg":  "quis",
+                                                                   "pl":  "quae"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "—",
+                                                                 "pl":  "—"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "quem",
+                                                                   "pl":  "quas"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "cuius",
+                                                                 "pl":  "quarum"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "cui",
+                                                               "pl":  "quibus"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "quo",
+                                                                 "pl":  "quibus"
+                                                             }
+                                            },
+                               "neuter":  {
+                                              "nominative":  {
+                                                                 "sg":  "quid",
+                                                                 "pl":  "quae"
+                                                             },
+                                              "vocative":  {
+                                                               "sg":  "—",
+                                                               "pl":  "—"
+                                                           },
+                                              "accusative":  {
+                                                                 "sg":  "quid",
+                                                                 "pl":  "quae"
+                                                             },
+                                              "genitive":  {
+                                                               "sg":  "cuius",
+                                                               "pl":  "quorum"
+                                                           },
+                                              "dative":  {
+                                                             "sg":  "cui",
+                                                             "pl":  "quibus"
+                                                         },
+                                              "ablative":  {
+                                                               "sg":  "quo",
+                                                               "pl":  "quibus"
+                                                           }
+                                          }
+                           }
+             },
+    "quidam":  {
+                   "word":  "quidam",
+                   "type":  "pronoun",
+                   "declension":  "irregular",
+                   "english":  "a certain one, someone",
+                   "stem":  "qu",
+                   "forms":  {
+                                 "masculine":  {
+                                                   "nominative":  {
+                                                                      "sg":  "quidam",
+                                                                      "pl":  "quidam"
+                                                                  },
+                                                   "vocative":  {
+                                                                    "sg":  "quidam",
+                                                                    "pl":  "quidam"
+                                                                },
+                                                   "accusative":  {
+                                                                      "sg":  "quendam",
+                                                                      "pl":  "quosdam"
+                                                                  },
+                                                   "genitive":  {
+                                                                    "sg":  "cuiusdam",
+                                                                    "pl":  "quorundam"
+                                                                },
+                                                   "dative":  {
+                                                                  "sg":  "cuidam",
+                                                                  "pl":  "quibusdam"
+                                                              },
+                                                   "ablative":  {
+                                                                    "sg":  "quodam",
+                                                                    "pl":  "quibusdam"
+                                                                }
+                                               },
+                                 "feminine":  {
+                                                  "nominative":  {
+                                                                     "sg":  "quaedam",
+                                                                     "pl":  "quaedam"
+                                                                 },
+                                                  "vocative":  {
+                                                                   "sg":  "quaedam",
+                                                                   "pl":  "quaedam"
+                                                               },
+                                                  "accusative":  {
+                                                                     "sg":  "quandam",
+                                                                     "pl":  "quasdam"
+                                                                 },
+                                                  "genitive":  {
+                                                                   "sg":  "cuiusdam",
+                                                                   "pl":  "quarundam"
+                                                               },
+                                                  "dative":  {
+                                                                 "sg":  "cuidam",
+                                                                 "pl":  "quibusdam"
+                                                             },
+                                                  "ablative":  {
+                                                                   "sg":  "quadam",
+                                                                   "pl":  "quibusdam"
+                                                               }
+                                              },
+                                 "neuter":  {
+                                                "nominative":  {
+                                                                   "sg":  "quoddam",
+                                                                   "pl":  "quaedam"
+                                                               },
+                                                "vocative":  {
+                                                                 "sg":  "quoddam",
+                                                                 "pl":  "quaedam"
+                                                             },
+                                                "accusative":  {
+                                                                   "sg":  "quoddam",
+                                                                   "pl":  "quaedam"
+                                                               },
+                                                "genitive":  {
+                                                                 "sg":  "cuiusdam",
+                                                                 "pl":  "quorundam"
+                                                             },
+                                                "dative":  {
+                                                               "sg":  "cuidam",
+                                                               "pl":  "quibusdam"
+                                                           },
+                                                "ablative":  {
+                                                                 "sg":  "quodam",
+                                                                 "pl":  "quibusdam"
+                                                             }
+                                            }
+                             }
+               },
+    "amo_pres_imp_act":  {
+                             "type":  "verb",
+                             "tense":  "present",
+                             "mood":  "imperative",
+                             "voice":  "active",
+                             "lemma":  "amo",
+                             "english":  "love!",
+                             "conjugation":  "1st",
+                             "2nd_sg":  "ama",
+                             "3rd_sg":  "amato",
+                             "2nd_pl":  "amate",
+                             "3rd_pl":  "amanto"
+                         },
+    "moneo_pres_imp_act":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "imperative",
+                               "voice":  "active",
+                               "lemma":  "moneo",
+                               "english":  "warn!",
+                               "conjugation":  "2nd",
+                               "2nd_sg":  "mone",
+                               "3rd_sg":  "moneto",
+                               "2nd_pl":  "monete",
+                               "3rd_pl":  "monento"
+                           },
+    "rego_pres_imp_act":  {
+                              "type":  "verb",
+                              "tense":  "present",
+                              "mood":  "imperative",
+                              "voice":  "active",
+                              "lemma":  "rego",
+                              "english":  "rule!",
+                              "conjugation":  "3rd",
+                              "2nd_sg":  "rege",
+                              "3rd_sg":  "regito",
+                              "2nd_pl":  "regite",
+                              "3rd_pl":  "regunto"
+                          },
+    "audio_pres_imp_act":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "imperative",
+                               "voice":  "active",
+                               "lemma":  "audio",
+                               "english":  "hear!",
+                               "conjugation":  "4th",
+                               "2nd_sg":  "audi",
+                               "3rd_sg":  "audito",
+                               "2nd_pl":  "audite",
+                               "3rd_pl":  "audiunto"
+                           },
+    "sum_pres_imp_act":  {
+                             "type":  "verb",
+                             "tense":  "present",
+                             "mood":  "imperative",
+                             "voice":  "active",
+                             "lemma":  "sum",
+                             "english":  "be!",
+                             "conjugation":  "irregular",
+                             "2nd_sg":  "es",
+                             "3rd_sg":  "esto",
+                             "2nd_pl":  "este",
+                             "3rd_pl":  "sunto"
+                         },
+    "amo_pres_inf_act":  {
+                             "type":  "verb",
+                             "tense":  "present",
+                             "mood":  "infinitive",
+                             "voice":  "active",
+                             "lemma":  "amo",
+                             "english":  "I love",
+                             "conjugation":  "1st",
+                             "infinitive":  "amare"
+                         },
+    "amo_pres_inf_pass":  {
+                              "type":  "verb",
+                              "tense":  "present",
+                              "mood":  "infinitive",
+                              "voice":  "passive",
+                              "lemma":  "amo",
+                              "english":  "I love",
+                              "conjugation":  "1st",
+                              "infinitive":  "amari"
+                          },
+    "amo_perf_inf_act":  {
+                             "type":  "verb",
+                             "tense":  "perfect",
+                             "mood":  "infinitive",
+                             "voice":  "active",
+                             "lemma":  "amo",
+                             "english":  "I love",
+                             "conjugation":  "1st",
+                             "infinitive":  "amavisse"
+                         },
+    "amo_perf_inf_pass":  {
+                              "type":  "verb",
+                              "tense":  "perfect",
+                              "mood":  "infinitive",
+                              "voice":  "passive",
+                              "lemma":  "amo",
+                              "english":  "I love",
+                              "conjugation":  "1st",
+                              "infinitive":  "amatus esse"
+                          },
+    "amo_fut_inf_act":  {
+                            "type":  "verb",
+                            "tense":  "future",
+                            "mood":  "infinitive",
+                            "voice":  "active",
+                            "lemma":  "amo",
+                            "english":  "I love",
+                            "conjugation":  "1st",
+                            "infinitive":  "amaturus esse"
+                        },
+    "amo_fut_inf_pass":  {
+                             "type":  "verb",
+                             "tense":  "future",
+                             "mood":  "infinitive",
+                             "voice":  "passive",
+                             "lemma":  "amo",
+                             "english":  "I love",
+                             "conjugation":  "1st",
+                             "infinitive":  "amatum iri"
+                         },
+    "moneo_pres_inf_act":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "infinitive",
+                               "voice":  "active",
+                               "lemma":  "moneo",
+                               "english":  "I warn",
+                               "conjugation":  "2nd",
+                               "infinitive":  "monere"
+                           },
+    "moneo_pres_inf_pass":  {
+                                "type":  "verb",
+                                "tense":  "present",
+                                "mood":  "infinitive",
+                                "voice":  "passive",
+                                "lemma":  "moneo",
+                                "english":  "I warn",
+                                "conjugation":  "2nd",
+                                "infinitive":  "moneri"
+                            },
+    "moneo_perf_inf_act":  {
+                               "type":  "verb",
+                               "tense":  "perfect",
+                               "mood":  "infinitive",
+                               "voice":  "active",
+                               "lemma":  "moneo",
+                               "english":  "I warn",
+                               "conjugation":  "2nd",
+                               "infinitive":  "monuisse"
+                           },
+    "moneo_perf_inf_pass":  {
+                                "type":  "verb",
+                                "tense":  "perfect",
+                                "mood":  "infinitive",
+                                "voice":  "passive",
+                                "lemma":  "moneo",
+                                "english":  "I warn",
+                                "conjugation":  "2nd",
+                                "infinitive":  "monitus esse"
+                            },
+    "moneo_fut_inf_act":  {
+                              "type":  "verb",
+                              "tense":  "future",
+                              "mood":  "infinitive",
+                              "voice":  "active",
+                              "lemma":  "moneo",
+                              "english":  "I warn",
+                              "conjugation":  "2nd",
+                              "infinitive":  "moniturus esse"
+                          },
+    "moneo_fut_inf_pass":  {
+                               "type":  "verb",
+                               "tense":  "future",
+                               "mood":  "infinitive",
+                               "voice":  "passive",
+                               "lemma":  "moneo",
+                               "english":  "I warn",
+                               "conjugation":  "2nd",
+                               "infinitive":  "monitum iri"
+                           },
+    "rego_pres_inf_act":  {
+                              "type":  "verb",
+                              "tense":  "present",
+                              "mood":  "infinitive",
+                              "voice":  "active",
+                              "lemma":  "rego",
+                              "english":  "I rule",
+                              "conjugation":  "3rd",
+                              "infinitive":  "regere"
+                          },
+    "rego_pres_inf_pass":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "infinitive",
+                               "voice":  "passive",
+                               "lemma":  "rego",
+                               "english":  "I rule",
+                               "conjugation":  "3rd",
+                               "infinitive":  "regi"
+                           },
+    "rego_perf_inf_act":  {
+                              "type":  "verb",
+                              "tense":  "perfect",
+                              "mood":  "infinitive",
+                              "voice":  "active",
+                              "lemma":  "rego",
+                              "english":  "I rule",
+                              "conjugation":  "3rd",
+                              "infinitive":  "rexisse"
+                          },
+    "rego_perf_inf_pass":  {
+                               "type":  "verb",
+                               "tense":  "perfect",
+                               "mood":  "infinitive",
+                               "voice":  "passive",
+                               "lemma":  "rego",
+                               "english":  "I rule",
+                               "conjugation":  "3rd",
+                               "infinitive":  "rectus esse"
+                           },
+    "rego_fut_inf_act":  {
+                             "type":  "verb",
+                             "tense":  "future",
+                             "mood":  "infinitive",
+                             "voice":  "active",
+                             "lemma":  "rego",
+                             "english":  "I rule",
+                             "conjugation":  "3rd",
+                             "infinitive":  "recturus esse"
+                         },
+    "rego_fut_inf_pass":  {
+                              "type":  "verb",
+                              "tense":  "future",
+                              "mood":  "infinitive",
+                              "voice":  "passive",
+                              "lemma":  "rego",
+                              "english":  "I rule",
+                              "conjugation":  "3rd",
+                              "infinitive":  "rectum iri"
+                          },
+    "audio_pres_inf_act":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "infinitive",
+                               "voice":  "active",
+                               "lemma":  "audio",
+                               "english":  "I hear",
+                               "conjugation":  "4th",
+                               "infinitive":  "audire"
+                           },
+    "audio_pres_inf_pass":  {
+                                "type":  "verb",
+                                "tense":  "present",
+                                "mood":  "infinitive",
+                                "voice":  "passive",
+                                "lemma":  "audio",
+                                "english":  "I hear",
+                                "conjugation":  "4th",
+                                "infinitive":  "audiri"
+                            },
+    "audio_perf_inf_act":  {
+                               "type":  "verb",
+                               "tense":  "perfect",
+                               "mood":  "infinitive",
+                               "voice":  "active",
+                               "lemma":  "audio",
+                               "english":  "I hear",
+                               "conjugation":  "4th",
+                               "infinitive":  "audivisse"
+                           },
+    "audio_perf_inf_pass":  {
+                                "type":  "verb",
+                                "tense":  "perfect",
+                                "mood":  "infinitive",
+                                "voice":  "passive",
+                                "lemma":  "audio",
+                                "english":  "I hear",
+                                "conjugation":  "4th",
+                                "infinitive":  "auditus esse"
+                            },
+    "audio_fut_inf_act":  {
+                              "type":  "verb",
+                              "tense":  "future",
+                              "mood":  "infinitive",
+                              "voice":  "active",
+                              "lemma":  "audio",
+                              "english":  "I hear",
+                              "conjugation":  "4th",
+                              "infinitive":  "auditurus esse"
+                          },
+    "audio_fut_inf_pass":  {
+                               "type":  "verb",
+                               "tense":  "future",
+                               "mood":  "infinitive",
+                               "voice":  "passive",
+                               "lemma":  "audio",
+                               "english":  "I hear",
+                               "conjugation":  "4th",
+                               "infinitive":  "auditum iri"
+                           },
+    "sum_pres_inf_act":  {
+                             "type":  "verb",
+                             "tense":  "present",
+                             "mood":  "infinitive",
+                             "voice":  "active",
+                             "lemma":  "sum",
+                             "english":  "I am",
+                             "conjugation":  "irregular",
+                             "infinitive":  "esse"
+                         },
+    "sum_perf_inf_act":  {
+                             "type":  "verb",
+                             "tense":  "perfect",
+                             "mood":  "infinitive",
+                             "voice":  "active",
+                             "lemma":  "sum",
+                             "english":  "I am",
+                             "conjugation":  "irregular",
+                             "infinitive":  "fuisse"
+                         },
+    "sum_fut_inf_act":  {
+                            "type":  "verb",
+                            "tense":  "future",
+                            "mood":  "infinitive",
+                            "voice":  "active",
+                            "lemma":  "sum",
+                            "english":  "I am",
+                            "conjugation":  "irregular",
+                            "infinitive":  "futurus esse"
+                        },
+    "eo_pres_inf_act":  {
+                            "type":  "verb",
+                            "tense":  "present",
+                            "mood":  "infinitive",
+                            "voice":  "active",
+                            "lemma":  "eo",
+                            "english":  "(I go)",
+                            "conjugation":  "irregular",
+                            "infinitive":  "ire"
+                        },
+    "eo_perf_inf_act":  {
+                            "type":  "verb",
+                            "tense":  "perfect",
+                            "mood":  "infinitive",
+                            "voice":  "active",
+                            "lemma":  "eo",
+                            "english":  "(I go)",
+                            "conjugation":  "irregular",
+                            "infinitive":  "isse"
+                        },
+    "eo_fut_inf_act":  {
+                           "type":  "verb",
+                           "tense":  "future",
+                           "mood":  "infinitive",
+                           "voice":  "active",
+                           "lemma":  "eo",
+                           "english":  "(I go)",
+                           "conjugation":  "irregular",
+                           "infinitive":  "iturus esse"
+                       },
+    "eo_pres_imp_act":  {
+                            "type":  "verb",
+                            "tense":  "present",
+                            "mood":  "imperative",
+                            "voice":  "active",
+                            "lemma":  "eo",
+                            "english":  "(I go)",
+                            "conjugation":  "irregular",
+                            "2nd_sg":  "i",
+                            "3rd_sg":  "ito",
+                            "2nd_pl":  "ite",
+                            "3rd_pl":  "eunto"
+                        },
+    "eo_pres_ind_act":  {
+                            "type":  "verb",
+                            "tense":  "present",
+                            "mood":  "indicative",
+                            "voice":  "active",
+                            "lemma":  "eo",
+                            "english":  "(I go)",
+                            "conjugation":  "irregular",
+                            "1st_sg":  "eo",
+                            "2nd_sg":  "is",
+                            "3rd_sg":  "it",
+                            "1st_pl":  "imus",
+                            "2nd_pl":  "itis",
+                            "3rd_pl":  "eunt"
+                        },
+    "eo_imperf_ind_act":  {
+                              "type":  "verb",
+                              "tense":  "imperfect",
+                              "mood":  "indicative",
+                              "voice":  "active",
+                              "lemma":  "eo",
+                              "english":  "(I go)",
+                              "conjugation":  "irregular",
+                              "1st_sg":  "ibam",
+                              "2nd_sg":  "ibas",
+                              "3rd_sg":  "ibat",
+                              "1st_pl":  "ibamus",
+                              "2nd_pl":  "ibatis",
+                              "3rd_pl":  "ibant"
+                          },
+    "eo_fut_ind_act":  {
+                           "type":  "verb",
+                           "tense":  "future",
+                           "mood":  "indicative",
+                           "voice":  "active",
+                           "lemma":  "eo",
+                           "english":  "(I go)",
+                           "conjugation":  "irregular",
+                           "1st_sg":  "ibo",
+                           "2nd_sg":  "ibis",
+                           "3rd_sg":  "ibit",
+                           "1st_pl":  "ibimus",
+                           "2nd_pl":  "ibitis",
+                           "3rd_pl":  "ibunt"
+                       },
+    "eo_perf_ind_act":  {
+                            "type":  "verb",
+                            "tense":  "perfect",
+                            "mood":  "indicative",
+                            "voice":  "active",
+                            "lemma":  "eo",
+                            "english":  "(I go)",
+                            "conjugation":  "irregular",
+                            "1st_sg":  "ii",
+                            "2nd_sg":  "isti",
+                            "3rd_sg":  "iit",
+                            "1st_pl":  "iimus",
+                            "2nd_pl":  "istis",
+                            "3rd_pl":  "ierunt"
+                        },
+    "eo_plup_ind_act":  {
+                            "type":  "verb",
+                            "tense":  "pluperfect",
+                            "mood":  "indicative",
+                            "voice":  "active",
+                            "lemma":  "eo",
+                            "english":  "(I go)",
+                            "conjugation":  "irregular",
+                            "1st_sg":  "ieram",
+                            "2nd_sg":  "ieras",
+                            "3rd_sg":  "ierat",
+                            "1st_pl":  "ieramus",
+                            "2nd_pl":  "ieratis",
+                            "3rd_pl":  "ierant"
+                        },
+    "eo_futperf_ind_act":  {
+                               "type":  "verb",
+                               "tense":  "future perfect",
+                               "mood":  "indicative",
+                               "voice":  "active",
+                               "lemma":  "eo",
+                               "english":  "(I go)",
+                               "conjugation":  "irregular",
+                               "1st_sg":  "iero",
+                               "2nd_sg":  "ieris",
+                               "3rd_sg":  "ierit",
+                               "1st_pl":  "ierimus",
+                               "2nd_pl":  "ieritis",
+                               "3rd_pl":  "ierint"
+                           },
+    "eo_pres_subj_act":  {
+                             "type":  "verb",
+                             "tense":  "present",
+                             "mood":  "subjunctive",
+                             "voice":  "active",
+                             "lemma":  "eo",
+                             "english":  "(I go)",
+                             "conjugation":  "irregular",
+                             "1st_sg":  "eam",
+                             "2nd_sg":  "eas",
+                             "3rd_sg":  "eat",
+                             "1st_pl":  "eamus",
+                             "2nd_pl":  "eatis",
+                             "3rd_pl":  "eant"
+                         },
+    "eo_imperf_subj_act":  {
+                               "type":  "verb",
+                               "tense":  "imperfect",
+                               "mood":  "subjunctive",
+                               "voice":  "active",
+                               "lemma":  "eo",
+                               "english":  "(I go)",
+                               "conjugation":  "irregular",
+                               "1st_sg":  "irem",
+                               "2nd_sg":  "ires",
+                               "3rd_sg":  "iret",
+                               "1st_pl":  "iremus",
+                               "2nd_pl":  "iretis",
+                               "3rd_pl":  "irent"
+                           },
+    "eo_perf_subj_act":  {
+                             "type":  "verb",
+                             "tense":  "perfect",
+                             "mood":  "subjunctive",
+                             "voice":  "active",
+                             "lemma":  "eo",
+                             "english":  "(I go)",
+                             "conjugation":  "irregular",
+                             "1st_sg":  "ierim",
+                             "2nd_sg":  "ieris",
+                             "3rd_sg":  "ierit",
+                             "1st_pl":  "ierimus",
+                             "2nd_pl":  "ieritis",
+                             "3rd_pl":  "ierint"
+                         },
+    "eo_plup_subj_act":  {
+                             "type":  "verb",
+                             "tense":  "pluperfect",
+                             "mood":  "subjunctive",
+                             "voice":  "active",
+                             "lemma":  "eo",
+                             "english":  "(I go)",
+                             "conjugation":  "irregular",
+                             "1st_sg":  "issem",
+                             "2nd_sg":  "isses",
+                             "3rd_sg":  "isset",
+                             "1st_pl":  "issemus",
+                             "2nd_pl":  "issetis",
+                             "3rd_pl":  "issent"
+                         },
+    "amo_pres_imp_pass":  {
+                              "type":  "verb",
+                              "tense":  "present",
+                              "mood":  "imperative",
+                              "voice":  "passive",
+                              "lemma":  "amo",
+                              "english":  "be loved!",
+                              "conjugation":  "1st",
+                              "2nd_sg":  "amare",
+                              "3rd_sg":  "amator",
+                              "2nd_pl":  "amamini",
+                              "3rd_pl":  "amantor"
+                          },
+    "moneo_pres_imp_pass":  {
+                                "type":  "verb",
+                                "tense":  "present",
+                                "mood":  "imperative",
+                                "voice":  "passive",
+                                "lemma":  "moneo",
+                                "english":  "be warned!",
+                                "conjugation":  "2nd",
+                                "2nd_sg":  "monere",
+                                "3rd_sg":  "monetor",
+                                "2nd_pl":  "monemini",
+                                "3rd_pl":  "monentor"
+                            },
+    "rego_pres_imp_pass":  {
+                               "type":  "verb",
+                               "tense":  "present",
+                               "mood":  "imperative",
+                               "voice":  "passive",
+                               "lemma":  "rego",
+                               "english":  "be ruled!",
+                               "conjugation":  "3rd",
+                               "2nd_sg":  "regere",
+                               "3rd_sg":  "regitor",
+                               "2nd_pl":  "regimini",
+                               "3rd_pl":  "reguntor"
+                           },
+    "audio_pres_imp_pass":  {
+                                "type":  "verb",
+                                "tense":  "present",
+                                "mood":  "imperative",
+                                "voice":  "passive",
+                                "lemma":  "audio",
+                                "english":  "be heard!",
+                                "conjugation":  "4th",
+                                "2nd_sg":  "audire",
+                                "3rd_sg":  "auditor",
+                                "2nd_pl":  "audimini",
+                                "3rd_pl":  "audiuntor"
+                            }
 }
