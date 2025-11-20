@@ -1,0 +1,9 @@
+{
+  "ignore_breathings": true,
+  "prefill_stems": false,
+  "randomize_next": true,
+  "lock_current_type": true,
+  "auto_advance": true,
+  "hide_vocative": true,
+  "hard_mode": false
+}

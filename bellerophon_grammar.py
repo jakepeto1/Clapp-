@@ -16,6 +16,16 @@ try:
 except ImportError:
     PIL_AVAILABLE = False
 
+# Helper function for resource paths when running as bundled executable
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 # Unicode combining characters for Greek diacritics
 SMOOTH_BREATHING = '\u0313'  # ᾿
 ROUGH_BREATHING = '\u0314'   # ῾
@@ -30,6 +40,7 @@ class TimeTrialManager:
         self.is_active = False
         self.is_game_over = False
         self.waiting_for_input = False  # True when waiting for first keystroke
+        self.is_paused = False  # True when paused
         self.timer_id = None
         self.callback_on_game_over = callback_on_game_over
         self.start_time = 30.0  # Initial time in seconds
@@ -42,14 +53,26 @@ class TimeTrialManager:
         self.is_active = True
         self.is_game_over = False
         self.waiting_for_input = True  # Wait for first keystroke before starting timer
+        self.is_paused = False
         
     def begin_countdown(self):
         """Actually start the countdown (called on first keystroke)"""
         self.waiting_for_input = False
         
+    def pause(self):
+        """Pause the timer"""
+        if self.is_active and not self.is_game_over and not self.waiting_for_input:
+            self.is_paused = True
+            
+    def resume(self):
+        """Resume the timer"""
+        if self.is_active and not self.is_game_over:
+            self.is_paused = False
+        
     def stop(self):
         """Stop the timer"""
         self.is_active = False
+        self.is_paused = False
         if self.timer_id:
             # Will be cancelled by the update loop checking is_active
             pass
@@ -80,7 +103,7 @@ class TimeTrialManager:
     
     def update_timer(self, delta_seconds=0.1):
         """Decrease time by delta_seconds (called every 100ms)"""
-        if not self.is_active or self.is_game_over or self.waiting_for_input:
+        if not self.is_active or self.is_game_over or self.waiting_for_input or self.is_paused:
             return False
         
         self.time_left -= delta_seconds
@@ -119,6 +142,7 @@ class PracticeConfig:
         self.lock_current_type = tk.BooleanVar(value=False)
         self.auto_advance = tk.BooleanVar(value=False)
         self.hide_vocative = tk.BooleanVar(value=False)  # New: Hide vocative case
+        self.hard_mode = tk.BooleanVar(value=False)  # New: Hard mode - no immediate feedback
         # Future toggles can be added here
         # self.ignore_accents = tk.BooleanVar(value=False)
         # self.show_hints = tk.BooleanVar(value=True)
@@ -140,6 +164,7 @@ class PracticeConfig:
         self.lock_current_type.set(False)
         self.auto_advance.set(False)
         self.hide_vocative.set(False)
+        self.hard_mode.set(False)
 
     def to_dict(self):
         """Serialize settings to a plain dict (JSON-friendly)."""
@@ -150,6 +175,7 @@ class PracticeConfig:
             'lock_current_type': bool(self.lock_current_type.get()),
             'auto_advance': bool(self.auto_advance.get()),
             'hide_vocative': bool(self.hide_vocative.get()),
+            'hard_mode': bool(self.hard_mode.get()),
         }
 
     def apply_from_dict(self, data: dict):
@@ -168,6 +194,8 @@ class PracticeConfig:
             self.auto_advance.set(bool(data['auto_advance']))
         if 'hide_vocative' in data:
             self.hide_vocative.set(bool(data['hide_vocative']))
+        if 'hard_mode' in data:
+            self.hard_mode.set(bool(data['hard_mode']))
 
 class BellerophonGrammarApp:
     def get_settings_path(self):
@@ -560,7 +588,7 @@ class BellerophonGrammarApp:
                 entry = tk.Entry(entry_frame, width=18, font=('Times New Roman', 12), relief='solid', borderwidth=1)
                 entry.grid(row=0, column=0, sticky='ew')
                 entry.bind('<KeyPress>', self.handle_key_press)
-                entry.bind('<KeyRelease>', lambda e, k=key: (self.handle_text_change(e, k), self.clear_error(k)))
+                entry.bind('<KeyRelease>', lambda e, k=key: (self.handle_text_change(e, k), self.clear_error(k), self.reset_greek_entry_background(e, k)))
                 entry.bind('<Return>', lambda e, k=key: self.handle_enter(e, k))
                 
                 self.entries[key] = entry
@@ -610,7 +638,7 @@ class BellerophonGrammarApp:
                 entry = tk.Entry(entry_frame, width=18, font=('Times New Roman', 12), relief='solid', borderwidth=1)
                 entry.grid(row=0, column=0, sticky='ew')
                 entry.bind('<KeyPress>', self.handle_key_press)
-                entry.bind('<KeyRelease>', lambda e, k=key: (self.handle_text_change(e, k), self.clear_error(k)))
+                entry.bind('<KeyRelease>', lambda e, k=key: (self.handle_text_change(e, k), self.clear_error(k), self.reset_greek_entry_background(e, k)))
                 entry.bind('<Return>', lambda e, k=key: self.handle_enter(e, k))
                 
                 self.entries[key] = entry
@@ -680,6 +708,8 @@ class BellerophonGrammarApp:
         # Initialize entries and error_labels as empty dicts to avoid AttributeError before first use
         self.entries = {}
         self.error_labels = {}
+        # Track last entry content to detect actual changes
+        self.last_entry_content = {}
         # Set up proper Unicode handling for Greek characters
         if sys.platform.startswith('win'):
             try:
@@ -712,9 +742,12 @@ class BellerophonGrammarApp:
             except Exception as e:
                 print(f"Could not set window icon: {e}")
         
+        # Setup global keyboard shortcuts
+        self.setup_keyboard_shortcuts()
+        
         # Load paradigms early so they're available for session mode
         try:
-            with open('paradigms.json', 'r', encoding='utf-8') as f:
+            with open(resource_path('paradigms.json'), 'r', encoding='utf-8') as f:
                 self.paradigms = json.load(f)
         except FileNotFoundError:
             messagebox.showerror("Error", "Could not find paradigms.json file")
@@ -740,6 +773,167 @@ class BellerophonGrammarApp:
     # - All session table creation and management methods
     # To re-enable, change show_tables_view() to show_startup_page() in __init__
     # ============================================================================
+    
+    def setup_keyboard_shortcuts(self):
+        """Setup global keyboard shortcuts for the application."""
+        # Ctrl+R for Reveal
+        self.root.bind('<Control-r>', lambda e: self.handle_reveal_shortcut())
+        self.root.bind('<Control-R>', lambda e: self.handle_reveal_shortcut())
+        
+        # Ctrl+N for Next/Skip
+        self.root.bind('<Control-n>', lambda e: self.handle_next_skip_shortcut())
+        self.root.bind('<Control-N>', lambda e: self.handle_next_skip_shortcut())
+        
+        # Ctrl+X for Reset/Retry (smart button)
+        self.root.bind('<Control-x>', lambda e: self.handle_reset_retry_shortcut())
+        self.root.bind('<Control-X>', lambda e: self.handle_reset_retry_shortcut())
+        
+        # ESC for Pause (time trials only)
+        self.root.bind('<Escape>', lambda e: self.handle_pause_shortcut())
+        
+        # Initialize pause overlay variable
+        self.pause_overlay = None
+        self.root.bind('<Control-x>', lambda e: self.handle_reset_retry_shortcut())
+        self.root.bind('<Control-X>', lambda e: self.handle_reset_retry_shortcut())
+    
+    def is_latin_view_active(self):
+        """Safely check if Latin view is currently active."""
+        try:
+            return (hasattr(self, 'latin_table_frame') and 
+                    self.latin_table_frame is not None and 
+                    self.latin_table_frame.winfo_exists() and 
+                    self.latin_table_frame.winfo_ismapped())
+        except:
+            return False
+    
+    def handle_reveal_shortcut(self):
+        """Handle Ctrl+R shortcut - triggers reveal answers depending on current view."""
+        try:
+            if self.is_latin_view_active():
+                # Latin side
+                self.reveal_latin_answers()
+            elif hasattr(self, 'table_frame') and self.table_frame is not None:
+                # Greek side
+                self.reveal_answers()
+        except Exception as e:
+            print(f"Error handling reveal shortcut: {e}")
+    
+    def handle_next_skip_shortcut(self):
+        """Handle Ctrl+N shortcut - triggers next/skip depending on current view."""
+        try:
+            if self.is_latin_view_active():
+                # Latin side
+                self.latin_next_or_skip()
+            elif hasattr(self, 'table_frame') and self.table_frame is not None:
+                # Greek side
+                self.next_answer()
+        except Exception as e:
+            print(f"Error handling next/skip shortcut: {e}")
+    
+    def handle_reset_retry_shortcut(self):
+        """Handle Ctrl+X shortcut - triggers smart reset/retry depending on current view."""
+        try:
+            if self.is_latin_view_active():
+                # Latin side - call the smart reset/retry method
+                self.smart_latin_reset_retry()
+            elif hasattr(self, 'table_frame') and self.table_frame is not None:
+                # Greek side - call smart reset/retry
+                self.smart_reset_retry()
+        except Exception as e:
+            print(f"Error handling reset/retry shortcut: {e}")
+    
+    def handle_pause_shortcut(self):
+        """Handle ESC shortcut - pause/resume time trial."""
+        try:
+            # Check if either time trial is active
+            if hasattr(self, 'time_trial') and self.time_trial.is_active and not self.time_trial.is_game_over:
+                # Latin time trial is active
+                if self.time_trial.is_paused:
+                    self.resume_time_trial()
+                else:
+                    self.pause_time_trial()
+            elif hasattr(self, 'greek_time_trial') and self.greek_time_trial.is_active and not self.greek_time_trial.is_game_over:
+                # Greek time trial is active
+                if self.greek_time_trial.is_paused:
+                    self.resume_greek_time_trial()
+                else:
+                    self.pause_greek_time_trial()
+        except Exception as e:
+            print(f"Error handling pause shortcut: {e}")
+    
+    def pause_time_trial(self):
+        """Pause the Latin time trial and show overlay."""
+        if not self.time_trial.is_active or self.time_trial.is_game_over or self.time_trial.waiting_for_input:
+            return
+            
+        self.time_trial.pause()
+        self.show_pause_overlay()
+    
+    def resume_time_trial(self):
+        """Resume the Latin time trial and hide overlay."""
+        self.time_trial.resume()
+        self.hide_pause_overlay()
+    
+    def pause_greek_time_trial(self):
+        """Pause the Greek time trial and show overlay."""
+        if not self.greek_time_trial.is_active or self.greek_time_trial.is_game_over or self.greek_time_trial.waiting_for_input:
+            return
+            
+        self.greek_time_trial.pause()
+        self.show_pause_overlay()
+    
+    def resume_greek_time_trial(self):
+        """Resume the Greek time trial and hide overlay."""
+        self.greek_time_trial.resume()
+        self.hide_pause_overlay()
+    
+    def show_pause_overlay(self):
+        """Show a pause overlay that obscures the table."""
+        if self.pause_overlay is not None:
+            return  # Already showing
+        
+        # Create a semi-transparent overlay
+        self.pause_overlay = tk.Frame(self.main_frame, bg='#2C2C2C')
+        self.pause_overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        
+        # Add content to the overlay
+        container = tk.Frame(self.pause_overlay, bg='#2C2C2C')
+        container.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Paused title
+        title_label = tk.Label(
+            container,
+            text="⏸ PAUSED",
+            font=('Arial', 48, 'bold'),
+            bg='#2C2C2C',
+            fg='#FFD700'
+        )
+        title_label.pack(pady=20)
+        
+        # Instructions
+        instruction_label = tk.Label(
+            container,
+            text="Press ESC to resume",
+            font=('Arial', 20),
+            bg='#2C2C2C',
+            fg='#FFFFFF'
+        )
+        instruction_label.pack(pady=10)
+        
+        # Resume button
+        resume_button = ttk.Button(
+            container,
+            text="Resume",
+            command=self.handle_pause_shortcut,
+            style='Large.TButton'
+        )
+        resume_button.pack(pady=20)
+    
+    def hide_pause_overlay(self):
+        """Hide the pause overlay."""
+        if self.pause_overlay is not None:
+            self.pause_overlay.destroy()
+            self.pause_overlay = None
     
     def show_startup_page(self):
         """Display the startup page with logo and navigation buttons."""
@@ -781,7 +975,7 @@ class BellerophonGrammarApp:
         
         # Load and display the Bellerophon small logo with enhanced presentation
         try:
-            logo_path = os.path.join(os.path.dirname(__file__), "assets", "Bellerphon small.png")
+            logo_path = resource_path(os.path.join("assets", "Bellerphon small.png"))
             logo_image = Image.open(logo_path)
             # Resize to larger dimensions for more impact
             logo_image = logo_image.resize((420, 350), Image.Resampling.LANCZOS)
@@ -1982,7 +2176,7 @@ class BellerophonGrammarApp:
         
         # Load Latin paradigms
         try:
-            with open('latin_paradigms.json', 'r', encoding='utf-8') as f:
+            with open(resource_path('latin_paradigms.json'), 'r', encoding='utf-8') as f:
                 self.latin_paradigms = json.load(f)
         except FileNotFoundError:
             messagebox.showerror("Error", "Could not find latin_paradigms.json file")
@@ -2351,6 +2545,7 @@ class BellerophonGrammarApp:
         self.latin_entries = {}
         self.latin_incorrect_entries = set()  # Track which Latin entries were incorrect
         self.latin_has_revealed = False  # Track if Latin answers have been revealed
+        self.last_latin_entry_content = {}  # Track last content to detect actual changes
         
         # Create the appropriate Latin table based on initial word
         # Get the first word to determine type
@@ -2484,6 +2679,7 @@ class BellerophonGrammarApp:
             self.latin_entries[f"{case}_sg"] = entry_sg
             entry_sg.bind('<Return>', lambda e, c=case: self.check_latin_single_entry(f"{c}_sg"))
             entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
+            entry_sg.bind('<KeyRelease>', lambda e, k=f"{case}_sg": self.reset_latin_entry_background(e, k))
             
             # Plural entry
             entry_pl = tk.Entry(
@@ -2497,6 +2693,7 @@ class BellerophonGrammarApp:
             self.latin_entries[f"{case}_pl"] = entry_pl
             entry_pl.bind('<Return>', lambda e, c=case: self.check_latin_single_entry(f"{c}_pl"))
             entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
+            entry_pl.bind('<KeyRelease>', lambda e, k=f"{case}_pl": self.reset_latin_entry_background(e, k))
         
         # Mark unattested forms as readonly and grey
         self.mark_unattested_latin_forms(paradigm)
@@ -2663,6 +2860,7 @@ class BellerophonGrammarApp:
                 self.latin_entries[key_sg] = entry_sg
                 entry_sg.bind('<Return>', lambda e, k=key_sg: self.check_latin_single_entry(k))
                 entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
+                entry_sg.bind('<KeyRelease>', lambda e, k=key_sg: self.reset_latin_entry_background(e, k))
                 
                 # Plural entry
                 entry_pl = tk.Entry(
@@ -2677,6 +2875,7 @@ class BellerophonGrammarApp:
                 self.latin_entries[key_pl] = entry_pl
                 entry_pl.bind('<Return>', lambda e, k=key_pl: self.check_latin_single_entry(k))
                 entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
+                entry_pl.bind('<KeyRelease>', lambda e, k=key_pl: self.reset_latin_entry_background(e, k))
                 key_pl = f"{case}_{gender}_pl"
                 self.latin_entries[key_pl] = entry_pl
                 entry_pl.bind('<Return>', lambda e, k=key_pl: self.check_latin_single_entry(k))
@@ -2798,6 +2997,7 @@ class BellerophonGrammarApp:
             self.latin_entries[f"{person}_sg"] = entry_sg
             entry_sg.bind('<Return>', lambda e, p=person: self.check_latin_single_entry(f"{p}_sg"))
             entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
+            entry_sg.bind('<KeyRelease>', lambda e, p=person: self.reset_latin_entry_background(e, f"{p}_sg"))
             
             # Plural entry
             entry_pl = tk.Entry(
@@ -2811,6 +3011,7 @@ class BellerophonGrammarApp:
             self.latin_entries[f"{person}_pl"] = entry_pl
             entry_pl.bind('<Return>', lambda e, p=person: self.check_latin_single_entry(f"{p}_pl"))
             entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
+            entry_pl.bind('<KeyRelease>', lambda e, p=person: self.reset_latin_entry_background(e, f"{p}_pl"))
             entry_pl.bind('<Return>', lambda e, p=person: self.check_latin_single_entry(f"{p}_pl"))
         
         # Apply prefill stems if enabled
@@ -2881,6 +3082,7 @@ class BellerophonGrammarApp:
             self.latin_entries[key_act] = entry_act
             entry_act.bind('<Return>', lambda e, k=key_act: self.check_latin_single_entry(k))
             entry_act.bind('<Key>', self.on_time_trial_first_keystroke)
+            entry_act.bind('<KeyRelease>', lambda e, k=key_act: self.reset_latin_entry_background(e, k))
             
             # Passive infinitive entry (only for present, perfect, and future)
             # Note: sum and eo are intransitive, so no passive forms
@@ -2897,6 +3099,7 @@ class BellerophonGrammarApp:
                 self.latin_entries[key_pass] = entry_pass
                 entry_pass.bind('<Return>', lambda e, k=key_pass: self.check_latin_single_entry(k))
                 entry_pass.bind('<Key>', self.on_time_trial_first_keystroke)
+                entry_pass.bind('<KeyRelease>', lambda e, k=key_pass: self.reset_latin_entry_background(e, k))
             else:
                 # Grey out passive for intransitive verbs
                 tk.Label(
@@ -3025,6 +3228,7 @@ class BellerophonGrammarApp:
             self.latin_entries[key_sg] = entry_sg
             entry_sg.bind('<Return>', lambda e, k=key_sg: self.check_latin_single_entry(k))
             entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
+            entry_sg.bind('<KeyRelease>', lambda e, k=key_sg: self.reset_latin_entry_background(e, k))
             
             # Plural entry
             entry_pl = tk.Entry(
@@ -3039,7 +3243,10 @@ class BellerophonGrammarApp:
             self.latin_entries[key_pl] = entry_pl
             entry_pl.bind('<Return>', lambda e, k=key_pl: self.check_latin_single_entry(k))
             entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
+            entry_pl.bind('<KeyRelease>', lambda e, k=key_pl: self.reset_latin_entry_background(e, k))
         
+        # Mark unattested forms as readonly and grey
+        self.mark_unattested_latin_forms(paradigm)
         # Mark unattested forms as readonly and grey
         self.mark_unattested_latin_forms(paradigm)
     
@@ -3154,6 +3361,7 @@ class BellerophonGrammarApp:
                 self.latin_entries[key_sg] = entry_sg
                 entry_sg.bind('<Return>', lambda e, k=key_sg: self.check_latin_single_entry(k))
                 entry_sg.bind('<Key>', self.on_time_trial_first_keystroke)
+                entry_sg.bind('<KeyRelease>', lambda e, k=key_sg: self.reset_latin_entry_background(e, k))
                 
                 # Plural entry
                 entry_pl = tk.Entry(
@@ -3168,7 +3376,10 @@ class BellerophonGrammarApp:
                 self.latin_entries[key_pl] = entry_pl
                 entry_pl.bind('<Return>', lambda e, k=key_pl: self.check_latin_single_entry(k))
                 entry_pl.bind('<Key>', self.on_time_trial_first_keystroke)
+                entry_pl.bind('<KeyRelease>', lambda e, k=key_pl: self.reset_latin_entry_background(e, k))
         
+        # Mark unattested forms as readonly and grey
+        self.mark_unattested_latin_forms(paradigm)
         # Mark unattested forms as readonly and grey
         self.mark_unattested_latin_forms(paradigm)
     
@@ -3588,6 +3799,15 @@ class BellerophonGrammarApp:
             command=self.on_hide_vocative_toggle
         )
         vocative_cb.pack(anchor='w', pady=5)
+        
+        # Hard mode
+        hard_mode_cb = ttk.Checkbutton(
+            practice_section,
+            text="Hard mode (no immediate feedback)",
+            variable=self.config.hard_mode,
+            command=lambda: self.on_setting_changed()
+        )
+        hard_mode_cb.pack(anchor='w', pady=5)
         
         # Statistics Section
         stats_section = ttk.LabelFrame(main_frame, text="Statistics", padding=15)
@@ -4730,6 +4950,29 @@ class BellerophonGrammarApp:
         if not user_answer:
             return
         
+        # Check if hard mode is enabled
+        hard_mode = self.config.hard_mode.get() if hasattr(self.config, 'hard_mode') else False
+        
+        if hard_mode:
+            # Just mark entry and move to next one down
+            entry.configure(bg='#D3D3D3')  # Mark as submitted/grey
+            
+            # Move to next entry in table order (always down)
+            self.move_to_next_latin_entry(entry_key)
+            
+            # Check if all entries are now filled
+            all_filled = all(
+                e.get().strip() != '' 
+                for e in self.latin_entries.values()
+            )
+            
+            if all_filled:
+                # Check all answers at once
+                self.check_all_latin_entries_hard_mode()
+            
+            return
+        
+        # Normal mode: continue with regular checking
         # Get correct answer
         word_display = self.latin_word_var.get()
         word = word_display.split(' (')[0]
@@ -4868,6 +5111,96 @@ class BellerophonGrammarApp:
         else:
             entry.configure(bg='#FFB6C6')  # Light red
     
+    def is_latin_entry_available(self, entry):
+        """Check if a Latin entry is available for navigation (not readonly and not grey in hard mode)."""
+        if str(entry.cget('state')) == 'readonly':
+            return False
+        
+        # In hard mode, skip grey (submitted) entries but allow pink (incorrect) entries
+        hard_mode = self.config.hard_mode.get() if hasattr(self.config, 'hard_mode') else False
+        if hard_mode:
+            bg_color = str(entry.cget('bg'))
+            # Skip grey but keep pink (#FFB6C6) entries available
+            if bg_color == '#D3D3D3' or bg_color == '#d3d3d3':
+                return False
+        
+        return True
+    
+    def move_to_next_incorrect_latin_entry(self, current_key):
+        """Move focus to the next incorrect (pink background) Latin entry in hard mode."""
+        # Build ordered list of all keys based on current word type
+        ordered_keys = []
+        
+        # Determine word type
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]
+        
+        # Find paradigm to determine type
+        word_type = None
+        for key, data in self.latin_paradigms.items():
+            if data.get('word') == word or data.get('lemma') == word:
+                word_type = data.get('type')
+                break
+        
+        cases = ["nominative", "vocative", "accusative", "genitive", "dative", "ablative"]
+        
+        if word_type == 'adjective' or (word_type == 'pronoun' and '_' in current_key and len(current_key.split('_')) == 3):
+            # Adjective or gendered pronoun: case_gender_number
+            genders = ["masculine", "feminine", "neuter"]
+            for gender in genders:
+                for number in ["sg", "pl"]:
+                    for case in cases:
+                        ordered_keys.append(f"{case}_{gender}_{number}")
+        
+        elif word_type == 'verb':
+            if self.latin_mood_var.get() == "infinitive":
+                tenses = ["present", "perfect", "future"]
+                voices = ["act", "pass"]
+                for voice in voices:
+                    for tense in tenses:
+                        ordered_keys.append(f"{tense}_{voice}")
+            else:
+                persons = ["1st", "2nd", "3rd"]
+                for number in ["sg", "pl"]:
+                    for person in persons:
+                        ordered_keys.append(f"{person}_{number}")
+        
+        elif word_type == 'pronoun':
+            # Personal pronoun: case_number
+            for number in ["sg", "pl"]:
+                for case in cases:
+                    ordered_keys.append(f"{case}_{number}")
+        
+        else:  # Noun
+            cases_cap = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative", "Ablative"]
+            # Filter out vocative if hide_vocative is enabled
+            if self.config.hide_vocative.get():
+                cases_cap = [c for c in cases_cap if c != "Vocative"]
+            # Build order: down each column (all cases in sg, then all cases in pl)
+            for number in ["sg", "pl"]:
+                for case in cases_cap:
+                    ordered_keys.append(f"{case}_{number}")
+        
+        # Find current position
+        try:
+            current_idx = ordered_keys.index(current_key)
+        except ValueError:
+            return
+        
+        # Search for next incorrect entry (pink background #FFB6C6)
+        for i in range(current_idx + 1, len(ordered_keys)):
+            key = ordered_keys[i]
+            if key in self.latin_entries:
+                entry = self.latin_entries[key]
+                bg_color = str(entry.cget('bg'))
+                if bg_color == '#FFB6C6':  # Incorrect entry
+                    entry.focus()
+                    entry.icursor(tk.END)
+                    return
+        
+        # No more incorrect entries found - remove focus
+        self.root.focus()
+    
     def move_to_next_latin_entry(self, current_key):
         """Move focus to the next logical Latin entry."""
         # Parse current key
@@ -4896,7 +5229,7 @@ class BellerophonGrammarApp:
                     next_key = f"{cases[i]}_{gender}_{number}"
                     if next_key in self.latin_entries:
                         next_entry = self.latin_entries[next_key]
-                        if str(next_entry.cget('state')) != 'readonly':
+                        if self.is_latin_entry_available(next_entry):
                             next_entry.focus()
                             return
             
@@ -4907,7 +5240,7 @@ class BellerophonGrammarApp:
                 next_key = f"nominative_{gender}_pl"
                 if next_key in self.latin_entries:
                     next_entry = self.latin_entries[next_key]
-                    if str(next_entry.cget('state')) != 'readonly':
+                    if self.is_latin_entry_available(next_entry):
                         next_entry.focus()
                         return
             elif number == "pl" and gender_idx < len(genders) - 1:
@@ -4916,7 +5249,7 @@ class BellerophonGrammarApp:
                 next_key = f"nominative_{next_gender}_sg"
                 if next_key in self.latin_entries:
                     next_entry = self.latin_entries[next_key]
-                    if str(next_entry.cget('state')) != 'readonly':
+                    if self.is_latin_entry_available(next_entry):
                         next_entry.focus()
                         return
             
@@ -4947,7 +5280,7 @@ class BellerophonGrammarApp:
                     if next_key in self.latin_entries:
                         next_entry = self.latin_entries[next_key]
                         # Only move if entry is not already marked correct (readonly)
-                        if str(next_entry.cget('state')) != 'readonly':
+                        if self.is_latin_entry_available(next_entry):
                             next_entry.focus()
                             return
             
@@ -4957,7 +5290,7 @@ class BellerophonGrammarApp:
                     next_key = f"{tenses[i]}_pass"
                     if next_key in self.latin_entries:
                         next_entry = self.latin_entries[next_key]
-                        if str(next_entry.cget('state')) != 'readonly':
+                        if self.is_latin_entry_available(next_entry):
                             next_entry.focus()
                             return
             
@@ -4987,7 +5320,7 @@ class BellerophonGrammarApp:
                     if next_key in self.latin_entries:
                         next_entry = self.latin_entries[next_key]
                         # Only move if entry is not already marked correct (readonly)
-                        if str(next_entry.cget('state')) != 'readonly':
+                        if self.is_latin_entry_available(next_entry):
                             next_entry.focus()
                             return
             
@@ -4997,7 +5330,7 @@ class BellerophonGrammarApp:
                     next_key = f"{cases[i]}_pl"
                     if next_key in self.latin_entries:
                         next_entry = self.latin_entries[next_key]
-                        if str(next_entry.cget('state')) != 'readonly':
+                        if self.is_latin_entry_available(next_entry):
                             next_entry.focus()
                             return
         
@@ -5012,7 +5345,7 @@ class BellerophonGrammarApp:
                     if next_key in self.latin_entries:
                         next_entry = self.latin_entries[next_key]
                         # Only move if entry is not already marked correct (readonly)
-                        if str(next_entry.cget('state')) != 'readonly':
+                        if self.is_latin_entry_available(next_entry):
                             next_entry.focus()
                             return
             
@@ -5022,9 +5355,237 @@ class BellerophonGrammarApp:
                     next_key = f"{persons[i]}_pl"
                     if next_key in self.latin_entries:
                         next_entry = self.latin_entries[next_key]
-                        if str(next_entry.cget('state')) != 'readonly':
+                        if self.is_latin_entry_available(next_entry):
                             next_entry.focus()
                             return
+    
+    def check_all_latin_entries_hard_mode(self):
+        """Check all Latin entries at once in hard mode and reveal correct/incorrect answers."""
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]
+        all_correct = True
+        num_correct = 0
+        first_incorrect_key = None
+        
+        for entry_key, entry in self.latin_entries.items():
+            user_answer = entry.get().strip()
+            
+            # Find paradigm
+            paradigm = None
+            for key, data in self.latin_paradigms.items():
+                if data.get('type') == 'noun' and data.get('word') == word:
+                    paradigm = data
+                    break
+                elif data.get('type') == 'adjective' and data.get('word') == word:
+                    paradigm = data
+                    break
+                elif data.get('type') == 'pronoun' and data.get('word') == word:
+                    paradigm = data
+                    break
+                elif data.get('type') == 'verb' and data.get('lemma') == word:
+                    if self.latin_mood_var.get() == "infinitive":
+                        parts = entry_key.split('_')
+                        if len(parts) == 2:
+                            tense_key, voice_key = parts
+                            voice_full = "active" if voice_key == "act" else "passive"
+                            if (data.get('tense') == tense_key and
+                                data.get('voice') == voice_full and
+                                data.get('mood') == 'infinitive'):
+                                paradigm = data
+                                break
+                    else:
+                        if (data.get('tense') == self.latin_tense_var.get() and
+                            data.get('voice') == self.latin_voice_var.get() and
+                            data.get('mood') == self.latin_mood_var.get()):
+                            paradigm = data
+                            break
+            
+            if not paradigm:
+                continue
+            
+            # Get correct answer
+            correct_answer = None
+            if paradigm.get('type') == 'adjective':
+                parts = entry_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    correct_answer = paradigm['forms'][gender][case][number]
+            elif paradigm.get('type') == 'noun':
+                parts = entry_key.split('_')
+                if len(parts) == 2:
+                    identifier, number = parts
+                    correct_answer = paradigm['forms'][identifier.lower()][number]
+            elif paradigm.get('type') == 'pronoun':
+                forms = paradigm.get('forms', {})
+                if 'singular' in forms and 'plural' in forms:
+                    parts = entry_key.split('_')
+                    if len(parts) == 2:
+                        case, number = parts
+                        number_key = "singular" if number == "sg" else "plural"
+                        correct_answer = forms[number_key].get(case, "")
+                elif 'masculine' in forms and 'feminine' in forms and 'neuter' in forms:
+                    parts = entry_key.split('_')
+                    if len(parts) == 3:
+                        case, gender, number = parts
+                        correct_answer = forms[gender][case][number]
+            else:  # verb
+                if paradigm.get('mood') == 'infinitive':
+                    correct_answer = paradigm.get('infinitive', '')
+                else:
+                    correct_answer = paradigm.get(entry_key, '')
+            
+            if correct_answer and correct_answer != "" and correct_answer != "—":
+                # Check if correct
+                if " / " in correct_answer:
+                    alternative_forms = [form.strip() for form in correct_answer.split(" / ")]
+                    is_correct = user_answer.lower() in [form.lower() for form in alternative_forms]
+                else:
+                    is_correct = user_answer.lower() == correct_answer.lower()
+                
+                if is_correct:
+                    entry.configure(state='readonly', readonlybackground='#B8860B')
+                    num_correct += 1
+                else:
+                    entry.configure(bg='#FFB6C6', state='normal')
+                    all_correct = False
+                    # Track first incorrect entry for focus
+                    if first_incorrect_key is None:
+                        first_incorrect_key = entry_key
+        
+        # Latin Time Trial: Award bonuses for correct answers in hard mode
+        if self.time_trial.is_active and num_correct > 0:
+            # Award word bonuses for each correct entry
+            word_bonus = 1 if self.config.prefill_stems.get() else 2
+            total_word_bonus = word_bonus * num_correct
+            self.time_trial.add_time(total_word_bonus)
+            self.show_time_bonus(total_word_bonus)
+            
+            # Award table bonus if all correct
+            if all_correct:
+                table_bonus = 3 if self.config.prefill_stems.get() else 5
+                self.time_trial.add_table(table_bonus)
+                self.show_time_bonus(table_bonus)
+            
+            self.update_time_trial_ui()
+        
+        # Disable reveal button if all correct
+        if all_correct and hasattr(self, 'latin_reveal_button'):
+            self.latin_reveal_button.configure(state='disabled')
+        
+        # Focus handling: move to first incorrect entry or remove focus if all correct
+        if first_incorrect_key:
+            # Focus on first incorrect entry so user can fix it
+            first_incorrect_entry = self.latin_entries.get(first_incorrect_key)
+            if first_incorrect_entry:
+                first_incorrect_entry.focus()
+                first_incorrect_entry.icursor(tk.END)
+        else:
+            # Remove focus from all entries (move cursor off table)
+            self.root.focus()
+        
+        # Check auto-advance if all correct
+        if all_correct:
+            auto_advance_enabled = False
+            if hasattr(self, 'config') and hasattr(self.config, 'auto_advance'):
+                auto_advance_enabled = self.config.auto_advance.get()
+            
+            if auto_advance_enabled:
+                self.next_latin_word()
+                self.root.after(50, self.focus_first_latin_entry)
+    
+    def recheck_latin_resubmitted_entries(self):
+        """Re-check all grey (re-submitted) Latin entries in hard mode and update their colors."""
+        word_display = self.latin_word_var.get()
+        word = word_display.split(' (')[0]
+        
+        for entry_key, entry in self.latin_entries.items():
+            # Only check grey (re-submitted) entries
+            current_bg = str(entry.cget('bg'))
+            if current_bg != '#D3D3D3' and current_bg != '#d3d3d3':
+                continue
+            
+            user_answer = entry.get().strip()
+            if not user_answer:
+                continue
+            
+            # Find paradigm
+            paradigm = None
+            for key, data in self.latin_paradigms.items():
+                if data.get('type') == 'noun' and data.get('word') == word:
+                    paradigm = data
+                    break
+                elif data.get('type') == 'adjective' and data.get('word') == word:
+                    paradigm = data
+                    break
+                elif data.get('type') == 'pronoun' and data.get('word') == word:
+                    paradigm = data
+                    break
+                elif data.get('type') == 'verb' and data.get('lemma') == word:
+                    if self.latin_mood_var.get() == "infinitive":
+                        parts = entry_key.split('_')
+                        if len(parts) == 2:
+                            tense_key, voice_key = parts
+                            voice_full = "active" if voice_key == "act" else "passive"
+                            if (data.get('tense') == tense_key and
+                                data.get('voice') == voice_full and
+                                data.get('mood') == 'infinitive'):
+                                paradigm = data
+                                break
+                    else:
+                        if (data.get('tense') == self.latin_tense_var.get() and
+                            data.get('voice') == self.latin_voice_var.get() and
+                            data.get('mood') == self.latin_mood_var.get()):
+                            paradigm = data
+                            break
+            
+            if not paradigm:
+                continue
+            
+            # Get correct answer
+            correct_answer = None
+            if paradigm.get('type') == 'adjective':
+                parts = entry_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    correct_answer = paradigm['forms'][gender][case][number]
+            elif paradigm.get('type') == 'noun':
+                parts = entry_key.split('_')
+                if len(parts) == 2:
+                    identifier, number = parts
+                    correct_answer = paradigm['forms'][identifier.lower()][number]
+            elif paradigm.get('type') == 'pronoun':
+                forms = paradigm.get('forms', {})
+                if 'singular' in forms and 'plural' in forms:
+                    parts = entry_key.split('_')
+                    if len(parts) == 2:
+                        case, number = parts
+                        number_key = "singular" if number == "sg" else "plural"
+                        correct_answer = forms[number_key].get(case, "")
+                elif 'masculine' in forms and 'feminine' in forms and 'neuter' in forms:
+                    parts = entry_key.split('_')
+                    if len(parts) == 3:
+                        case, gender, number = parts
+                        correct_answer = forms[gender][case][number]
+            else:  # verb
+                if paradigm.get('mood') == 'infinitive':
+                    correct_answer = paradigm.get('infinitive', '')
+                else:
+                    correct_answer = paradigm.get(entry_key, '')
+            
+            if correct_answer and correct_answer != "" and correct_answer != "—":
+                # Check if correct
+                if " / " in correct_answer:
+                    alternative_forms = [form.strip() for form in correct_answer.split(" / ")]
+                    is_correct = user_answer.lower() in [form.lower() for form in alternative_forms]
+                else:
+                    is_correct = user_answer.lower() == correct_answer.lower()
+                
+                if is_correct:
+                    # Mark as correct
+                    entry.configure(state='readonly', readonlybackground='#B8860B')
+                else:
+                    # Mark as still incorrect
+                    entry.configure(bg='#FFB6C6', state='normal')
     
     def switch_to_greek_view(self):
         """Switch to Greek view, stopping Latin time trial if active."""
@@ -10105,7 +10666,34 @@ class BellerophonGrammarApp:
         if not current_paradigm:
             return "break"
 
-        # Check if this entry is correct before moving to next
+        # Check if hard mode is enabled
+        hard_mode = self.config.hard_mode.get() if hasattr(self.config, 'hard_mode') else False
+        
+        if hard_mode:
+            entry = self.entries.get(current_key)
+            if not entry:
+                return "break"
+            
+            # Just mark entry and move to next one down
+            if entry.get().strip():  # Only if there's input
+                entry.configure(bg='#D3D3D3')  # Mark as submitted/grey
+                
+                # Move to next entry in table order (always down)
+                self.move_to_next_entry(current_key)
+                
+                # Check if all entries are now filled
+                all_filled = all(
+                    e.get().strip() != '' 
+                    for e in self.entries.values()
+                )
+                
+                if all_filled:
+                    # Check all answers at once
+                    self.check_all_entries_hard_mode()
+            
+            return "break"
+        
+        # Normal mode: Check if this entry is correct before moving to next
         if self.check_single_entry(current_key):
             self.check_and_auto_advance()
             # Only move to next entry if not auto-advanced
@@ -10212,16 +10800,247 @@ class BellerophonGrammarApp:
             return is_correct
 
         return False
+    
+    def check_all_entries_hard_mode(self):
+        """Check all entries at once in hard mode and reveal correct/incorrect answers."""
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            return
+        
+        current_type = self.get_effective_type()
+        all_correct = True
+        num_correct = 0
+        first_incorrect_key = None
+        
+        for entry_key, entry in self.entries.items():
+            user_answer = entry.get().strip()
+            correct_answer = None
+            
+            # Get correct answer based on type (same logic as check_single_entry)
+            if current_type == "Adjective":
+                parts = entry_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                        correct_answer = current_paradigm[gender][f"{case}_{number}"]
+            elif current_type == "Pronoun":
+                mode = self.mode_var.get()
+                if "Personal I" in mode or "Personal You" in mode:
+                    if entry_key in current_paradigm:
+                        correct_answer = current_paradigm[entry_key]
+                else:
+                    parts = entry_key.split('_')
+                    if len(parts) == 3:
+                        case, gender, number = parts
+                        if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                            correct_answer = current_paradigm[gender][f"{case}_{number}"]
+            elif current_type == "Verb":
+                current_mood = self.mood_var.get()
+                if current_mood == "Infinitive":
+                    if entry_key in current_paradigm:
+                        correct_answer = current_paradigm[entry_key]
+                else:
+                    if entry_key in current_paradigm:
+                        correct_answer = current_paradigm[entry_key]
+            else:
+                if entry_key in current_paradigm:
+                    correct_answer = current_paradigm[entry_key]
+            
+            # Check if correct
+            if correct_answer:
+                is_correct = self.compare_answers(user_answer, correct_answer)
+                
+                if is_correct:
+                    # Mark as correct
+                    entry.configure(state='readonly', readonlybackground='#7C8C4E')
+                    error_label = self.error_labels.get(entry_key)
+                    if error_label:
+                        error_label.grid_remove()
+                    num_correct += 1
+                else:
+                    # Mark as incorrect
+                    entry.configure(bg='#B6523C', state='normal')
+                    error_label = self.error_labels.get(entry_key)
+                    if error_label:
+                        error_label.grid_remove()
+                    all_correct = False
+                    # Track first incorrect entry for focus
+                    if first_incorrect_key is None:
+                        first_incorrect_key = entry_key
+        
+        # Greek Time Trial: Award bonuses for correct answers in hard mode
+        if self.greek_time_trial.is_active and num_correct > 0:
+            # Award word bonuses for each correct entry
+            word_bonus = 1 if self.config.prefill_stems.get() else 2
+            total_word_bonus = word_bonus * num_correct
+            self.greek_time_trial.add_time(total_word_bonus)
+            self.show_greek_time_bonus(total_word_bonus)
+            
+            # Award table bonus if all correct
+            if all_correct:
+                table_bonus = 3 if self.config.prefill_stems.get() else 5
+                self.greek_time_trial.add_table(table_bonus)
+                self.show_greek_time_bonus(table_bonus)
+            
+            self.update_greek_time_trial_ui()
+        
+        # Focus handling: move to first incorrect entry or remove focus if all correct
+        if first_incorrect_key:
+            # Focus on first incorrect entry so user can fix it
+            first_incorrect_entry = self.entries.get(first_incorrect_key)
+            if first_incorrect_entry:
+                first_incorrect_entry.focus()
+                first_incorrect_entry.icursor(tk.END)
+        else:
+            # Remove focus from all entries (move cursor off table)
+            self.root.focus()
+        
+        # Check auto-advance if all correct
+        if all_correct:
+            self.check_and_auto_advance()
+    
+    def recheck_greek_resubmitted_entries(self):
+        """Re-check all grey (re-submitted) Greek entries in hard mode and update their colors."""
+        current_paradigm = self.get_current_paradigm()
+        if not current_paradigm:
+            return
+        
+        current_type = self.get_effective_type()
+        
+        for entry_key, entry in self.entries.items():
+            # Only check grey (re-submitted) entries
+            current_bg = str(entry.cget('bg'))
+            if current_bg != '#D3D3D3' and current_bg != '#d3d3d3':
+                continue
+            
+            user_answer = entry.get().strip()
+            if not user_answer:
+                continue
+            
+            correct_answer = None
+            
+            # Get correct answer based on type (same logic as check_single_entry)
+            if current_type == "Adjective":
+                parts = entry_key.split('_')
+                if len(parts) == 3:
+                    case, gender, number = parts
+                    if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                        correct_answer = current_paradigm[gender][f"{case}_{number}"]
+            elif current_type == "Pronoun":
+                mode = self.mode_var.get()
+                if "Personal I" in mode or "Personal You" in mode:
+                    if entry_key in current_paradigm:
+                        correct_answer = current_paradigm[entry_key]
+                else:
+                    parts = entry_key.split('_')
+                    if len(parts) == 3:
+                        case, gender, number = parts
+                        if gender in current_paradigm and f"{case}_{number}" in current_paradigm[gender]:
+                            correct_answer = current_paradigm[gender][f"{case}_{number}"]
+            elif current_type == "Verb":
+                current_mood = self.mood_var.get()
+                if current_mood == "Infinitive":
+                    if entry_key in current_paradigm:
+                        correct_answer = current_paradigm[entry_key]
+                else:
+                    if entry_key in current_paradigm:
+                        correct_answer = current_paradigm[entry_key]
+            else:
+                if entry_key in current_paradigm:
+                    correct_answer = current_paradigm[entry_key]
+            
+            # Check if correct
+            if correct_answer:
+                is_correct = self.compare_answers(user_answer, correct_answer)
+                
+                if is_correct:
+                    # Mark as correct
+                    entry.configure(state='readonly', readonlybackground='#7C8C4E')
+                else:
+                    # Mark as still incorrect
+                    entry.configure(bg='#B6523C', state='normal')
 
     def find_next_incomplete_entry(self, candidates):
         """Find the next entry that needs completion from a list of candidate keys."""
+        hard_mode = self.config.hard_mode.get() if hasattr(self.config, 'hard_mode') else False
+        
         for key in candidates:
             if key in self.entries:
                 entry = self.entries[key]
-                # Check if entry needs completion (not readonly, meaning not already correct)
+                # Check if entry needs completion
                 if str(entry.cget('state')) != 'readonly':
+                    # In hard mode, also skip grey (submitted) entries
+                    if hard_mode:
+                        bg_color = str(entry.cget('bg'))
+                        if bg_color == '#D3D3D3' or bg_color == '#d3d3d3':
+                            continue
                     return key
         return None
+    
+    def move_to_next_incorrect_entry(self, current_key):
+        """Move focus to the next incorrect (red background) entry in hard mode."""
+        # Get all entry keys in table order
+        current_type = self.get_effective_type()
+        cases = ["Nominative", "Vocative", "Accusative", "Genitive", "Dative"]
+        
+        # Build ordered list of all keys based on type
+        ordered_keys = []
+        
+        if current_type == "Adjective":
+            current_paradigm = self.get_current_paradigm()
+            is_two_termination = current_paradigm and current_paradigm.get("type") == "adjective_2termination"
+            genders = ["masculine", "neuter"] if is_two_termination else ["masculine", "feminine", "neuter"]
+            for gender in genders:
+                for number in ["sg", "pl"]:
+                    for case in cases:
+                        ordered_keys.append(f"{case}_{gender}_{number}")
+        
+        elif current_type == "Pronoun":
+            pronoun_cases = ["Nominative", "Accusative", "Genitive", "Dative"]
+            mode = self.mode_var.get()
+            if "Personal I" in mode or "Personal You" in mode:
+                for number in ["sg", "pl"]:
+                    for case in pronoun_cases:
+                        ordered_keys.append(f"{case}_{number}")
+            else:
+                genders = ["masculine", "feminine", "neuter"]
+                for gender in genders:
+                    for number in ["sg", "pl"]:
+                        for case in pronoun_cases:
+                            ordered_keys.append(f"{case}_{gender}_{number}")
+        
+        elif current_type == "Verb":
+            current_mood = self.mood_var.get()
+            if current_mood == "Infinitive":
+                ordered_keys = ["inf_active", "inf_middle", "inf_passive"]
+            else:
+                persons = ["1st_sg", "2nd_sg", "3rd_sg", "1st_pl", "2nd_pl", "3rd_pl"]
+                ordered_keys = persons
+        
+        else:  # Noun
+            for number in ["sg", "pl"]:
+                for case in cases:
+                    ordered_keys.append(f"{case}_{number}")
+        
+        # Find current position
+        try:
+            current_idx = ordered_keys.index(current_key)
+        except ValueError:
+            return
+        
+        # Search for next incorrect entry (red background #B6523C)
+        for i in range(current_idx + 1, len(ordered_keys)):
+            key = ordered_keys[i]
+            if key in self.entries:
+                entry = self.entries[key]
+                bg_color = str(entry.cget('bg'))
+                if bg_color == '#B6523C':  # Incorrect entry
+                    entry.focus()
+                    entry.icursor(tk.END)
+                    return
+        
+        # No more incorrect entries found - remove focus
+        self.root.focus()
 
     def move_to_next_entry(self, current_key):
         """Move focus to the next logical entry."""
@@ -10792,6 +11611,66 @@ class BellerophonGrammarApp:
         if self.time_trial.is_active and self.time_trial.waiting_for_input:
             self.time_trial.begin_countdown()
     
+    def reset_latin_entry_background(self, event, entry_key):
+        """Reset Latin entry background to white when user adds or deletes a character"""
+        if entry_key in self.latin_entries:
+            entry = self.latin_entries[entry_key]
+            # Don't reset if entry is readonly
+            if str(entry.cget('state')) == 'readonly':
+                return
+            
+            # Get current content
+            current_content = entry.get()
+            
+            # Check if content actually changed
+            last_content = self.last_latin_entry_content.get(entry_key, '')
+            if current_content == last_content:
+                # Content didn't change, don't reset background
+                return
+            
+            # Update tracked content
+            self.last_latin_entry_content[entry_key] = current_content
+            
+            current_bg = str(entry.cget('bg'))
+            # Only reset if background is an error/submission color
+            if current_bg in ['#FFB6C6', '#D3D3D3', '#d3d3d3', '#B6523C']:
+                # Check if this is an actual content change (not just navigation keys)
+                if event.keysym not in ['Shift_L', 'Shift_R', 'Control_L', 'Control_R', 'Alt_L', 'Alt_R', 
+                                        'Left', 'Right', 'Up', 'Down', 'Home', 'End', 'Tab', 'Escape',
+                                        'Return', 'Enter', 'Prior', 'Next', 'Insert', 'F1', 'F2', 'F3', 
+                                        'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12']:
+                    entry.configure(bg='white')
+    
+    def reset_greek_entry_background(self, event, entry_key):
+        """Reset Greek entry background to white when user adds or deletes a character"""
+        if entry_key in self.entries:
+            entry = self.entries[entry_key]
+            # Don't reset if entry is readonly
+            if str(entry.cget('state')) == 'readonly':
+                return
+            
+            # Get current content
+            current_content = entry.get()
+            
+            # Check if content actually changed
+            last_content = self.last_entry_content.get(entry_key, '')
+            if current_content == last_content:
+                # Content didn't change, don't reset background
+                return
+            
+            # Update tracked content
+            self.last_entry_content[entry_key] = current_content
+            
+            current_bg = str(entry.cget('bg'))
+            # Only reset if background is an error/submission color
+            if current_bg in ['#B6523C', '#D3D3D3', '#d3d3d3']:
+                # Check if this is an actual content change (not just navigation keys)
+                if event.keysym not in ['Shift_L', 'Shift_R', 'Control_L', 'Control_R', 'Alt_L', 'Alt_R', 
+                                        'Left', 'Right', 'Up', 'Down', 'Home', 'End', 'Tab', 'Escape',
+                                        'Return', 'Enter', 'Prior', 'Next', 'Insert', 'F1', 'F2', 'F3', 
+                                        'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12']:
+                    entry.configure(bg='white')
+    
     def update_time_trial_ui(self):
         """Update time trial UI elements"""
         # Update timer display
@@ -11299,9 +12178,9 @@ class BellerophonGrammarApp:
     def load_header_logo(self):
         """Load and resize the long logo for the app header."""
         logo_paths = [
-            os.path.join('assets', 'Bellerphon_grammar_long-remove bg.png'),
-            os.path.join('assets', 'Bellerphon_grammar_long-remove bg.jpg'),
-            os.path.join('assets', 'Bellerphon_grammar_long-remove bg.jpeg'),
+            resource_path(os.path.join('assets', 'Bellerphon_grammar_long-remove bg.png')),
+            resource_path(os.path.join('assets', 'Bellerphon_grammar_long-remove bg.jpg')),
+            resource_path(os.path.join('assets', 'Bellerphon_grammar_long-remove bg.jpeg')),
             'Bellerphon_grammar_long-remove bg.png',
             'Bellerphon_grammar_long-remove bg.jpg',
             'Bellerphon_grammar_long-remove bg.jpeg'
@@ -11364,9 +12243,9 @@ class BellerophonGrammarApp:
     def load_latin_header_logo(self):
         """Load and resize the Latin logo for the app header."""
         logo_paths = [
-            os.path.join('assets', 'b grammar latin large logo gold.png'),
-            os.path.join('assets', 'b grammar latin large logo gold.jpg'),
-            os.path.join('assets', 'b grammar latin large logo gold.jpeg'),
+            resource_path(os.path.join('assets', 'b grammar latin large logo gold.png')),
+            resource_path(os.path.join('assets', 'b grammar latin large logo gold.jpg')),
+            resource_path(os.path.join('assets', 'b grammar latin large logo gold.jpeg')),
             'b grammar latin large logo gold.png',
             'b grammar latin large logo gold.jpg',
             'b grammar latin large logo gold.jpeg'
@@ -11429,9 +12308,9 @@ class BellerophonGrammarApp:
     def load_app_icon(self):
         """Load the small icon for the app window."""
         icon_paths = [
-            os.path.join('assets', 'bell simple.png'),
-            os.path.join('assets', 'bell simple.jpg'),
-            os.path.join('assets', 'bell simple.jpeg'),
+            resource_path(os.path.join('assets', 'bell simple.png')),
+            resource_path(os.path.join('assets', 'bell simple.jpg')),
+            resource_path(os.path.join('assets', 'bell simple.jpeg')),
             'bell simple.png',
             'bell simple.jpg',
             'bell simple.jpeg'
