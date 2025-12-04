@@ -1,8 +1,9 @@
 [
   "Latin:Noun:ille",
-  "Latin:Noun:ego",
-  "Latin:Noun:is",
   "Latin:Noun:quis",
   "Latin:Noun:hic",
-  "Latin:Noun:tu"
+  "Latin:Noun:is",
+  "Latin:Noun:tu",
+  "Latin:Verb:fero:active:future:indicative",
+  "Latin:Noun:ego"
 ]

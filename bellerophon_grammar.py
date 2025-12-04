@@ -3560,10 +3560,32 @@ class BellerophonGrammarApp:
         if hasattr(self, 'latin_reset_retry_button'):
             self.update_latin_reset_retry_button()
         
+        # Handle UI state for infinitive mood (disable irrelevant dropdowns)
+        current_mood = self.latin_mood_var.get()
+        if current_mood == "infinitive":
+            if hasattr(self, 'latin_tense_dropdown'):
+                self.latin_tense_dropdown.configure(state='disabled')
+                self.latin_tense_var.set('')
+            if hasattr(self, 'latin_voice_dropdown'):
+                self.latin_voice_dropdown.configure(state='disabled')
+                self.latin_voice_var.set('')
+        else:
+            if hasattr(self, 'latin_tense_dropdown'):
+                self.latin_tense_dropdown.configure(state='readonly')
+                if not self.latin_tense_var.get():
+                    self.latin_tense_var.set('present')
+            if hasattr(self, 'latin_voice_dropdown'):
+                self.latin_voice_dropdown.configure(state='readonly')
+                if not self.latin_voice_var.get():
+                    self.latin_voice_var.set('active')
+
         # Update available options based on current selections
         word_display = self.latin_word_var.get()
         lemma = word_display.split(' (')[0]
-        self.update_latin_verb_dropdown_options_filtered(lemma)
+        
+        # Only filter options if not in infinitive mode (where dropdowns are disabled)
+        if current_mood != "infinitive":
+            self.update_latin_verb_dropdown_options_filtered(lemma)
         
         # Recreate the verb table with new tense/voice/mood
         self.create_latin_verb_table()
